@@ -107,3 +107,9 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# docs - 个人笔记和会话记录（不纳入版本控制）
+docs/SESSION_SUMMARY_*.md
+docs/git-*.md
+docs/tech-overview.md
+docs/项目小结.txt
