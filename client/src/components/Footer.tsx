@@ -43,41 +43,41 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#demo" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  在线演示
-                </a>
+                <Link href="/my-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  我的作品
+                </Link>
               </li>
               <li>
-                <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  成本估算
+                <a href="#templates" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  模板库
                 </a>
               </li>
             </ul>
           </div>
-          
+
           {/* Resources */}
           <div>
-            <h4 className="font-semibold mb-4">资源中心</h4>
+            <h4 className="font-semibold mb-4">更多内容</h4>
             <ul className="space-y-2">
               <li>
-                <a href="#tech" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  技术架构
+                <a href="#gallery" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  作品广场
                 </a>
               </li>
               <li>
-                <a href="#roadmap" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  发展规划
+                <a href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  关于我们
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  API文档
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/help" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   帮助中心
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  联系客服
+                </Link>
               </li>
             </ul>
           </div>
@@ -104,10 +104,10 @@ export default function Footer() {
         
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground text-center md:text-left">
             © 2026 童话绘本工坊. 保留所有权利.
           </p>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6">
             <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               隐私政策
             </a>

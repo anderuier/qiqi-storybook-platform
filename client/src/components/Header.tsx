@@ -5,21 +5,52 @@
 
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { BookOpen, Menu, X } from "lucide-react";
+import { BookOpen, Menu, X, User, LogOut, Settings, FolderOpen, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [location] = useLocation();
+
+  // 模拟登录状态 - 实际项目中应该从全局状态或Context获取
+  // 为了演示，我们假设用户已登录
+  const isLoggedIn = true;
+  const user = {
+    name: "柒柒爸爸",
+    avatar: "/images/avatar-1.png"
+  };
+
   const navLinks = [
     { href: "#features", label: "功能特色" },
     { href: "#how-it-works", label: "创作流程" },
     { href: "#demo", label: "在线演示" },
-    { href: "#tech", label: "技术架构" },
-    { href: "#pricing", label: "成本估算" },
-    { href: "#roadmap", label: "发展规划" },
+    { href: "#templates", label: "模板库" },
+    { href: "#gallery", label: "作品广场" },
+    { href: "#about", label: "关于我们" },
   ];
+
+  // 平滑滚动到锚点
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    // 如果不在首页，先跳转到首页
+    if (location !== "/") {
+      window.location.href = "/" + href;
+      return;
+    }
+    const targetId = href.replace('#', '');
+    const element = document.getElementById(targetId);
+    if (element) {
+      const headerHeight = 80; // Header 高度
+      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({
+        top: elementPosition - headerHeight,
+        behavior: 'smooth'
+      });
+    }
+    setIsMenuOpen(false);
+  };
   
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
@@ -38,9 +69,10 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1">
             {navLinks.map((link) => (
-              <a 
+              <a
                 key={link.href}
                 href={link.href}
+                onClick={(e) => handleNavClick(e, link.href)}
                 className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-muted"
               >
                 {link.label}
@@ -50,12 +82,70 @@ export default function Header() {
           
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" className="rounded-full">
-              登录
-            </Button>
-            <Button className="bg-coral hover:bg-coral/90 text-white rounded-full shadow-md shadow-coral/20">
-              开始创作
-            </Button>
+            {isLoggedIn ? (
+              /* 已登录状态 - 用户菜单 */
+              <div className="relative">
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-muted transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral to-mint overflow-hidden">
+                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                  </div>
+                  <span className="text-sm font-medium">{user.name}</span>
+                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isUserMenuOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {/* 用户下拉菜单 */}
+                {isUserMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    />
+                    <div className="absolute right-0 top-12 bg-white rounded-xl shadow-lg border border-border/50 py-2 min-w-[180px] z-20">
+                      <Link href="/my-works" onClick={() => setIsUserMenuOpen(false)}>
+                        <div className="px-4 py-2 text-sm hover:bg-muted flex items-center gap-3 cursor-pointer">
+                          <FolderOpen className="w-4 h-4 text-coral" />
+                          我的作品
+                        </div>
+                      </Link>
+                      <Link href="/create" onClick={() => setIsUserMenuOpen(false)}>
+                        <div className="px-4 py-2 text-sm hover:bg-muted flex items-center gap-3 cursor-pointer">
+                          <BookOpen className="w-4 h-4 text-mint" />
+                          创作新绘本
+                        </div>
+                      </Link>
+                      <Link href="/settings" onClick={() => setIsUserMenuOpen(false)}>
+                        <div className="px-4 py-2 text-sm hover:bg-muted flex items-center gap-3 cursor-pointer">
+                          <Settings className="w-4 h-4 text-muted-foreground" />
+                          账户设置
+                        </div>
+                      </Link>
+                      <div className="border-t border-border my-1" />
+                      <div className="px-4 py-2 text-sm hover:bg-muted flex items-center gap-3 cursor-pointer text-red-500">
+                        <LogOut className="w-4 h-4" />
+                        退出登录
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              /* 未登录状态 */
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" className="rounded-full">
+                    登录
+                  </Button>
+                </Link>
+                <Link href="/create">
+                  <Button className="bg-coral hover:bg-coral/90 text-white rounded-full shadow-md shadow-coral/20">
+                    开始创作
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
           
           {/* Mobile Menu Button */}
@@ -79,23 +169,65 @@ export default function Header() {
           <div className="container py-4">
             <nav className="flex flex-col gap-2">
               {navLinks.map((link) => (
-                <a 
+                <a
                   key={link.href}
                   href={link.href}
                   className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={(e) => handleNavClick(e, link.href)}
                 >
                   {link.label}
                 </a>
               ))}
-              <div className="flex gap-3 mt-4 pt-4 border-t border-border">
-                <Button variant="outline" className="flex-1 rounded-full">
-                  登录
-                </Button>
-                <Button className="flex-1 bg-coral hover:bg-coral/90 text-white rounded-full">
-                  开始创作
-                </Button>
-              </div>
+              {isLoggedIn ? (
+                /* 已登录状态 - 移动端 */
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="flex items-center gap-3 px-4 py-3 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-coral to-mint overflow-hidden">
+                      <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <div className="font-medium">{user.name}</div>
+                      <div className="text-xs text-muted-foreground">已登录</div>
+                    </div>
+                  </div>
+                  <Link href="/my-works" onClick={() => setIsMenuOpen(false)}>
+                    <div className="px-4 py-3 text-sm hover:bg-muted rounded-lg flex items-center gap-3">
+                      <FolderOpen className="w-4 h-4 text-coral" />
+                      我的作品
+                    </div>
+                  </Link>
+                  <Link href="/create" onClick={() => setIsMenuOpen(false)}>
+                    <div className="px-4 py-3 text-sm hover:bg-muted rounded-lg flex items-center gap-3">
+                      <BookOpen className="w-4 h-4 text-mint" />
+                      创作新绘本
+                    </div>
+                  </Link>
+                  <Link href="/settings" onClick={() => setIsMenuOpen(false)}>
+                    <div className="px-4 py-3 text-sm hover:bg-muted rounded-lg flex items-center gap-3 cursor-pointer">
+                      <Settings className="w-4 h-4 text-muted-foreground" />
+                      账户设置
+                    </div>
+                  </Link>
+                  <div className="px-4 py-3 text-sm hover:bg-muted rounded-lg flex items-center gap-3 cursor-pointer text-red-500">
+                    <LogOut className="w-4 h-4" />
+                    退出登录
+                  </div>
+                </div>
+              ) : (
+                /* 未登录状态 - 移动端 */
+                <div className="flex gap-3 mt-4 pt-4 border-t border-border">
+                  <Link href="/login" className="flex-1">
+                    <Button variant="outline" className="w-full rounded-full">
+                      登录
+                    </Button>
+                  </Link>
+                  <Link href="/create" className="flex-1">
+                    <Button className="w-full bg-coral hover:bg-coral/90 text-white rounded-full">
+                      开始创作
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </nav>
           </div>
         </motion.div>

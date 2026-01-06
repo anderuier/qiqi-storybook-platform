@@ -15,6 +15,7 @@ import {
   BookOpen
 } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 
 export default function DemoSection() {
   const [currentPage, setCurrentPage] = useState(0);
@@ -23,7 +24,31 @@ export default function DemoSection() {
   const pages = [
     {
       text: "从前，在一片神奇的森林里，住着一只勇敢的小兔子，它的名字叫小勇。",
-      image: "/images/demo-book.png"
+      image: "/images/demo-page-1.png"
+    },
+    {
+      text: "小勇有一双明亮的眼睛和一颗善良的心。它最喜欢在森林里探险，寻找新朋友。",
+      image: "/images/demo-page-2.png"
+    },
+    {
+      text: "一天，小勇听说森林深处有一朵神奇的七色花，能实现一个愿望。它决定去寻找这朵花。",
+      image: "/images/demo-page-3.png"
+    },
+    {
+      text: "在路上，小勇遇到了迷路的小松鼠。'别担心，我带你回家！'小勇说。",
+      image: "/images/demo-page-4.png"
+    },
+    {
+      text: "送完小松鼠后，小勇继续前进。它穿过了彩虹桥，来到了花的所在地。",
+      image: "/images/demo-page-5.png"
+    },
+    {
+      text: "七色花真的在那里！小勇许下了愿望：'希望森林里的小动物们都能快乐！'",
+      image: "/images/demo-page-6.png"
+    },
+    {
+      text: "从此以后，森林里充满了欢声笑语。小勇成为了大家心中的小英雄。",
+      image: "/images/demo-page-7.png"
     }
   ];
   
@@ -81,11 +106,11 @@ export default function DemoSection() {
             
             {/* 控制栏 */}
             <div className="p-4 md:p-6 bg-white border-t border-border/50">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 {/* 翻页控制 */}
                 <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="icon"
                     className="rounded-full"
                     disabled={currentPage === 0}
@@ -93,8 +118,11 @@ export default function DemoSection() {
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <span className="text-sm text-muted-foreground min-w-[60px] text-center">
+                    {currentPage + 1} / {pages.length}
+                  </span>
+                  <Button
+                    variant="outline"
                     size="icon"
                     className="rounded-full"
                     disabled={currentPage === pages.length - 1}
@@ -103,39 +131,39 @@ export default function DemoSection() {
                     <ChevronRight className="w-5 h-5" />
                   </Button>
                 </div>
-                
+
                 {/* 播放控制 */}
                 <div className="flex items-center gap-3">
-                  <Button 
+                  <Button
                     variant="outline"
                     size="icon"
                     className="rounded-full"
                   >
                     <Volume2 className="w-5 h-5" />
                   </Button>
-                  <Button 
-                    className="bg-coral hover:bg-coral/90 text-white rounded-full px-6"
+                  <Button
+                    className="bg-coral hover:bg-coral/90 text-white rounded-full px-4 sm:px-6"
                     onClick={() => setIsPlaying(!isPlaying)}
                   >
                     {isPlaying ? (
                       <>
-                        <Pause className="w-5 h-5 mr-2" />
-                        暂停朗读
+                        <Pause className="w-5 h-5 sm:mr-2" />
+                        <span className="hidden sm:inline">暂停朗读</span>
                       </>
                     ) : (
                       <>
-                        <Play className="w-5 h-5 mr-2" />
-                        开始朗读
+                        <Play className="w-5 h-5 sm:mr-2" />
+                        <span className="hidden sm:inline">开始朗读</span>
                       </>
                     )}
                   </Button>
+                  <Link href="/create">
+                    <Button className="bg-mint hover:bg-mint/90 text-white rounded-full px-4 sm:px-6">
+                      <Sparkles className="w-5 h-5 sm:mr-2" />
+                      <span className="hidden sm:inline">创作类似绘本</span>
+                    </Button>
+                  </Link>
                 </div>
-                
-                {/* 创作按钮 */}
-                <Button className="bg-mint hover:bg-mint/90 text-white rounded-full px-6 hidden md:flex">
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  创作类似绘本
-                </Button>
               </div>
             </div>
           </div>

@@ -21,15 +21,16 @@ import {
   Shield
 } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WaveDivider from "@/components/WaveDivider";
 import FeatureCard from "@/components/FeatureCard";
 import StepCard from "@/components/StepCard";
 import DemoSection from "@/components/DemoSection";
-import TechSection from "@/components/TechSection";
-import PricingSection from "@/components/PricingSection";
-import RoadmapSection from "@/components/RoadmapSection";
+import TemplateSection from "@/components/TemplateSection";
+import GallerySection from "@/components/GallerySection";
+import AboutSection from "@/components/AboutSection";
 
 export default function Home() {
   return (
@@ -56,25 +57,25 @@ export default function Home() {
       
       {/* Demo Section */}
       <DemoSection />
-      
+
       {/* Wave Divider */}
       <WaveDivider color="cream" flip />
-      
-      {/* Tech Section */}
-      <TechSection />
-      
+
+      {/* Template Section */}
+      <TemplateSection />
+
       {/* Wave Divider */}
-      <WaveDivider color="mint" />
-      
-      {/* Pricing Section */}
-      <PricingSection />
-      
+      <WaveDivider color="coral" />
+
+      {/* Gallery Section */}
+      <GallerySection />
+
       {/* Wave Divider */}
-      <WaveDivider color="coral" flip />
-      
-      {/* Roadmap Section */}
-      <RoadmapSection />
-      
+      <WaveDivider color="mint" flip />
+
+      {/* About Section */}
+      <AboutSection />
+
       {/* CTA Section */}
       <CTASection />
       
@@ -138,10 +139,12 @@ function HeroSection() {
             </p>
             
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="bg-coral hover:bg-coral/90 text-white rounded-full px-8 shadow-lg shadow-coral/25">
-                <Play className="w-5 h-5 mr-2" />
-                开始创作
-              </Button>
+              <Link href="/create">
+                <Button size="lg" className="bg-coral hover:bg-coral/90 text-white rounded-full px-8 shadow-lg shadow-coral/25">
+                  <Play className="w-5 h-5 mr-2" />
+                  开始创作
+                </Button>
+              </Link>
               <Button size="lg" variant="outline" className="rounded-full px-8 border-2 border-mint text-mint hover:bg-mint/10">
                 了解更多
                 <ChevronRight className="w-5 h-5 ml-1" />
@@ -149,18 +152,18 @@ function HeroSection() {
             </div>
             
             {/* 统计数据 */}
-            <div className="flex gap-8 mt-12">
-              <div>
-                <div className="text-3xl font-bold text-coral">10,000+</div>
-                <div className="text-sm text-muted-foreground">绘本已创作</div>
+            <div className="grid grid-cols-3 gap-4 sm:flex sm:gap-8 mt-12">
+              <div className="text-center sm:text-left">
+                <div className="text-2xl sm:text-3xl font-bold text-coral">10,000+</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">绘本已创作</div>
               </div>
-              <div>
-                <div className="text-3xl font-bold text-mint">50+</div>
-                <div className="text-sm text-muted-foreground">艺术风格</div>
+              <div className="text-center sm:text-left">
+                <div className="text-2xl sm:text-3xl font-bold text-mint">50+</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">艺术风格</div>
               </div>
-              <div>
-                <div className="text-3xl font-bold text-sunny">99%</div>
-                <div className="text-sm text-muted-foreground">家长好评</div>
+              <div className="text-center sm:text-left">
+                <div className="text-2xl sm:text-3xl font-bold text-sunny">99%</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">家长好评</div>
               </div>
             </div>
           </motion.div>
@@ -367,13 +370,17 @@ function CTASection() {
             加入我们，用AI和爱为孩子打造专属的童话世界
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="bg-coral hover:bg-coral/90 text-white rounded-full px-10 shadow-lg shadow-coral/25">
-              <Sparkles className="w-5 h-5 mr-2" />
-              立即开始创作
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-10 border-2">
-              联系我们
-            </Button>
+            <Link href="/create">
+              <Button size="lg" className="bg-coral hover:bg-coral/90 text-white rounded-full px-10 shadow-lg shadow-coral/25">
+                <Sparkles className="w-5 h-5 mr-2" />
+                立即开始创作
+              </Button>
+            </Link>
+            <Link href="/contact">
+              <Button size="lg" variant="outline" className="rounded-full px-10 border-2">
+                联系我们
+              </Button>
+            </Link>
           </div>
           
           <div className="flex justify-center items-center gap-8 mt-12">

@@ -71,11 +71,11 @@ export default function PricingSection() {
             
             <div className="space-y-3 mb-6">
               {apiPricing.map((item, index) => (
-                <div key={index} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                  <span className="text-sm">{item.service}</span>
+                <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-border/50 last:border-0 gap-1 sm:gap-0">
+                  <span className="text-sm font-medium sm:font-normal">{item.service}</span>
                   <div className="flex gap-4 text-sm">
-                    <span className="text-muted-foreground w-16 text-right">{item.perBook}/本</span>
-                    <span className="font-medium w-16 text-right">{item.monthly}</span>
+                    <span className="text-muted-foreground">{item.perBook}/本</span>
+                    <span className="font-medium">{item.monthly}/月</span>
                   </div>
                 </div>
               ))}
@@ -132,11 +132,11 @@ export default function PricingSection() {
             
             <div className="space-y-3 mb-6">
               {selfHostPricing.map((item, index) => (
-                <div key={index} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                  <span className="text-sm">{item.service}</span>
+                <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-border/50 last:border-0 gap-1 sm:gap-0">
+                  <span className="text-sm font-medium sm:font-normal">{item.service}</span>
                   <div className="flex gap-4 text-sm">
-                    <span className="text-muted-foreground w-16 text-right">{item.perBook}/本</span>
-                    <span className="font-medium w-16 text-right">{item.monthly}</span>
+                    <span className="text-muted-foreground">{item.perBook}/本</span>
+                    <span className="font-medium">{item.monthly}/月</span>
                   </div>
                 </div>
               ))}
