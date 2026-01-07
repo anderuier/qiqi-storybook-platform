@@ -4,6 +4,62 @@
 
 ---
 
+## [2026-01-08] Vercel 部署配置与网站上线
+
+### 本次更新摘要
+完成 Vercel 部署配置，将童话绘本工坊成功发布到互联网，可通过公网访问。
+
+### 详细内容
+
+#### 1. Vercel CLI 安装与配置
+- 全局安装 Vercel CLI (v50.1.6)
+- 完成 Vercel 账户身份验证 (anderuier)
+- 关联本地项目到 Vercel 平台
+- 自动连接 GitHub 仓库
+
+#### 2. 部署问题修复
+**问题**：首次部署后，访问网址显示后端 Express 代码源文件
+
+**原因**：构建命令同时构建前后端，Vercel 把 `dist/index.js` 当作静态文件提供
+
+**解决方案**：
+- 创建 `vercel.json` 配置文件，指定只构建前端
+- 在 `package.json` 添加 `build:client` 命令
+
+#### 3. 成功部署
+- **正式域名**：https://storybook-gamma-ten.vercel.app
+- **自动部署**：每次 `git push` 会自动触发重新部署
+
+#### 4. 新增文档
+- `docs/vercel-deployment-guide.md` - Vercel 部署指南
+
+### 新增/修改的文件
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `vercel.json` | 新增 | Vercel 部署配置 |
+| `package.json` | 修改 | 添加 build:client 命令 |
+| `docs/vercel-deployment-guide.md` | 新增 | 部署指南文档 |
+| `.gitignore` | 修改 | 排除 .vercel 目录 |
+
+### 当前项目状态
+- **前端页面**: ✅ 完整（首页 + 8个二级页面）
+- **响应式设计**: ✅ 完成
+- **Vercel 部署**: ✅ 完成
+- **网站上线**: ✅ https://storybook-gamma-ten.vercel.app
+- **后端业务**: ❌ 未实现
+- **AI 功能**: ❌ 未实现
+- **数据库**: ❌ 未实现
+
+### 下一步计划
+- 设计后端 API 接口结构
+- 实现 Vercel Serverless Functions
+- 集成 AI 故事生成功能
+- 集成 AI 图片生成功能
+- 实现用户认证系统
+
+---
+
 ## [2026-01-06] 前端页面完善与二级页面开发
 
 ### 本次更新摘要
