@@ -12,7 +12,10 @@
       "Bash(git remote add:*)",
       "Bash(git push:*)",
       "Bash(del:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Skill(vercel:setup)",
+      "Bash(vercel:*)",
+      "Bash(npm install -g vercel)"
     ]
   }
 }
