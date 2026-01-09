@@ -4,6 +4,105 @@
 
 ---
 
+## [2026-01-09] 后端 API 框架与前端页面对接
+
+### 本次更新摘要
+完成后端 API 框架搭建（Vercel Serverless Functions）和前端所有页面的 API 对接，实现完整的前后端集成架构。
+
+### 详细内容
+
+#### 1. 后端 API 设计
+- 创建完整 API 设计文档 (`docs/api-design.md`)
+- 设计 30 个接口，覆盖用户系统、故事创作、作品管理、模板系统、社区发布
+
+#### 2. Vercel Serverless Functions 实现
+
+**工具库 (`api/_lib/`)**：
+| 文件 | 功能 |
+|------|------|
+| `response.ts` | 统一响应格式处理 |
+| `auth.ts` | JWT Token 生成与验证 |
+| `password.ts` | bcrypt 密码加密 |
+| `validate.ts` | Zod 请求参数验证 |
+| `db.ts` | 数据库 Schema 定义 (8张表) |
+| `ai.ts` | 多 AI 提供商文本生成服务 |
+| `image.ts` | 多提供商图片生成服务 |
+| `prompts.ts` | 故事/分镜生成提示词 |
+
+**API 端点 (14个)**：
+- 认证：注册、登录、退出
+- 用户：获取信息、更新资料、修改密码
+- 创作：故事生成、分镜生成、图片生成、批量图片、任务查询、继续生成
+- 系统：数据库初始化、健康检查
+
+#### 3. 多 AI 提供商支持
+
+**文本生成**：Claude、OpenAI GPT、Google Gemini、自定义 OpenAI 兼容接口
+
+**图片生成**：DALL-E 3、Stability AI、Google Imagen 3、即梦 (Jimeng)、自定义接口
+
+#### 4. 前端 API 对接
+
+**新增文件**：
+- `client/src/lib/api.ts` - API 客户端封装
+- `client/src/contexts/AuthContext.tsx` - 用户认证状态管理
+- `client/src/hooks/useCreate.ts` - 创作流程状态管理
+
+**页面对接**：
+| 页面 | 对接功能 |
+|------|----------|
+| Login.tsx | 登录、注册、表单验证 |
+| Create.tsx | 5步向导、故事/分镜/图片生成 |
+| MyWorks.tsx | 作品列表、删除、发布 |
+| Gallery.tsx | 公开作品、点赞、搜索 |
+| Templates.tsx | 模板列表、分类筛选 |
+| AccountSettings.tsx | 资料修改、密码修改 |
+
+#### 5. 图片生成策略
+采用轮询模式避免 Vercel 10秒超时：
+- 前端每2秒调用 continue 接口
+- 逐张生成，实时显示进度
+
+### 新增/修改的文件
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `api/_lib/*.ts` | 新增 | 9个工具库文件 |
+| `api/auth/*.ts` | 新增 | 3个认证接口 |
+| `api/user/*.ts` | 新增 | 3个用户接口 |
+| `api/create/*.ts` | 新增 | 6个创作接口 |
+| `api/health.ts` | 新增 | 健康检查 |
+| `api/db/init.ts` | 新增 | 数据库初始化 |
+| `client/src/lib/api.ts` | 新增 | API 客户端 |
+| `client/src/contexts/AuthContext.tsx` | 新增 | 认证 Context |
+| `client/src/hooks/useCreate.ts` | 新增 | 创作 Hook |
+| `client/src/pages/*.tsx` | 修改 | 6个页面对接 API |
+| `vercel.json` | 修改 | 添加 API 路由配置 |
+| `package.json` | 修改 | 添加后端依赖 |
+| `docs/api-design.md` | 新增 | API 设计文档 |
+
+### 代码统计
+- 新增文件：27 个
+- 修改文件：10 个
+- 新增代码：7069 行
+
+### 当前项目状态
+- **前端 UI**: ✅ 完成
+- **前端 API 对接**: ✅ 完成
+- **后端 API 框架**: ✅ 完成
+- **多 AI 提供商**: ✅ 完成
+- **Vercel 部署配置**: ✅ 完成
+- **数据库**: ⏳ 待配置 (Schema 已定义)
+- **环境变量**: ⏳ 待配置 (API 密钥)
+
+### 下一步计划
+- 创建 Vercel Postgres 数据库
+- 配置环境变量 (DATABASE_URL, JWT_SECRET, AI API Keys)
+- 部署测试完整功能
+- 实现剩余 API (作品管理、模板、社区)
+
+---
+
 ## [2026-01-08] Vercel 部署配置与网站上线
 
 ### 本次更新摘要
