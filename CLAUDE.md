@@ -114,11 +114,18 @@ pnpm check
 
 ## 开发规范
 
+### 开发环境规范
+当前开发环境为 Windows 系统。在执行命令行操作时，请使用 Windows 兼容的命令（PowerShell/CMD），避免直接使用 Linux/Unix 特定命令（如 `rm`、`ls`、`chmod` 等），以减少不必要的尝试和错误。
+
 ### 代码风格
 - 使用 TypeScript 严格模式
 - 组件使用函数式组件 + Hooks
 - 文件命名：组件用 PascalCase，其他用 kebab-case
 - 缩进：2 空格
+
+### 代码语法规范
+- 在创建新文件或添加代码时，必须使用当前项目所采用的语言/框架的最新稳定语法。避免使用已废弃(deprecated)或过时的API、语法特性，以减少潜在的兼容性问题和运行时错误。
+
 
 ### React 组件规范
 ```tsx
