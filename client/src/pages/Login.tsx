@@ -13,12 +13,17 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  Loader2
 } from "lucide-react";
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
+  const [, setLocation] = useLocation();
+  const { login, register, isLoading, error, clearError } = useAuth();
+
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -27,12 +32,87 @@ export default function Login() {
     confirmPassword: "",
     nickname: ""
   });
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: 实现登录/注册逻辑
-    alert(isLogin ? "登录功能即将上线！" : "注册功能即将上线！");
+  // 切换登录/注册模式
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setFormError(null);
+    clearError();
   };
+
+  // 表单验证
+  const validateForm = (): boolean => {
+    setFormError(null);
+
+    if (!formData.email) {
+      setFormError("请输入邮箱地址");
+      return false;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setFormError("邮箱格式不正确");
+      return false;
+    }
+
+    if (!formData.password) {
+      setFormError("请输入密码");
+      return false;
+    }
+
+    if (formData.password.length < 6) {
+      setFormError("密码至少需要6位");
+      return false;
+    }
+
+    if (!isLogin) {
+      if (!formData.nickname) {
+        setFormError("请输入昵称");
+        return false;
+      }
+
+      if (formData.nickname.length < 2 || formData.nickname.length > 20) {
+        setFormError("昵称需要2-20个字符");
+        return false;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        setFormError("两次输入的密码不一致");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  // 提交表单
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    try {
+      if (isLogin) {
+        await login({
+          email: formData.email,
+          password: formData.password,
+        });
+      } else {
+        await register({
+          email: formData.email,
+          password: formData.password,
+          nickname: formData.nickname,
+        });
+      }
+      // 登录/注册成功，跳转到首页或创作页
+      setLocation("/create");
+    } catch (err) {
+      // 错误已在 AuthContext 中处理
+    }
+  };
+
+  // 显示的错误信息
+  const displayError = formError || error;
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-coral/10 via-mint/5 to-sunny/10">
@@ -113,6 +193,17 @@ export default function Login() {
               {isLogin ? "登录您的账号，继续创作之旅" : "注册账号，开始您的创作之旅"}
             </p>
 
+            {/* 错误提示 */}
+            {displayError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm"
+              >
+                {displayError}
+              </motion.div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* 昵称 (仅注册) */}
               {!isLogin && (
@@ -126,6 +217,7 @@ export default function Login() {
                       onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
                       placeholder="给自己取个名字吧"
                       className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none transition-colors"
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -142,6 +234,7 @@ export default function Login() {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="请输入邮箱地址"
                     className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none transition-colors"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -155,8 +248,9 @@ export default function Login() {
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="请输入密码"
+                    placeholder="请输入密码（至少6位）"
                     className="w-full pl-12 pr-12 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none transition-colors"
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
@@ -180,6 +274,7 @@ export default function Login() {
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                       placeholder="请再次输入密码"
                       className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none transition-colors"
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -198,8 +293,16 @@ export default function Login() {
               <Button
                 type="submit"
                 className="w-full bg-coral hover:bg-coral/90 text-white rounded-xl py-6 text-base"
+                disabled={isLoading}
               >
-                {isLogin ? "登录" : "注册"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    {isLogin ? "登录中..." : "注册中..."}
+                  </>
+                ) : (
+                  isLogin ? "登录" : "注册"
+                )}
               </Button>
             </form>
 
@@ -209,8 +312,9 @@ export default function Login() {
                 {isLogin ? "还没有账号？" : "已有账号？"}
               </span>
               <button
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={toggleMode}
                 className="text-coral font-medium hover:underline ml-1"
+                disabled={isLoading}
               >
                 {isLogin ? "立即注册" : "立即登录"}
               </button>
@@ -228,15 +332,18 @@ export default function Login() {
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-4">
-                <Button variant="outline" className="rounded-xl py-5">
+                <Button variant="outline" className="rounded-xl py-5" disabled>
                   <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5 mr-2" />
                   Google
                 </Button>
-                <Button variant="outline" className="rounded-xl py-5">
+                <Button variant="outline" className="rounded-xl py-5" disabled>
                   <img src="https://www.svgrepo.com/show/448234/wechat.svg" alt="微信" className="w-5 h-5 mr-2" />
                   微信
                 </Button>
               </div>
+              <p className="text-center text-xs text-muted-foreground mt-3">
+                第三方登录即将上线
+              </p>
             </div>
           </div>
         </motion.div>

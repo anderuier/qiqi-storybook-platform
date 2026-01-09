@@ -1,6 +1,7 @@
 /**
  * 账户设置页面
  * 设计风格：梦幻童话风格
+ * 已对接后端 API
  */
 
 import { Button } from "@/components/ui/button";
@@ -8,20 +9,23 @@ import { motion } from "framer-motion";
 import {
   Settings,
   User,
-  Mail,
   Lock,
   Bell,
   Palette,
   Shield,
-  CreditCard,
   Camera,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  Loader2,
+  LogOut,
+  Check
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
 
 // 设置分类
 const settingsTabs = [
@@ -32,18 +36,28 @@ const settingsTabs = [
 ];
 
 export default function AccountSettings() {
+  const [, setLocation] = useLocation();
+  const { user, isAuthenticated, isLoading: authLoading, updateProfile, changePassword, logout } = useAuth();
+
   const [activeTab, setActiveTab] = useState("profile");
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // 模拟用户数据
-  const [profile, setProfile] = useState({
-    nickname: "柒柒爸爸",
-    email: "qiqi@example.com",
-    phone: "138****8888",
-    avatar: "/images/avatar-1.png"
+  // 个人资料表单
+  const [nickname, setNickname] = useState("");
+
+  // 密码表单
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
+  // 通知设置
   const [notifications, setNotifications] = useState({
     newFeatures: true,
     weeklyDigest: true,
@@ -51,19 +65,105 @@ export default function AccountSettings() {
     likes: false
   });
 
+  // 偏好设置
   const [preferences, setPreferences] = useState({
     defaultStyle: "watercolor",
     defaultVoice: "female",
     autoSave: true
   });
 
-  const handleSave = () => {
+  // 检查登录状态
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setLocation("/login");
+    }
+  }, [authLoading, isAuthenticated, setLocation]);
+
+  // 初始化表单数据
+  useEffect(() => {
+    if (user) {
+      setNickname(user.nickname || "");
+    }
+  }, [user]);
+
+  // 保存个人资料
+  const handleSaveProfile = async () => {
+    if (!nickname.trim()) {
+      setError("昵称不能为空");
+      return;
+    }
+
     setIsSaving(true);
-    setTimeout(() => {
+    setError(null);
+    setSaveSuccess(false);
+
+    try {
+      await updateProfile({ nickname: nickname.trim() });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      setError(err.message || "保存失败");
+    } finally {
       setIsSaving(false);
-      alert("设置已保存！");
-    }, 1000);
+    }
   };
+
+  // 修改密码
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    if (!passwordForm.oldPassword) {
+      setPasswordError("请输入当前密码");
+      return;
+    }
+
+    if (!passwordForm.newPassword) {
+      setPasswordError("请输入新密码");
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError("新密码至少需要6位");
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("两次输入的密码不一致");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      await changePassword({
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setPasswordSuccess(true);
+      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    } catch (err: any) {
+      setPasswordError(err.message || "密码修改失败");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 退出登录
+  const handleLogout = async () => {
+    await logout();
+    setLocation("/");
+  };
+
+  // 加载中显示
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-coral" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -114,6 +214,17 @@ export default function AccountSettings() {
                     </button>
                   );
                 })}
+
+                {/* 退出登录按钮 */}
+                <div className="border-t border-border mt-2 pt-2">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-all"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    退出登录
+                  </button>
+                </div>
               </div>
             </motion.div>
 
@@ -130,12 +241,25 @@ export default function AccountSettings() {
                   <div>
                     <h2 className="text-xl font-bold mb-6">个人资料</h2>
 
+                    {/* 错误/成功提示 */}
+                    {error && (
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                        {error}
+                      </div>
+                    )}
+                    {saveSuccess && (
+                      <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-green-600 text-sm flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        保存成功
+                      </div>
+                    )}
+
                     {/* 头像 */}
                     <div className="flex items-center gap-6 mb-8">
                       <div className="relative">
                         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-coral to-mint overflow-hidden">
                           <img
-                            src={profile.avatar}
+                            src={user?.avatar || "/images/default-avatar.png"}
                             alt="头像"
                             className="w-full h-full object-cover"
                           />
@@ -145,7 +269,7 @@ export default function AccountSettings() {
                         </button>
                       </div>
                       <div>
-                        <h3 className="font-semibold">{profile.nickname}</h3>
+                        <h3 className="font-semibold">{user?.nickname || "用户"}</h3>
                         <p className="text-sm text-muted-foreground">
                           点击相机图标更换头像
                         </p>
@@ -158,8 +282,8 @@ export default function AccountSettings() {
                         <label className="block text-sm font-medium mb-2">昵称</label>
                         <input
                           type="text"
-                          value={profile.nickname}
-                          onChange={(e) => setProfile({ ...profile, nickname: e.target.value })}
+                          value={nickname}
+                          onChange={(e) => setNickname(e.target.value)}
                           className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
                         />
                       </div>
@@ -168,24 +292,45 @@ export default function AccountSettings() {
                         <label className="block text-sm font-medium mb-2">邮箱</label>
                         <input
                           type="email"
-                          value={profile.email}
-                          onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">手机号</label>
-                        <input
-                          type="text"
-                          value={profile.phone}
+                          value={user?.email || ""}
                           disabled
                           className="w-full px-4 py-3 rounded-xl border-2 border-border bg-muted text-muted-foreground"
                         />
                         <p className="text-xs text-muted-foreground mt-1">
-                          如需修改手机号，请联系客服
+                          邮箱暂不支持修改
                         </p>
                       </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">注册时间</label>
+                        <input
+                          type="text"
+                          value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString("zh-CN") : ""}
+                          disabled
+                          className="w-full px-4 py-3 rounded-xl border-2 border-border bg-muted text-muted-foreground"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 保存按钮 */}
+                    <div className="mt-8 pt-6 border-t border-border flex justify-end">
+                      <Button
+                        onClick={handleSaveProfile}
+                        disabled={isSaving}
+                        className="bg-coral hover:bg-coral/90 text-white rounded-full px-8"
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            保存中...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            保存设置
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -207,11 +352,27 @@ export default function AccountSettings() {
                             <p className="text-sm text-muted-foreground mb-4">
                               定期更换密码可以提高账户安全性
                             </p>
+
+                            {/* 密码错误/成功提示 */}
+                            {passwordError && (
+                              <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                                {passwordError}
+                              </div>
+                            )}
+                            {passwordSuccess && (
+                              <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm flex items-center gap-2">
+                                <Check className="w-4 h-4" />
+                                密码修改成功
+                              </div>
+                            )}
+
                             <div className="space-y-3">
                               <div className="relative">
                                 <input
                                   type={showPassword ? "text" : "password"}
                                   placeholder="当前密码"
+                                  value={passwordForm.oldPassword}
+                                  onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
                                   className="w-full px-4 py-2 rounded-lg border border-border focus:border-coral focus:outline-none pr-10"
                                 />
                                 <button
@@ -224,14 +385,33 @@ export default function AccountSettings() {
                               </div>
                               <input
                                 type={showPassword ? "text" : "password"}
-                                placeholder="新密码"
+                                placeholder="新密码（至少6位）"
+                                value={passwordForm.newPassword}
+                                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                                 className="w-full px-4 py-2 rounded-lg border border-border focus:border-coral focus:outline-none"
                               />
                               <input
                                 type={showPassword ? "text" : "password"}
                                 placeholder="确认新密码"
+                                value={passwordForm.confirmPassword}
+                                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                                 className="w-full px-4 py-2 rounded-lg border border-border focus:border-coral focus:outline-none"
                               />
+                              <Button
+                                onClick={handleChangePassword}
+                                disabled={isSaving}
+                                size="sm"
+                                className="bg-coral hover:bg-coral/90 text-white rounded-full"
+                              >
+                                {isSaving ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    修改中...
+                                  </>
+                                ) : (
+                                  "修改密码"
+                                )}
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -251,8 +431,8 @@ export default function AccountSettings() {
                               </p>
                             </div>
                           </div>
-                          <Button variant="outline" size="sm" className="rounded-full">
-                            开启
+                          <Button variant="outline" size="sm" className="rounded-full" disabled>
+                            即将上线
                           </Button>
                         </div>
                       </div>
@@ -304,6 +484,10 @@ export default function AccountSettings() {
                         </div>
                       ))}
                     </div>
+
+                    <p className="text-sm text-muted-foreground mt-4">
+                      通知功能即将上线，敬请期待
+                    </p>
                   </div>
                 )}
 
@@ -360,26 +544,12 @@ export default function AccountSettings() {
                         </button>
                       </div>
                     </div>
+
+                    <p className="text-sm text-muted-foreground mt-4">
+                      偏好设置功能即将上线，敬请期待
+                    </p>
                   </div>
                 )}
-
-                {/* 保存按钮 */}
-                <div className="mt-8 pt-6 border-t border-border flex justify-end">
-                  <Button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="bg-coral hover:bg-coral/90 text-white rounded-full px-8"
-                  >
-                    {isSaving ? (
-                      "保存中..."
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4 mr-2" />
-                        保存设置
-                      </>
-                    )}
-                  </Button>
-                </div>
               </div>
             </motion.div>
           </div>

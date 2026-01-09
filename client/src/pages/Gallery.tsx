@@ -1,6 +1,7 @@
 /**
  * 作品广场完整页面
  * 设计风格：梦幻童话风格
+ * 已对接后端 API
  */
 
 import { Button } from "@/components/ui/button";
@@ -9,55 +10,99 @@ import {
   ImageIcon,
   Heart,
   Eye,
-  MessageCircle,
   Share2,
   Crown,
   Flame,
   Clock,
   Search,
-  Play
+  Play,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect, useCallback } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { galleryApi, GalleryWork } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 // 排序选项
 const sortOptions = [
   { id: "hot", label: "最热", icon: Flame },
-  { id: "new", label: "最新", icon: Clock },
+  { id: "newest", label: "最新", icon: Clock },
   { id: "featured", label: "精选", icon: Crown },
 ];
 
-// 更多作品数据
-const allWorks = [
-  { id: 1, title: "小熊的生日派对", author: "琪琪妈妈", avatar: "/images/avatar-1.png", cover: "/images/work-1.png", likes: 328, views: 1256, comments: 42, featured: true, isNew: false },
-  { id: 2, title: "月亮上的小兔子", author: "星星爸爸", avatar: "/images/avatar-2.png", cover: "/images/work-2.png", likes: 256, views: 892, comments: 28, featured: false, isNew: true },
-  { id: 3, title: "勇敢的小消防员", author: "阳光家庭", avatar: "/images/avatar-3.png", cover: "/images/work-3.png", likes: 412, views: 1580, comments: 56, featured: true, isNew: false },
-  { id: 4, title: "彩虹桥的秘密", author: "梦想工坊", avatar: "/images/avatar-4.png", cover: "/images/work-4.png", likes: 189, views: 723, comments: 19, featured: false, isNew: true },
-  { id: 5, title: "小鱼的海底冒险", author: "蓝色海洋", avatar: "/images/avatar-5.png", cover: "/images/work-5.png", likes: 367, views: 1342, comments: 45, featured: true, isNew: false },
-  { id: 6, title: "森林音乐会", author: "快乐童年", avatar: "/images/avatar-6.png", cover: "/images/work-6.png", likes: 298, views: 1089, comments: 33, featured: false, isNew: false },
-  { id: 7, title: "小蝴蝶找妈妈", author: "花��家庭", avatar: "/images/avatar-1.png", cover: "/images/demo-book.png", likes: 234, views: 876, comments: 21, featured: false, isNew: true },
-  { id: 8, title: "恐龙宝宝的一天", author: "探险家", avatar: "/images/avatar-2.png", cover: "/images/demo-book.png", likes: 456, views: 1678, comments: 67, featured: true, isNew: false },
-  { id: 9, title: "小星星的愿望", author: "夜空妈妈", avatar: "/images/avatar-3.png", cover: "/images/demo-book.png", likes: 312, views: 1123, comments: 38, featured: false, isNew: false },
-  { id: 10, title: "农场里的朋友们", author: "田园爸爸", avatar: "/images/avatar-4.png", cover: "/images/demo-book.png", likes: 278, views: 945, comments: 29, featured: false, isNew: true },
-  { id: 11, title: "魔法森林历险记", author: "童话世界", avatar: "/images/avatar-5.png", cover: "/images/demo-book.png", likes: 523, views: 1890, comments: 78, featured: true, isNew: false },
-  { id: 12, title: "小企鹅学游泳", author: "冰雪家庭", avatar: "/images/avatar-6.png", cover: "/images/demo-book.png", likes: 198, views: 756, comments: 24, featured: false, isNew: false },
-];
-
 export default function Gallery() {
-  const [activeSort, setActiveSort] = useState("hot");
-  const [searchQuery, setSearchQuery] = useState("");
+  const { isAuthenticated } = useAuth();
 
-  // 排序和筛选
-  const filteredWorks = allWorks
-    .filter(w => searchQuery === "" || w.title.includes(searchQuery) || w.author.includes(searchQuery))
-    .sort((a, b) => {
-      if (activeSort === "hot") return b.likes - a.likes;
-      if (activeSort === "new") return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
-      if (activeSort === "featured") return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
-      return 0;
-    });
+  // 作品列表状态
+  const [works, setWorks] = useState<GalleryWork[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 筛选状态
+  const [activeSort, setActiveSort] = useState<"hot" | "newest" | "featured">("hot");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+
+  // 加载作品列表
+  const loadWorks = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await galleryApi.getGallery({
+        sort: activeSort,
+        search: searchQuery || undefined,
+      });
+      setWorks(response.works);
+      setTotal(response.total);
+    } catch (err: any) {
+      setError(err.message || "加载作品失败");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeSort, searchQuery]);
+
+  // 初始加载和筛选变化时重新加载
+  useEffect(() => {
+    loadWorks();
+  }, [loadWorks]);
+
+  // 搜索处理
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+  };
+
+  // 点赞处理
+  const handleLike = async (workId: string, isLiked: boolean) => {
+    if (!isAuthenticated) {
+      // 未登录提示
+      setError("请先登录后再点赞");
+      return;
+    }
+
+    try {
+      if (isLiked) {
+        const result = await galleryApi.unlikeWork(workId);
+        setWorks(works.map(w =>
+          w.workId === workId
+            ? { ...w, stats: { ...w.stats, likes: result.likes }, isLiked: false }
+            : w
+        ));
+      } else {
+        const result = await galleryApi.likeWork(workId);
+        setWorks(works.map(w =>
+          w.workId === workId
+            ? { ...w, stats: { ...w.stats, likes: result.likes }, isLiked: true }
+            : w
+        ));
+      }
+    } catch (err: any) {
+      setError(err.message || "操作失败");
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -84,6 +129,23 @@ export default function Gallery() {
             </p>
           </motion.div>
 
+          {/* 错误提示 */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm"
+            >
+              {error}
+              <button
+                onClick={() => setError(null)}
+                className="ml-2 underline hover:no-underline"
+              >
+                关闭
+              </button>
+            </motion.div>
+          )}
+
           {/* 搜索和排序 */}
           <motion.div
             className="flex flex-col md:flex-row gap-4 mb-8"
@@ -96,11 +158,18 @@ export default function Gallery() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 placeholder="搜索作品或作者..."
-                className="w-full pl-12 pr-4 py-3 rounded-full border-2 border-border focus:border-coral focus:outline-none"
+                className="w-full pl-12 pr-20 py-3 rounded-full border-2 border-border focus:border-coral focus:outline-none"
               />
+              <button
+                onClick={handleSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-coral text-white text-sm rounded-full hover:bg-coral/90"
+              >
+                搜索
+              </button>
             </div>
 
             {/* 排序选项 */}
@@ -111,7 +180,7 @@ export default function Gallery() {
                 return (
                   <button
                     key={option.id}
-                    onClick={() => setActiveSort(option.id)}
+                    onClick={() => setActiveSort(option.id as "hot" | "newest" | "featured")}
                     className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all ${
                       isActive
                         ? "bg-mint text-white shadow-md shadow-mint/25"
@@ -123,23 +192,43 @@ export default function Gallery() {
                   </button>
                 );
               })}
+
+              <Button
+                variant="outline"
+                onClick={loadWorks}
+                disabled={isLoading}
+                className="rounded-full"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+              </Button>
             </div>
           </motion.div>
 
           {/* 作品数量 */}
           <div className="mb-6 text-sm text-muted-foreground">
-            共 <span className="font-semibold text-foreground">{filteredWorks.length}</span> 个作品
+            共 <span className="font-semibold text-foreground">{total}</span> 个作品
           </div>
 
-          {/* 作品网格 */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredWorks.map((work, index) => (
-              <WorkCard key={work.id} work={work} index={index} />
-            ))}
-          </div>
-
-          {/* 空状态 */}
-          {filteredWorks.length === 0 && (
+          {/* 加载中 */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-12 h-12 animate-spin text-coral mb-4" />
+              <p className="text-muted-foreground">加载作品中...</p>
+            </div>
+          ) : works.length > 0 ? (
+            /* 作品网格 */
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {works.map((work, index) => (
+                <WorkCard
+                  key={work.workId}
+                  work={work}
+                  index={index}
+                  onLike={() => handleLike(work.workId, work.isLiked)}
+                />
+              ))}
+            </div>
+          ) : (
+            /* 空状态 */
             <div className="text-center py-20">
               <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                 <Search className="w-10 h-10 text-muted-foreground" />
@@ -157,11 +246,12 @@ export default function Gallery() {
 }
 
 interface WorkCardProps {
-  work: typeof allWorks[0];
+  work: GalleryWork;
   index: number;
+  onLike: () => void;
 }
 
-function WorkCard({ work, index }: WorkCardProps) {
+function WorkCard({ work, index, onLike }: WorkCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -172,7 +262,7 @@ function WorkCard({ work, index }: WorkCardProps) {
       {/* 封面图 */}
       <div className="relative aspect-[4/3] bg-gradient-to-br from-cream to-coral/10 overflow-hidden">
         <img
-          src={work.cover}
+          src={work.coverUrl || "/images/demo-book.png"}
           alt={work.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
@@ -184,19 +274,11 @@ function WorkCard({ work, index }: WorkCardProps) {
           </div>
         </div>
 
-        {/* 标签 */}
-        <div className="absolute top-3 left-3 flex gap-2">
-          {work.featured && (
-            <span className="bg-sunny text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
-              <Crown className="w-3 h-3" />
-              精选
-            </span>
-          )}
-          {work.isNew && (
-            <span className="bg-mint text-white text-xs font-medium px-2 py-1 rounded-full">
-              新作
-            </span>
-          )}
+        {/* 页数标签 */}
+        <div className="absolute top-3 left-3">
+          <span className="bg-black/50 text-white text-xs font-medium px-2 py-1 rounded-full">
+            {work.pageCount} 页
+          </span>
         </div>
       </div>
 
@@ -205,9 +287,13 @@ function WorkCard({ work, index }: WorkCardProps) {
         {/* 作者信息 */}
         <div className="flex items-center gap-3 mb-3">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral to-mint overflow-hidden">
-            <img src={work.avatar} alt={work.author} className="w-full h-full object-cover" />
+            <img
+              src={work.author.avatar || "/images/default-avatar.png"}
+              alt={work.author.nickname}
+              className="w-full h-full object-cover"
+            />
           </div>
-          <span className="text-sm text-muted-foreground">{work.author}</span>
+          <span className="text-sm text-muted-foreground">{work.author.nickname}</span>
         </div>
 
         {/* 标题 */}
@@ -218,17 +304,21 @@ function WorkCard({ work, index }: WorkCardProps) {
         {/* 互动数据 */}
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              <Heart className="w-4 h-4 text-coral" />
-              {work.likes}
-            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onLike();
+              }}
+              className={`flex items-center gap-1 transition-colors ${
+                work.isLiked ? "text-coral" : "hover:text-coral"
+              }`}
+            >
+              <Heart className={`w-4 h-4 ${work.isLiked ? "fill-coral" : ""}`} />
+              {work.stats.likes}
+            </button>
             <span className="flex items-center gap-1">
               <Eye className="w-4 h-4" />
-              {work.views}
-            </span>
-            <span className="flex items-center gap-1">
-              <MessageCircle className="w-4 h-4" />
-              {work.comments}
+              {work.stats.views}
             </span>
           </div>
           <button className="p-2 rounded-full hover:bg-muted transition-colors">

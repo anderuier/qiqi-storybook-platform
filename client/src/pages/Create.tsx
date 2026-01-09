@@ -1,6 +1,7 @@
 /**
  * 创作页面 - 绘本创作向导
  * 设计风格：梦幻童话风格
+ * 已对接后端 API
  */
 
 import { Button } from "@/components/ui/button";
@@ -17,13 +18,19 @@ import {
   ScrollText,
   Check,
   Upload,
-  Play,
-  Volume2
+  Volume2,
+  Loader2,
+  RefreshCw,
+  Eye,
+  Image as ImageIcon
 } from "lucide-react";
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useLocation } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCreate } from "@/hooks/useCreate";
+import { Progress } from "@/components/ui/progress";
 
 // 创作模式
 const createModes = [
@@ -47,7 +54,7 @@ const createModes = [
     id: "custom",
     icon: FileText,
     title: "自定义文本",
-    description: "输入您自己的故事文本，AI为其生成精美插图",
+    description: "输���您自己的故事文本，AI为其生成精美插图",
     example: "适合已有故事内容的家长",
     color: "sunny"
   }
@@ -57,55 +64,165 @@ const createModes = [
 const artStyles = [
   { id: "watercolor", name: "水彩手绘", image: "/images/demo-book.png" },
   { id: "cartoon", name: "卡通动漫", image: "/images/demo-book.png" },
-  { id: "crayon", name: "蜡笔涂鸦", image: "/images/demo-book.png" },
-  { id: "3d", name: "3D渲染", image: "/images/demo-book.png" },
   { id: "flat", name: "扁平插画", image: "/images/demo-book.png" },
-  { id: "paper", name: "剪纸风格", image: "/images/demo-book.png" },
+  { id: "3d", name: "3D渲染", image: "/images/demo-book.png" },
+  { id: "anime", name: "动漫风格", image: "/images/demo-book.png" },
+  { id: "oil", name: "油画风格", image: "/images/demo-book.png" },
+];
+
+// 故事风格
+const storyStyles = [
+  { id: "warm", name: "温馨感人" },
+  { id: "adventure", name: "冒险刺激" },
+  { id: "funny", name: "幽默搞笑" },
+  { id: "educational", name: "寓教于乐" },
+  { id: "fantasy", name: "奇幻梦幻" },
+  { id: "friendship", name: "友情故事" },
 ];
 
 // 语音选项
 const voiceOptions = [
+  { id: "female_gentle", name: "温柔女声", description: "甜美温柔的女性配音", icon: Volume2 },
+  { id: "female_lively", name: "活泼女声", description: "活泼开朗的女性配音", icon: Volume2 },
+  { id: "male_warm", name: "温暖男声", description: "温暖亲切的男性配音", icon: Volume2 },
+  { id: "child_cute", name: "童声朗读", description: "活泼可爱的儿童配音", icon: Volume2 },
   { id: "clone", name: "克隆我的声音", description: "上传30秒录音，AI克隆您的声音", icon: Mic2 },
-  { id: "female", name: "温柔女声", description: "甜美温柔的女性配音", icon: Volume2 },
-  { id: "male", name: "温暖男声", description: "温暖亲切的男性配音", icon: Volume2 },
-  { id: "child", name: "童声朗读", description: "活泼可爱的儿童配音", icon: Volume2 },
 ];
 
 export default function Create() {
+  const [, setLocation] = useLocation();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+
+  // 创作流程状态
+  const create = useCreate();
+
+  // 本地表单状态
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
+  const [childName, setChildName] = useState("");
+  const [childAge, setChildAge] = useState(4);
   const [storyInput, setStoryInput] = useState("");
-  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [selectedStoryStyle, setSelectedStoryStyle] = useState<string>("warm");
+  const [storyLength, setStoryLength] = useState<"short" | "medium" | "long">("medium");
+  const [selectedArtStyle, setSelectedArtStyle] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
 
-  const totalSteps = 4;
+  const totalSteps = 5; // 输入 -> 故事 -> 分镜 -> 图片 -> 预览
 
+  // 检查登录状态
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setLocation("/login");
+    }
+  }, [authLoading, isAuthenticated, setLocation]);
+
+  // 判断是否可以进入下一步
   const canProceed = () => {
     switch (currentStep) {
-      case 1: return selectedMode !== null;
-      case 2: return storyInput.trim().length > 0;
-      case 3: return selectedStyle !== null;
-      case 4: return selectedVoice !== null;
-      default: return false;
+      case 1:
+        return selectedMode !== null && childName.trim().length > 0 && storyInput.trim().length > 0;
+      case 2:
+        return create.story !== null;
+      case 3:
+        return create.storyboard !== null && selectedArtStyle !== null;
+      case 4:
+        return create.imageTask.status === "completed";
+      case 5:
+        return selectedVoice !== null;
+      default:
+        return false;
     }
   };
 
-  const handleNext = () => {
-    if (canProceed() && currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+  // 生成故事
+  const handleGenerateStory = async () => {
+    try {
+      await create.generateStory({
+        childName,
+        childAge,
+        theme: storyInput,
+        style: selectedStoryStyle as any,
+        length: storyLength,
+      });
+      setCurrentStep(2);
+    } catch (err) {
+      // 错误已在 hook 中处理
     }
   };
 
+  // 生成分镜
+  const handleGenerateStoryboard = async () => {
+    try {
+      await create.generateStoryboard();
+      setCurrentStep(3);
+    } catch (err) {
+      // 错误已在 hook 中处理
+    }
+  };
+
+  // 开始生成图片
+  const handleStartImageGeneration = async () => {
+    if (!selectedArtStyle) return;
+    try {
+      await create.startImageGeneration(selectedArtStyle);
+      setCurrentStep(4);
+    } catch (err) {
+      // 错误已在 hook 中处理
+    }
+  };
+
+  // 轮询生成图片
+  useEffect(() => {
+    if (create.imageTask.status === "processing" && create.imageTask.taskId) {
+      const interval = setInterval(async () => {
+        try {
+          const result = await create.continueImageGeneration();
+          if (result.status === "completed") {
+            clearInterval(interval);
+          }
+        } catch (err) {
+          clearInterval(interval);
+        }
+      }, 2000); // 每2秒生成一张
+
+      return () => clearInterval(interval);
+    }
+  }, [create.imageTask.status, create.imageTask.taskId]);
+
+  // 上一步
   const handlePrev = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
-  const handleGenerate = () => {
-    // TODO: 调用AI生成接口
-    alert("绘本生成功能即将上线，敬请期待！");
+  // 下一步
+  const handleNext = () => {
+    if (currentStep === 1) {
+      handleGenerateStory();
+    } else if (currentStep === 2) {
+      handleGenerateStoryboard();
+    } else if (currentStep === 3) {
+      handleStartImageGeneration();
+    } else if (currentStep === 4 && create.imageTask.status === "completed") {
+      setCurrentStep(5);
+    }
   };
+
+  // 完成创作
+  const handleComplete = () => {
+    // TODO: 保存作品并跳转到预览页
+    setLocation("/my-works");
+  };
+
+  // 加载中显示
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-coral" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-cream/30 to-background">
@@ -130,29 +247,52 @@ export default function Create() {
 
           {/* 步骤指示器 */}
           <div className="flex items-center justify-center gap-2 mb-10">
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="flex items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
-                    step === currentStep
-                      ? "bg-coral text-white shadow-lg shadow-coral/25"
-                      : step < currentStep
-                      ? "bg-mint text-white"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {step < currentStep ? <Check className="w-5 h-5" /> : step}
+            {["输入", "故事", "分镜", "图片", "完成"].map((label, index) => {
+              const step = index + 1;
+              return (
+                <div key={step} className="flex items-center">
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
+                        step === currentStep
+                          ? "bg-coral text-white shadow-lg shadow-coral/25"
+                          : step < currentStep
+                          ? "bg-mint text-white"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {step < currentStep ? <Check className="w-5 h-5" /> : step}
+                    </div>
+                    <span className="text-xs mt-1 text-muted-foreground">{label}</span>
+                  </div>
+                  {step < 5 && (
+                    <div
+                      className={`w-8 md:w-12 h-1 mx-1 rounded ${
+                        step < currentStep ? "bg-mint" : "bg-muted"
+                      }`}
+                    />
+                  )}
                 </div>
-                {step < 4 && (
-                  <div
-                    className={`w-12 h-1 mx-1 rounded ${
-                      step < currentStep ? "bg-mint" : "bg-muted"
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* 错误提示 */}
+          {create.error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm"
+            >
+              {create.error}
+              <button
+                onClick={create.clearError}
+                className="ml-2 underline hover:no-underline"
+              >
+                关闭
+              </button>
+            </motion.div>
+          )}
 
           {/* 步骤内容 */}
           <motion.div
@@ -163,127 +303,296 @@ export default function Create() {
             transition={{ duration: 0.3 }}
             className="bg-white rounded-3xl p-8 shadow-lg border border-border/50"
           >
-            {/* 步骤1：选择创作模式 */}
+            {/* 步骤1：输入信息 */}
             {currentStep === 1 && (
-              <div>
-                <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold flex items-center gap-2">
                   <BookOpen className="w-6 h-6 text-coral" />
-                  选择创作模式
+                  创作信息
                 </h2>
-                <div className="grid md:grid-cols-3 gap-4">
-                  {createModes.map((mode) => {
-                    const Icon = mode.icon;
-                    const isSelected = selectedMode === mode.id;
-                    const colorClasses = {
-                      coral: "border-coral bg-coral/5",
-                      mint: "border-mint bg-mint/5",
-                      sunny: "border-sunny bg-sunny/5"
-                    };
-                    return (
-                      <div
-                        key={mode.id}
-                        onClick={() => setSelectedMode(mode.id)}
-                        className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
-                          isSelected
-                            ? colorClasses[mode.color as keyof typeof colorClasses]
-                            : "border-border hover:border-muted-foreground/30"
-                        }`}
-                      >
-                        <Icon className={`w-8 h-8 mb-3 text-${mode.color}`} />
-                        <h3 className="font-semibold mb-2">{mode.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {mode.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground/70">
-                          {mode.example}
-                        </p>
-                      </div>
-                    );
-                  })}
+
+                {/* 孩子信息 */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">孩子的名字</label>
+                    <input
+                      type="text"
+                      value={childName}
+                      onChange={(e) => setChildName(e.target.value)}
+                      placeholder="输入孩子的名字"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">孩子的年龄</label>
+                    <select
+                      value={childAge}
+                      onChange={(e) => setChildAge(Number(e.target.value))}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
+                    >
+                      {[3, 4, 5, 6].map((age) => (
+                        <option key={age} value={age}>{age}岁</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 创作模式 */}
+                <div>
+                  <label className="block text-sm font-medium mb-3">选择创作模式</label>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {createModes.map((mode) => {
+                      const Icon = mode.icon;
+                      const isSelected = selectedMode === mode.id;
+                      return (
+                        <div
+                          key={mode.id}
+                          onClick={() => setSelectedMode(mode.id)}
+                          className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                            isSelected
+                              ? "border-coral bg-coral/5"
+                              : "border-border hover:border-muted-foreground/30"
+                          }`}
+                        >
+                          <Icon className={`w-6 h-6 mb-2 ${isSelected ? "text-coral" : "text-muted-foreground"}`} />
+                          <h3 className="font-semibold text-sm">{mode.title}</h3>
+                          <p className="text-xs text-muted-foreground mt-1">{mode.description}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 故事主题/内容 */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    {selectedMode === "custom" ? "故事内容" : "故事主题"}
+                  </label>
+                  <textarea
+                    value={storyInput}
+                    onChange={(e) => setStoryInput(e.target.value)}
+                    placeholder={
+                      selectedMode === "theme"
+                        ? "请输入故事主题，例如：小兔子的森林冒险..."
+                        : selectedMode === "poem"
+                        ? "请输入古诗词标题，例如：静夜思..."
+                        : "请输入您的故事内容..."
+                    }
+                    className="w-full h-32 p-4 rounded-2xl border-2 border-border focus:border-coral focus:outline-none resize-none"
+                  />
+                </div>
+
+                {/* 故事风格和长度 */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">故事风格</label>
+                    <select
+                      value={selectedStoryStyle}
+                      onChange={(e) => setSelectedStoryStyle(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
+                    >
+                      {storyStyles.map((style) => (
+                        <option key={style.id} value={style.id}>{style.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">故事长度</label>
+                    <select
+                      value={storyLength}
+                      onChange={(e) => setStoryLength(e.target.value as any)}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
+                    >
+                      <option value="short">短篇 (4-6页)</option>
+                      <option value="medium">中篇 (6-10页)</option>
+                      <option value="long">长篇 (10-15页)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* 步骤2：输入内容 */}
+            {/* 步骤2：查看生成的故事 */}
             {currentStep === 2 && (
-              <div>
-                <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold flex items-center gap-2">
                   <FileText className="w-6 h-6 text-mint" />
-                  {selectedMode === "theme" && "输入故事主题"}
-                  {selectedMode === "poem" && "输入古诗词标题"}
-                  {selectedMode === "custom" && "输入故事内容"}
+                  AI 生成的故事
                 </h2>
-                <textarea
-                  value={storyInput}
-                  onChange={(e) => setStoryInput(e.target.value)}
-                  placeholder={
-                    selectedMode === "theme"
-                      ? "请输入您想要的故事主题，例如：小兔子的森林冒险..."
-                      : selectedMode === "poem"
-                      ? "请输入古诗词标题，例如：静夜思、春晓..."
-                      : "请输入您的故事内容..."
-                  }
-                  className="w-full h-40 p-4 rounded-2xl border-2 border-border focus:border-mint focus:outline-none resize-none text-base"
-                />
-                <p className="text-sm text-muted-foreground mt-3">
-                  {selectedMode === "theme" && "AI将根据主题为您生成适合3-6岁儿童的完整故事"}
-                  {selectedMode === "poem" && "AI将把古诗词改编成有趣易懂的儿童故事"}
-                  {selectedMode === "custom" && "AI将为您的故事配上精美的插图"}
-                </p>
-              </div>
-            )}
 
-            {/* 步骤3：选择艺术风格 */}
-            {currentStep === 3 && (
-              <div>
-                <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                  <Palette className="w-6 h-6 text-sunny" />
-                  选择艺术风格
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {artStyles.map((style) => {
-                    const isSelected = selectedStyle === style.id;
-                    return (
-                      <div
-                        key={style.id}
-                        onClick={() => setSelectedStyle(style.id)}
-                        className={`relative rounded-2xl overflow-hidden cursor-pointer transition-all ${
-                          isSelected
-                            ? "ring-4 ring-sunny shadow-lg"
-                            : "hover:shadow-md"
-                        }`}
-                      >
-                        <div className="aspect-square bg-gradient-to-br from-cream to-mint/10">
-                          <img
-                            src={style.image}
-                            alt={style.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                          <span className="text-white font-medium text-sm">
-                            {style.name}
-                          </span>
-                        </div>
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 w-6 h-6 bg-sunny rounded-full flex items-center justify-center">
-                            <Check className="w-4 h-4 text-white" />
-                          </div>
-                        )}
+                {create.isLoading ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="w-12 h-12 animate-spin text-coral mb-4" />
+                    <p className="text-muted-foreground">AI 正在创作故事...</p>
+                    <p className="text-sm text-muted-foreground mt-2">预计需要 10-20 秒</p>
+                  </div>
+                ) : create.story ? (
+                  <>
+                    <div className="bg-cream/30 rounded-2xl p-6">
+                      <h3 className="text-lg font-bold mb-4">{create.story.title}</h3>
+                      <div className="prose prose-sm max-w-none whitespace-pre-wrap">
+                        {create.story.content}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>字数：{create.story.wordCount} 字</span>
+                      <span>预计页数：{create.story.estimatedPages} 页</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        create.reset();
+                        setCurrentStep(1);
+                      }}
+                      className="rounded-full"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      重新生成
+                    </Button>
+                  </>
+                ) : null}
               </div>
             )}
 
-            {/* 步骤4：选择语音 */}
+            {/* 步骤3：分镜和选择艺术风格 */}
+            {currentStep === 3 && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Palette className="w-6 h-6 text-sunny" />
+                  分镜剧本 & 艺术风格
+                </h2>
+
+                {create.isLoading ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="w-12 h-12 animate-spin text-mint mb-4" />
+                    <p className="text-muted-foreground">AI 正在生成分镜剧本...</p>
+                  </div>
+                ) : create.storyboard ? (
+                  <>
+                    {/* 分镜预览 */}
+                    <div className="bg-cream/30 rounded-2xl p-4">
+                      <h3 className="font-semibold mb-3">分镜剧本 ({create.storyboard.pageCount} 页)</h3>
+                      <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {create.storyboard.pages.map((page) => (
+                          <div key={page.pageNumber} className="bg-white rounded-xl p-3 text-sm">
+                            <span className="font-medium text-coral">第 {page.pageNumber} 页：</span>
+                            <span className="text-muted-foreground ml-2">{page.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 艺术风格选择 */}
+                    <div>
+                      <label className="block text-sm font-medium mb-3">选择艺术风格</label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {artStyles.map((style) => {
+                          const isSelected = selectedArtStyle === style.id;
+                          return (
+                            <div
+                              key={style.id}
+                              onClick={() => setSelectedArtStyle(style.id)}
+                              className={`relative rounded-2xl overflow-hidden cursor-pointer transition-all ${
+                                isSelected ? "ring-4 ring-sunny shadow-lg" : "hover:shadow-md"
+                              }`}
+                            >
+                              <div className="aspect-square bg-gradient-to-br from-cream to-mint/10">
+                                <img
+                                  src={style.image}
+                                  alt={style.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                                <span className="text-white font-medium text-sm">{style.name}</span>
+                              </div>
+                              {isSelected && (
+                                <div className="absolute top-2 right-2 w-6 h-6 bg-sunny rounded-full flex items-center justify-center">
+                                  <Check className="w-4 h-4 text-white" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            )}
+
+            {/* 步骤4：图片生成进度 */}
             {currentStep === 4 && (
-              <div>
-                <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <ImageIcon className="w-6 h-6 text-coral" />
+                  生成插图
+                </h2>
+
+                <div className="text-center py-8">
+                  {create.imageTask.status === "processing" && (
+                    <>
+                      <Loader2 className="w-16 h-16 animate-spin text-coral mx-auto mb-4" />
+                      <p className="text-lg font-medium mb-2">
+                        正在生成第 {create.imageTask.completedPages + 1} / {create.imageTask.totalPages} 张图片
+                      </p>
+                      <Progress value={create.imageTask.progress} className="w-full max-w-md mx-auto mb-4" />
+                      <p className="text-sm text-muted-foreground">
+                        AI 正在为每一页绘制精美插图，请耐心等待...
+                      </p>
+                    </>
+                  )}
+
+                  {create.imageTask.status === "completed" && (
+                    <>
+                      <div className="w-16 h-16 bg-mint rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Check className="w-8 h-8 text-white" />
+                      </div>
+                      <p className="text-lg font-medium mb-2">所有插图生成完成！</p>
+                      <p className="text-sm text-muted-foreground">
+                        共生成 {create.imageTask.totalPages} 张精美插图
+                      </p>
+                    </>
+                  )}
+
+                  {create.imageTask.status === "failed" && (
+                    <>
+                      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-2xl">😢</span>
+                      </div>
+                      <p className="text-lg font-medium mb-2 text-red-600">图片生成失败</p>
+                      <Button
+                        onClick={() => selectedArtStyle && create.startImageGeneration(selectedArtStyle)}
+                        className="mt-4"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        重试
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                {/* 已生成的图片预览 */}
+                {Object.keys(create.pageImages).length > 0 && (
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                    {Object.entries(create.pageImages).map(([pageNum, url]) => (
+                      <div key={pageNum} className="aspect-square rounded-xl overflow-hidden bg-cream">
+                        <img src={url} alt={`第${pageNum}页`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 步骤5：选择语音并完成 */}
+            {currentStep === 5 && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold flex items-center gap-2">
                   <Mic2 className="w-6 h-6 text-coral" />
                   选择朗读语音
                 </h2>
+
                 <div className="grid md:grid-cols-2 gap-4">
                   {voiceOptions.map((voice) => {
                     const Icon = voice.icon;
@@ -305,27 +614,23 @@ export default function Create() {
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold mb-1">{voice.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {voice.description}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{voice.description}</p>
                           {voice.id === "clone" && isSelected && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mt-3 rounded-full"
-                            >
+                            <Button variant="outline" size="sm" className="mt-3 rounded-full">
                               <Upload className="w-4 h-4 mr-2" />
                               上传录音
                             </Button>
                           )}
                         </div>
-                        {isSelected && (
-                          <Check className="w-5 h-5 text-coral" />
-                        )}
+                        {isSelected && <Check className="w-5 h-5 text-coral" />}
                       </div>
                     );
                   })}
                 </div>
+
+                <p className="text-sm text-muted-foreground text-center">
+                  语音功能即将上线，目前可先跳过此步骤
+                </p>
               </div>
             )}
           </motion.div>
@@ -335,7 +640,7 @@ export default function Create() {
             <Button
               variant="outline"
               onClick={handlePrev}
-              disabled={currentStep === 1}
+              disabled={currentStep === 1 || create.isLoading}
               className="rounded-full px-6"
             >
               <ChevronLeft className="w-5 h-5 mr-1" />
@@ -345,20 +650,32 @@ export default function Create() {
             {currentStep < totalSteps ? (
               <Button
                 onClick={handleNext}
-                disabled={!canProceed()}
+                disabled={!canProceed() || create.isLoading}
                 className="bg-coral hover:bg-coral/90 text-white rounded-full px-6"
               >
-                下一步
-                <ChevronRight className="w-5 h-5 ml-1" />
+                {create.isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    {currentStep === 1 && "生成故事"}
+                    {currentStep === 2 && "生成分镜"}
+                    {currentStep === 3 && "生成图片"}
+                    {currentStep === 4 && "下一步"}
+                    <ChevronRight className="w-5 h-5 ml-1" />
+                  </>
+                )}
               </Button>
             ) : (
               <Button
-                onClick={handleGenerate}
-                disabled={!canProceed()}
+                onClick={handleComplete}
+                disabled={!selectedVoice}
                 className="bg-mint hover:bg-mint/90 text-white rounded-full px-8"
               >
                 <Sparkles className="w-5 h-5 mr-2" />
-                开始生成绘本
+                完成创作
               </Button>
             )}
           </div>
