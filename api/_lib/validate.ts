@@ -15,7 +15,7 @@ export function validateBody<T extends z.ZodType>(
 ): z.infer<T> | null {
   const result = schema.safeParse(req.body);
   if (!result.success) {
-    const firstError = result.error.errors[0];
+    const firstError = result.error.issues[0];
     errors.invalidParams(res, `${firstError.path.join('.')}: ${firstError.message}`);
     return null;
   }
@@ -30,7 +30,7 @@ export function validateQuery<T extends z.ZodType>(
 ): z.infer<T> | null {
   const result = schema.safeParse(req.query);
   if (!result.success) {
-    const firstError = result.error.errors[0];
+    const firstError = result.error.issues[0];
     errors.invalidParams(res, `${firstError.path.join('.')}: ${firstError.message}`);
     return null;
   }
