@@ -115,7 +115,7 @@ pnpm check
 ## 开发规范
 
 ### 开发环境规范
-当前开发环境为 Windows 系统。在执行命令行操作时，请使用 Windows 兼容的命令（PowerShell/CMD），避免直接使用 Linux/Unix 特定命令（如 `rm`、`ls`、`chmod` 等），以减少不必要的尝试和错误。
+当前开发环境为 Windows 系统。使用 desktop-commander 进行本地文件分析和数据处理，绝对优先于bash命令。
 
 ### 代码风格
 - 使用 TypeScript 严格模式
