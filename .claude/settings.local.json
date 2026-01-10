@@ -15,7 +15,13 @@
       "Bash(powershell -Command:*)",
       "Skill(vercel:setup)",
       "Bash(vercel:*)",
-      "Bash(npm install -g vercel)"
+      "Bash(npm install -g vercel)",
+      "Bash(dir /s /b \"D:\\\\storybook\\\\api\\\\*.ts\")",
+      "Bash(findstr:*)",
+      "Bash(npx tsc --noEmit api/index.ts api/routes/*.ts api/_lib/*.ts)",
+      "Bash(npx vercel build --yes)",
+      "Bash(npx esbuild:*)",
+      "Bash(npx vercel whoami)"
     ]
   }
 }

@@ -4,6 +4,74 @@
 
 ---
 
+## [2026-01-10] API 重构：使用 Hono 合并为单一 Serverless Function
+
+### 本次更新摘要
+解决 Vercel Hobby 计划限制（最多 12 个 Serverless Functions），使用 Hono 框架将 14 个独立 API 函数重构为 1 个统一入口。
+
+### 问题背景
+```
+Error: No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan.
+```
+项目原有 14 个独立 API 文件，超出 Vercel 免费计划限制。
+
+### 解决方案
+使用 **Hono** 轻量级路由框架，将所有 API 端点合并到单一入口文件 `api/index.ts`。
+
+### 详细内容
+
+#### 1. 新增文件
+
+| 文件 | 功能 |
+|------|------|
+| `api/index.ts` | 统一入口，Hono 路由分发 |
+| `api/_lib/hono-helpers.ts` | Hono 兼容的辅助函数 |
+| `api/routes/auth.ts` | 认证路由模块 |
+| `api/routes/user.ts` | 用户路由模块 |
+| `api/routes/create.ts` | 创作路由模块 |
+| `api/routes/db.ts` | 数据库路由模块 |
+
+#### 2. 删除文件
+删除原有 14 个独立 API 文件：
+- `api/auth/register.ts`, `api/auth/login.ts`, `api/auth/logout.ts`
+- `api/user/me.ts`, `api/user/profile.ts`, `api/user/password.ts`
+- `api/create/story.ts`, `api/create/storyboard.ts`, `api/create/image.ts`, `api/create/images.ts`
+- `api/create/task/[taskId].ts`, `api/create/task/[taskId]/continue.ts`
+- `api/db/init.ts`, `api/health.ts`
+
+#### 3. 修改文件
+
+| 文件 | 修改内容 |
+|------|----------|
+| `vercel.json` | 路由重写规则：`/api/*` → `/api` |
+| `api/_lib/validate.ts` | 修复 Zod v4 API：`errors` → `issues` |
+| `package.json` | 添加 `hono@4.11.3` 依赖 |
+
+#### 4. 修复的问题
+- **Zod v4 API 变更**：`result.error.errors` → `result.error.issues`
+- **TypeScript 类型推断**：使用 `'error' in validation` 进行类型守卫
+
+### 代码统计
+- 新增文件：5 个
+- 删除文件：14 个
+- 修改文件：3 个
+- Serverless Functions：14 → 1
+
+### 当前项目状态
+- **前端 UI**: ✅ 完成
+- **前端 API 对接**: ✅ 完成
+- **后端 API 框架**: ✅ 完成 (Hono 单一入口)
+- **Vercel 部署**: ✅ 完成
+- **数据库**: ⏳ 待配置
+- **环境变量**: ⏳ 待配置
+
+### 下一步计划
+- 创建 Vercel Postgres 数据库
+- 配置环境变量
+- 功能测试
+
+---
+
 ## [2026-01-09] 后端 API 框架与前端页面对接
 
 ### 本次更新摘要
