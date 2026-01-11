@@ -24,7 +24,8 @@
       "Bash(npx vercel whoami)",
       "Bash(node:*)",
       "Bash(curl:*)",
-      "WebFetch(domain:storybook-gamma-ten.vercel.app)"
+      "WebFetch(domain:storybook-gamma-ten.vercel.app)",
+      "Bash(git rm:*)"
     ]
   }
 }

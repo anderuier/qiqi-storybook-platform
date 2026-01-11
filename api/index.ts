@@ -7,6 +7,7 @@ import { sql } from '@vercel/postgres';
 import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
+import { STORY_SYSTEM_PROMPT, buildStoryUserPrompt } from './prompts.config';
 
 // ==================== 工具函数 ====================
 
@@ -33,19 +34,6 @@ function getAIClient(): OpenAI {
   }
   return aiClient;
 }
-
-// 故事生成提示词
-const STORY_SYSTEM_PROMPT = `你是一位专业的儿童故事作家，擅长为3-6岁学龄前儿童创作温馨、有趣、富有教育意义的童话故事。
-
-创作要求：
-1. 语言简单易懂，适合幼儿理解
-2. 故事情节生动有趣，富有想象力
-3. 包含积极正面的价值观和教育意义
-4. 角色形象可爱，容易引起孩子共鸣
-5. 故事长度适中，约500-800字
-6. 可以包含简单的对话和互动元素
-
-请根据用户提供的主题或要求，创作一个完整的童话故事。`;
 
 // 用户信息接口
 interface UserPayload {
@@ -443,33 +431,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const client = getAIClient();
 
-        // 构建用户提示
-        let userPrompt = `请为我创作一个关于"${theme}"的童话故事。`;
-        if (childName) {
-          userPrompt += `\n主角名字叫"${childName}"。`;
-        }
-        if (childAge) {
-          userPrompt += `\n故事适合${childAge}岁的孩子。`;
-        }
-        if (style) {
-          const styleMap: Record<string, string> = {
-            warm: '温馨感人',
-            adventure: '冒险刺激',
-            funny: '幽默搞笑',
-            educational: '寓教于乐',
-            fantasy: '奇幻魔法',
-            friendship: '友情主题',
-          };
-          userPrompt += `\n故事风格：${styleMap[style] || style}。`;
-        }
-        if (length) {
-          const lengthMap: Record<string, string> = {
-            short: '简短的（约300-500字）',
-            medium: '中等长度的（约500-800字）',
-            long: '较长的（约800-1200字）',
-          };
-          userPrompt += `\n故事长度：${lengthMap[length] || length}。`;
-        }
+        // 使用配置文件中的函数构建用户提示
+        const userPrompt = buildStoryUserPrompt({
+          theme,
+          childName,
+          childAge,
+          style,
+          length,
+        });
 
         const response = await client.chat.completions.create({
           model: process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022',
