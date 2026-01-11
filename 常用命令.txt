@@ -1,0 +1,7 @@
+---打开本地环境预览网页效果
+pnpm dev
+
+
+---本地上传部署vercel
+npx vercel login
+vercel

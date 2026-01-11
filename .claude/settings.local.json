@@ -21,7 +21,9 @@
       "Bash(npx tsc --noEmit api/index.ts api/routes/*.ts api/_lib/*.ts)",
       "Bash(npx vercel build --yes)",
       "Bash(npx esbuild:*)",
-      "Bash(npx vercel whoami)"
+      "Bash(npx vercel whoami)",
+      "Bash(node:*)",
+      "Bash(curl:*)"
     ]
   }
 }
