@@ -3,15 +3,5 @@
   "buildCommand": "pnpm run build:client",
   "outputDirectory": "dist/public",
   "installCommand": "pnpm install",
-  "framework": "vite",
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    },
-    {
-      "source": "/((?!api|assets).*)",
-      "destination": "/index.html"
-    }
-  ]
+  "framework": "vite"
 }

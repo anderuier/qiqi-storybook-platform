@@ -1,15 +1,15 @@
 /**
- * 简化的 API 测试入口
- * 用于排查部署问题
+ * API 入口 - Vercel Serverless Function
+ * 路径: /api/*
  */
 
 import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 
-// 不使用 basePath，让 Vercel 的 rewrites 处理路由
-const app = new Hono();
+// 使用 basePath 匹配 Vercel 的路由
+const app = new Hono().basePath('/api');
 
-// 最简单的健康检查
+// 健康检查
 app.get('/health', (c) => {
   return c.json({
     success: true,
@@ -23,7 +23,7 @@ app.get('/', (c) => {
   return c.json({
     success: true,
     message: 'API root',
-    endpoints: ['/health', '/test-db'],
+    endpoints: ['/api/health', '/api/test-db', '/api/db/init'],
   });
 });
 
@@ -45,26 +45,54 @@ app.get('/test-db', async (c) => {
   }
 });
 
+// 数据库初始化
+app.post('/db/init', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { secret } = body || {};
+
+    const DB_INIT_SECRET = process.env.DB_INIT_SECRET || 'init-secret-key';
+
+    if (secret !== DB_INIT_SECRET) {
+      return c.json({
+        success: false,
+        error: 'Invalid secret',
+      }, 403);
+    }
+
+    const { initDatabase } = await import('./_lib/db.js');
+    await initDatabase();
+
+    return c.json({
+      success: true,
+      data: { message: '数据库初始化成功' },
+    });
+  } catch (error) {
+    console.error('数据库初始化失败:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, 500);
+  }
+});
+
 // 404 处理
 app.notFound((c) => {
-  return c.json({ error: 'Not Found', path: c.req.path }, 404);
+  return c.json({
+    error: 'Not Found',
+    path: c.req.path,
+    method: c.req.method,
+  }, 404);
 });
 
 // 错误处理
 app.onError((err, c) => {
-  console.error('Error:', err);
+  console.error('API Error:', err);
   return c.json({
     error: err.message,
-    stack: err.stack,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
   }, 500);
 });
 
-// 导出所有 HTTP 方法
-export const GET = handle(app);
-export const POST = handle(app);
-export const PUT = handle(app);
-export const DELETE = handle(app);
-export const PATCH = handle(app);
-export const OPTIONS = handle(app);
-
+// Vercel Serverless Function 导出
 export default handle(app);
