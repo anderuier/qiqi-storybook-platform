@@ -4,8 +4,119 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-import { generateToken, getUserFromRequest } from './_lib/auth';
-import { hashPassword, verifyPassword } from './_lib/password';
+import { webcrypto } from 'node:crypto';
+import bcrypt from 'bcryptjs';
+
+// ==================== 工具函数 ====================
+
+// 使用 Node.js 的 webcrypto API
+const crypto = webcrypto;
+
+// JWT 配置
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_EXPIRES_IN = 7 * 24 * 60 * 60 * 1000; // 7 天
+
+// 用户信息接口
+interface UserPayload {
+  userId: string;
+  email: string;
+  nickname: string;
+}
+
+// Base64 URL 编码
+function base64UrlEncode(str: string): string {
+  return Buffer.from(str)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+function base64UrlDecode(str: string): string {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) {
+    str += '=';
+  }
+  return Buffer.from(str, 'base64').toString();
+}
+
+// HMAC 签名
+async function sign(payload: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(JWT_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(payload)
+  );
+  return base64UrlEncode(String.fromCharCode(...new Uint8Array(signature)));
+}
+
+// 生成 JWT Token
+async function generateToken(user: UserPayload): Promise<string> {
+  const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = base64UrlEncode(
+    JSON.stringify({
+      ...user,
+      exp: Date.now() + JWT_EXPIRES_IN,
+      iat: Date.now(),
+    })
+  );
+  const signature = await sign(`${header}.${payload}`);
+  return `${header}.${payload}.${signature}`;
+}
+
+// 验证 JWT Token
+async function verifyToken(token: string): Promise<UserPayload | null> {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    const [header, payload, signature] = parts;
+    const expectedSignature = await sign(`${header}.${payload}`);
+
+    if (signature !== expectedSignature) return null;
+
+    const data = JSON.parse(base64UrlDecode(payload));
+
+    if (data.exp && data.exp < Date.now()) return null;
+
+    return {
+      userId: data.userId,
+      email: data.email,
+      nickname: data.nickname,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// 从请求中获取用户信息
+async function getUserFromRequest(req: VercelRequest): Promise<UserPayload | null> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  const token = authHeader.slice(7);
+  return verifyToken(token);
+}
+
+// 密码加密
+const SALT_ROUNDS = 10;
+
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, SALT_ROUNDS);
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
 
 // 生成唯一 ID
 function generateId(prefix: string = ''): string {
