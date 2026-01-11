@@ -2,7 +2,11 @@
  * JWT 认证工具函数
  */
 
+import { webcrypto } from 'node:crypto';
 import type { VercelRequest } from '@vercel/node';
+
+// 使用 Node.js 的 webcrypto API
+const crypto = webcrypto;
 
 // JWT 密钥（生产环境应从环境变量读取）
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
