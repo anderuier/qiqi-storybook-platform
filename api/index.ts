@@ -425,7 +425,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      const { theme, childName, childAge, style } = req.body || {};
+      // 支持两种请求格式
+      const body = req.body || {};
+      const input = body.input || body;
+      const { theme, childName, childAge, style, length } = input;
 
       if (!theme) {
         return res.status(400).json({
@@ -449,7 +452,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           userPrompt += `\n故事适合${childAge}岁的孩子。`;
         }
         if (style) {
-          userPrompt += `\n故事风格：${style}。`;
+          const styleMap: Record<string, string> = {
+            warm: '温馨感人',
+            adventure: '冒险刺激',
+            funny: '幽默搞笑',
+            educational: '寓教于乐',
+            fantasy: '奇幻魔法',
+            friendship: '友情主题',
+          };
+          userPrompt += `\n故事风格：${styleMap[style] || style}。`;
+        }
+        if (length) {
+          const lengthMap: Record<string, string> = {
+            short: '简短的（约300-500字）',
+            medium: '中等长度的（约500-800字）',
+            long: '较长的（约800-1200字）',
+          };
+          userPrompt += `\n故事长度：${lengthMap[length] || length}。`;
         }
 
         const response = await client.chat.completions.create({
@@ -470,18 +489,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const story = response.choices[0]?.message?.content || '';
 
+        // 生成故事 ID 和作品 ID
+        const storyId = generateId('story');
+        const workId = generateId('work');
+
+        // 从故事中提取标题（第一行或前20个字）
+        const firstLine = story.split('\n')[0].replace(/^[#\s*]+/, '').trim();
+        const title = firstLine.length > 30 ? firstLine.substring(0, 30) + '...' : firstLine || '我的童话故事';
+
         return res.status(200).json({
           success: true,
           data: {
-            story,
+            storyId,
+            workId,
+            title,
+            content: story,
             wordCount: story.length,
-            model: response.model,
-            usage: response.usage
-              ? {
-                  inputTokens: response.usage.prompt_tokens,
-                  outputTokens: response.usage.completion_tokens,
-                }
-              : undefined,
+            estimatedPages: Math.ceil(story.length / 100),
+            aiProvider: 'claude',
+            aiModel: response.model || 'claude-haiku',
           },
         });
       } catch (error) {
