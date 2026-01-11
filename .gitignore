@@ -113,9 +113,16 @@ docs/SESSION_SUMMARY_*.md
 docs/git-*.md
 docs/tech-overview.md
 docs/项目小结.txt
-/docs/产品发展路线图.jpg
-/docs/成本估算.jpg
-/docs/技术架构.jpg
-/pnpm dev：打开本地环境预览网页效果.txt
+
+# DOCS 文件夹 - 忽略截图和临时图片
+DOCS/Snipaste_*.jpg
+DOCS/Snipaste_*.png
+docs/Snipaste_*.jpg
+docs/Snipaste_*.png
+
+# 忽略所有截图文件（任何位置）
+**/Snipaste_*
+**/screenshot_*
+**/截图_*
 
 .vercel
