@@ -95,4 +95,14 @@ app.onError((err, c) => {
 });
 
 // Vercel Serverless Function 导出
-export default handle(app);
+// 需要显式导出每个 HTTP 方法
+const handler = handle(app);
+
+export const GET = handler;
+export const POST = handler;
+export const PUT = handler;
+export const DELETE = handler;
+export const PATCH = handler;
+export const OPTIONS = handler;
+
+export default handler;
