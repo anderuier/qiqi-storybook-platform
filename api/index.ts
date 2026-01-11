@@ -84,6 +84,84 @@ function buildStoryUserPrompt(params: {
 
 // ==================== AI 配置 ====================
 
+// 限流配置
+const RATE_LIMIT = {
+  AI_REQUESTS_PER_MINUTE: 2,  // 每用户每分钟 AI 请求次数
+  AI_REQUESTS_PER_HOUR: 20,   // 每用户每小时 AI 请求次数
+};
+
+// 内存限流存储（Serverless 环境下每次请求可能是新实例，所以同时使用数据库）
+const rateLimitCache = new Map<string, { count: number; resetTime: number }>();
+
+// 检查限流（使用数据库持久化）
+async function checkRateLimit(userId: string): Promise<{ allowed: boolean; retryAfter?: number }> {
+  const now = Date.now();
+  const oneMinuteAgo = now - 60 * 1000;
+  const oneHourAgo = now - 60 * 60 * 1000;
+
+  try {
+    // 清理过期记录（1小时前的）
+    await sql`
+      DELETE FROM rate_limits
+      WHERE user_id = ${userId} AND created_at < to_timestamp(${oneHourAgo / 1000})
+    `;
+
+    // 查询最近1分钟的请求次数
+    const minuteResult = await sql`
+      SELECT COUNT(*) as count
+      FROM rate_limits
+      WHERE user_id = ${userId} AND created_at > to_timestamp(${oneMinuteAgo / 1000})
+    `;
+    const minuteCount = parseInt(minuteResult.rows[0]?.count || '0');
+
+    if (minuteCount >= RATE_LIMIT.AI_REQUESTS_PER_MINUTE) {
+      // 计算需要等待的时间
+      const oldestInMinute = await sql`
+        SELECT created_at
+        FROM rate_limits
+        WHERE user_id = ${userId} AND created_at > to_timestamp(${oneMinuteAgo / 1000})
+        ORDER BY created_at ASC
+        LIMIT 1
+      `;
+      const oldestTime = oldestInMinute.rows[0]?.created_at;
+      const retryAfter = oldestTime ? Math.ceil((new Date(oldestTime).getTime() + 60000 - now) / 1000) : 60;
+
+      return { allowed: false, retryAfter: Math.max(retryAfter, 1) };
+    }
+
+    // 查询最近1小时的请求次数
+    const hourResult = await sql`
+      SELECT COUNT(*) as count
+      FROM rate_limits
+      WHERE user_id = ${userId} AND created_at > to_timestamp(${oneHourAgo / 1000})
+    `;
+    const hourCount = parseInt(hourResult.rows[0]?.count || '0');
+
+    if (hourCount >= RATE_LIMIT.AI_REQUESTS_PER_HOUR) {
+      return { allowed: false, retryAfter: 60 };
+    }
+
+    return { allowed: true };
+  } catch (error) {
+    // 如果数据库查询失败，允许请求（降级处理）
+    console.error('Rate limit check error:', error);
+    return { allowed: true };
+  }
+}
+
+// 记录请求
+async function recordRequest(userId: string): Promise<void> {
+  try {
+    const id = generateId('rl');
+    await sql`
+      INSERT INTO rate_limits (id, user_id, created_at)
+      VALUES (${id}, ${userId}, NOW())
+    `;
+  } catch (error) {
+    console.error('Record request error:', error);
+  }
+}
+
 // OpenAI 兼容客户端（支持第三方 Claude API）
 let aiClient: OpenAI | null = null;
 function getAIClient(): OpenAI {
@@ -477,6 +555,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // 检查限流
+      const rateLimit = await checkRateLimit(userPayload.userId);
+      if (!rateLimit.allowed) {
+        return res.status(429).json({
+          success: false,
+          error: {
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: `请求太频繁，请 ${rateLimit.retryAfter} 秒后再试`,
+            retryAfter: rateLimit.retryAfter,
+          },
+        });
+      }
+
       // 支持两种请求格式
       const body = req.body || {};
       const input = body.input || body;
@@ -491,6 +582,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
         });
       }
+
+      // 记录请求（在实际调用 AI 之前记录）
+      await recordRequest(userPayload.userId);
 
       try {
         const client = getAIClient();
@@ -739,11 +833,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         )
       `;
 
+      // 创建限流记录表
+      await sql`
+        CREATE TABLE IF NOT EXISTS rate_limits (
+          id VARCHAR(36) PRIMARY KEY,
+          user_id VARCHAR(36) NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+
+      // 创建限流表索引
+      await sql`
+        CREATE INDEX IF NOT EXISTS idx_rate_limits_user_time
+        ON rate_limits (user_id, created_at)
+      `;
+
       return res.status(200).json({
         success: true,
         message: '数据库初始化成功',
         data: {
-          tables: ['users', 'works', 'stories', 'storyboards', 'storyboard_pages', 'cloned_voices', 'likes', 'templates', 'tasks'],
+          tables: ['users', 'works', 'stories', 'storyboards', 'storyboard_pages', 'cloned_voices', 'likes', 'templates', 'tasks', 'rate_limits'],
         },
       });
     }
