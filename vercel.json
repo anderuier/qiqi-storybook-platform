@@ -17,6 +17,10 @@
     {
       "source": "/api/:path*",
       "destination": "/api?path=:path*"
+    },
+    {
+      "source": "/((?!api|assets|images|favicon).*)",
+      "destination": "/index.html"
     }
   ]
 }

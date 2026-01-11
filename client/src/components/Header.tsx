@@ -5,21 +5,24 @@
 
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { BookOpen, Menu, X, User, LogOut, Settings, FolderOpen, ChevronDown } from "lucide-react";
+import { BookOpen, Menu, X, LogOut, Settings, FolderOpen, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [location] = useLocation();
 
-  // 模拟登录状态 - 实际项目中应该从全局状态或Context获取
-  // 为了演示，我们假设用户已登录
-  const isLoggedIn = true;
-  const user = {
-    name: "柒柒爸爸",
-    avatar: "/images/avatar-1.png"
+  // 使用真实的认证状态
+  const { user, isAuthenticated, logout, isLoading } = useAuth();
+
+  // 处理退出登录
+  const handleLogout = async () => {
+    await logout();
+    setIsUserMenuOpen(false);
+    setIsMenuOpen(false);
   };
 
   const navLinks = [
@@ -82,7 +85,7 @@ export default function Header() {
           
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            {isLoggedIn ? (
+            {isAuthenticated && user ? (
               /* 已登录状态 - 用户菜单 */
               <div className="relative">
                 <button
@@ -90,9 +93,9 @@ export default function Header() {
                   className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-muted transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral to-mint overflow-hidden">
-                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                    <img src={user.avatar || "/images/avatar-default.png"} alt={user.nickname} className="w-full h-full object-cover" />
                   </div>
-                  <span className="text-sm font-medium">{user.name}</span>
+                  <span className="text-sm font-medium">{user.nickname}</span>
                   <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isUserMenuOpen ? "rotate-180" : ""}`} />
                 </button>
 
@@ -123,7 +126,10 @@ export default function Header() {
                         </div>
                       </Link>
                       <div className="border-t border-border my-1" />
-                      <div className="px-4 py-2 text-sm hover:bg-muted flex items-center gap-3 cursor-pointer text-red-500">
+                      <div
+                        onClick={handleLogout}
+                        className="px-4 py-2 text-sm hover:bg-muted flex items-center gap-3 cursor-pointer text-red-500"
+                      >
                         <LogOut className="w-4 h-4" />
                         退出登录
                       </div>
@@ -178,15 +184,15 @@ export default function Header() {
                   {link.label}
                 </a>
               ))}
-              {isLoggedIn ? (
+              {isAuthenticated && user ? (
                 /* 已登录状态 - 移动端 */
                 <div className="mt-4 pt-4 border-t border-border">
                   <div className="flex items-center gap-3 px-4 py-3 mb-2">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-coral to-mint overflow-hidden">
-                      <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                      <img src={user.avatar || "/images/avatar-default.png"} alt={user.nickname} className="w-full h-full object-cover" />
                     </div>
                     <div>
-                      <div className="font-medium">{user.name}</div>
+                      <div className="font-medium">{user.nickname}</div>
                       <div className="text-xs text-muted-foreground">已登录</div>
                     </div>
                   </div>
@@ -208,7 +214,10 @@ export default function Header() {
                       账户设置
                     </div>
                   </Link>
-                  <div className="px-4 py-3 text-sm hover:bg-muted rounded-lg flex items-center gap-3 cursor-pointer text-red-500">
+                  <div
+                    onClick={handleLogout}
+                    className="px-4 py-3 text-sm hover:bg-muted rounded-lg flex items-center gap-3 cursor-pointer text-red-500"
+                  >
                     <LogOut className="w-4 h-4" />
                     退出登录
                   </div>
