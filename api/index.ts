@@ -6,7 +6,8 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 
-const app = new Hono().basePath('/api');
+// 不使用 basePath，让 Vercel 的 rewrites 处理路由
+const app = new Hono();
 
 // 最简单的健康检查
 app.get('/health', (c) => {
@@ -14,6 +15,15 @@ app.get('/health', (c) => {
     success: true,
     message: 'API is working!',
     timestamp: new Date().toISOString(),
+  });
+});
+
+// 根路径
+app.get('/', (c) => {
+  return c.json({
+    success: true,
+    message: 'API root',
+    endpoints: ['/health', '/test-db'],
   });
 });
 
@@ -37,7 +47,7 @@ app.get('/test-db', async (c) => {
 
 // 404 处理
 app.notFound((c) => {
-  return c.json({ error: 'Not Found' }, 404);
+  return c.json({ error: 'Not Found', path: c.req.path }, 404);
 });
 
 // 错误处理
