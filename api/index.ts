@@ -6,6 +6,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
 import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import Anthropic from '@anthropic-ai/sdk';
 
 // ==================== 工具函数 ====================
 
@@ -15,6 +16,33 @@ const crypto = webcrypto;
 // JWT 配置
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = 7 * 24 * 60 * 60 * 1000; // 7 天
+
+// ==================== AI 配置 ====================
+
+// Claude 客户端（支持自定义 base URL）
+let claudeClient: Anthropic | null = null;
+function getClaudeClient(): Anthropic {
+  if (!claudeClient) {
+    claudeClient = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY || '',
+      baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
+    });
+  }
+  return claudeClient;
+}
+
+// 故事生成提示词
+const STORY_SYSTEM_PROMPT = `你是一位专业的儿童故事作家，擅长为3-6岁学龄前儿童创作温馨、有趣、富有教育意义的童话故事。
+
+创作要求：
+1. 语言简单易懂，适合幼儿理解
+2. 故事情节生动有趣，富有想象力
+3. 包含积极正面的价值观和教育意义
+4. 角色形象可爱，容易引起孩子共鸣
+5. 故事长度适中，约500-800字
+6. 可以包含简单的对话和互动元素
+
+请根据用户提供的主题或要求，创作一个完整的童话故事。`;
 
 // 用户信息接口
 interface UserPayload {
@@ -151,10 +179,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         endpoints: [
           '/api/health',
           '/api/test-db',
+          '/api/test-ai',
           '/api/db/init',
           '/api/auth/register',
           '/api/auth/login',
           '/api/user/me',
+          '/api/create/story',
         ],
       });
     }
@@ -375,6 +405,128 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // ==================== 数据库管理 API ====================
+
+    // ==================== AI 故事生成 API ====================
+
+    // 生成故事
+    if (fullPath === '/api/create/story' && req.method === 'POST') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const { theme, childName, childAge, style } = req.body || {};
+
+      if (!theme) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_PARAMS',
+            message: '请提供故事主题',
+          },
+        });
+      }
+
+      try {
+        const client = getClaudeClient();
+
+        // 构建用户提示
+        let userPrompt = `请为我创作一个关于"${theme}"的童话故事。`;
+        if (childName) {
+          userPrompt += `\n主角名字叫"${childName}"。`;
+        }
+        if (childAge) {
+          userPrompt += `\n故事适合${childAge}岁的孩子。`;
+        }
+        if (style) {
+          userPrompt += `\n故事风格：${style}。`;
+        }
+
+        const response = await client.messages.create({
+          model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          temperature: 0.8,
+          system: STORY_SYSTEM_PROMPT,
+          messages: [
+            {
+              role: 'user',
+              content: userPrompt,
+            },
+          ],
+        });
+
+        const textContent = response.content.find((c) => c.type === 'text');
+        const story = textContent?.text || '';
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            story,
+            wordCount: story.length,
+            model: response.model,
+            usage: {
+              inputTokens: response.usage.input_tokens,
+              outputTokens: response.usage.output_tokens,
+            },
+          },
+        });
+      } catch (error) {
+        console.error('AI Error:', error);
+        return res.status(500).json({
+          success: false,
+          error: {
+            code: 'AI_ERROR',
+            message: error instanceof Error ? error.message : 'AI 服务暂时不可用',
+          },
+        });
+      }
+    }
+
+    // 测试 AI 连接
+    if (fullPath === '/api/test-ai') {
+      try {
+        const client = getClaudeClient();
+        const response = await client.messages.create({
+          model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+          max_tokens: 100,
+          messages: [
+            {
+              role: 'user',
+              content: '请用一句话介绍自己。',
+            },
+          ],
+        });
+
+        const textContent = response.content.find((c) => c.type === 'text');
+
+        return res.status(200).json({
+          success: true,
+          message: 'AI 连接成功',
+          data: {
+            response: textContent?.text || '',
+            model: response.model,
+          },
+        });
+      } catch (error) {
+        console.error('AI Test Error:', error);
+        return res.status(500).json({
+          success: false,
+          error: {
+            code: 'AI_ERROR',
+            message: error instanceof Error ? error.message : 'AI 连接失败',
+          },
+        });
+      }
+    }
+
+    // ==================== 数据库初始化 ====================
     if (fullPath === '/api/db/init' && req.method === 'POST') {
       const { secret } = req.body || {};
       const DB_INIT_SECRET = process.env.DB_INIT_SECRET || 'init-secret-key';
