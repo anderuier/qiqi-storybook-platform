@@ -6,7 +6,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
 import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 // ==================== 工具函数 ====================
 
@@ -19,16 +19,16 @@ const JWT_EXPIRES_IN = 7 * 24 * 60 * 60 * 1000; // 7 天
 
 // ==================== AI 配置 ====================
 
-// Claude 客户端（支持自定义 base URL）
-let claudeClient: Anthropic | null = null;
-function getClaudeClient(): Anthropic {
-  if (!claudeClient) {
-    claudeClient = new Anthropic({
+// OpenAI 兼容客户端（支持第三方 Claude API）
+let aiClient: OpenAI | null = null;
+function getAIClient(): OpenAI {
+  if (!aiClient) {
+    aiClient = new OpenAI({
       apiKey: process.env.ANTHROPIC_API_KEY || '',
-      baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
+      baseURL: process.env.ANTHROPIC_BASE_URL || 'https://api.openai.com/v1',
     });
   }
-  return claudeClient;
+  return aiClient;
 }
 
 // 故事生成提示词
@@ -435,7 +435,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       try {
-        const client = getClaudeClient();
+        const client = getAIClient();
 
         // 构建用户提示
         let userPrompt = `请为我创作一个关于"${theme}"的童话故事。`;
@@ -449,12 +449,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           userPrompt += `\n故事风格：${style}。`;
         }
 
-        const response = await client.messages.create({
-          model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+        const response = await client.chat.completions.create({
+          model: process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022',
           max_tokens: 2000,
           temperature: 0.8,
-          system: STORY_SYSTEM_PROMPT,
           messages: [
+            {
+              role: 'system',
+              content: STORY_SYSTEM_PROMPT,
+            },
             {
               role: 'user',
               content: userPrompt,
@@ -462,8 +465,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ],
         });
 
-        const textContent = response.content.find((c) => c.type === 'text');
-        const story = textContent?.text || '';
+        const story = response.choices[0]?.message?.content || '';
 
         return res.status(200).json({
           success: true,
@@ -471,10 +473,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             story,
             wordCount: story.length,
             model: response.model,
-            usage: {
-              inputTokens: response.usage.input_tokens,
-              outputTokens: response.usage.output_tokens,
-            },
+            usage: response.usage
+              ? {
+                  inputTokens: response.usage.prompt_tokens,
+                  outputTokens: response.usage.completion_tokens,
+                }
+              : undefined,
           },
         });
       } catch (error) {
@@ -492,9 +496,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 测试 AI 连接
     if (fullPath === '/api/test-ai') {
       try {
-        const client = getClaudeClient();
-        const response = await client.messages.create({
-          model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+        const client = getAIClient();
+        const response = await client.chat.completions.create({
+          model: process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022',
           max_tokens: 100,
           messages: [
             {
@@ -504,13 +508,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ],
         });
 
-        const textContent = response.content.find((c) => c.type === 'text');
+        const content = response.choices[0]?.message?.content || '';
 
         return res.status(200).json({
           success: true,
           message: 'AI 连接成功',
           data: {
-            response: textContent?.text || '',
+            response: content,
             model: response.model,
           },
         });
