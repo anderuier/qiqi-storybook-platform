@@ -26,6 +26,9 @@ function getAIClient(): OpenAI {
     aiClient = new OpenAI({
       apiKey: process.env.ANTHROPIC_API_KEY || '',
       baseURL: process.env.ANTHROPIC_BASE_URL || 'https://api.openai.com/v1',
+      defaultHeaders: {
+        'User-Agent': 'StoryBook/1.0',
+      },
     });
   }
   return aiClient;
@@ -518,13 +521,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             model: response.model,
           },
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('AI Test Error:', error);
+
+        // 返回更详细的错误信息
+        const errorDetails = {
+          message: error?.message || 'Unknown error',
+          status: error?.status,
+          code: error?.code,
+          type: error?.type,
+          baseURL: process.env.ANTHROPIC_BASE_URL,
+          model: process.env.CLAUDE_MODEL,
+        };
+
         return res.status(500).json({
           success: false,
           error: {
             code: 'AI_ERROR',
             message: error instanceof Error ? error.message : 'AI 连接失败',
+            details: errorDetails,
           },
         });
       }
