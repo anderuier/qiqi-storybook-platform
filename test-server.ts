@@ -1,16 +1,15 @@
 /**
- * API 入口 - Vercel Serverless Function
- * 路径: /api/*
+ * 本地 API 测试服务器
+ * 使用 Node.js 直接运行，不依赖 Vercel
  */
 
 import { Hono } from 'hono';
-import { handle } from 'hono/vercel';
+import { serve } from '@hono/node-server';
 
-// 使用 basePath 匹配 Vercel 的路由
-const app = new Hono().basePath('/api');
+const app = new Hono();
 
 // 健康检查
-app.get('/health', (c) => {
+app.get('/api/health', (c) => {
   return c.json({
     success: true,
     message: 'API is working!',
@@ -19,7 +18,7 @@ app.get('/health', (c) => {
 });
 
 // 根路径
-app.get('/', (c) => {
+app.get('/api', (c) => {
   return c.json({
     success: true,
     message: 'API root',
@@ -28,7 +27,7 @@ app.get('/', (c) => {
 });
 
 // 测试数据库连接
-app.get('/test-db', async (c) => {
+app.get('/api/test-db', async (c) => {
   try {
     const { sql } = await import('@vercel/postgres');
     const result = await sql`SELECT NOW()`;
@@ -46,7 +45,7 @@ app.get('/test-db', async (c) => {
 });
 
 // 数据库初始化
-app.post('/db/init', async (c) => {
+app.post('/api/db/init', async (c) => {
   try {
     const body = await c.req.json();
     const { secret } = body || {};
@@ -60,12 +59,12 @@ app.post('/db/init', async (c) => {
       }, 403);
     }
 
-    const { initDatabase } = await import('./_lib/db');
+    const { initDatabase } = await import('./api/_lib/db.js');
     await initDatabase();
 
     return c.json({
       success: true,
-      data: { message: '数据库初始化成功' },
+      message: '数据库初始化成功',
     });
   } catch (error) {
     console.error('数据库初始化失败:', error);
@@ -87,22 +86,18 @@ app.notFound((c) => {
 
 // 错误处理
 app.onError((err, c) => {
-  console.error('API Error:', err);
+  console.error('Error:', err);
   return c.json({
     error: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    stack: err.stack,
   }, 500);
 });
 
-// Vercel Serverless Function 导出
-// 需要显式导出每个 HTTP 方法
-const handler = handle(app);
+const port = 3001;
+console.log(`🚀 本地 API 服务器启动在 http://localhost:${port}`);
+console.log(`📍 测试地址: http://localhost:${port}/api/health`);
 
-export const GET = handler;
-export const POST = handler;
-export const PUT = handler;
-export const DELETE = handler;
-export const PATCH = handler;
-export const OPTIONS = handler;
-
-export default handler;
+serve({
+  fetch: app.fetch,
+  port,
+});

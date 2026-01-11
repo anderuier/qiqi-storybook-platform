@@ -23,7 +23,8 @@
       "Bash(npx esbuild:*)",
       "Bash(npx vercel whoami)",
       "Bash(node:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebFetch(domain:storybook-gamma-ten.vercel.app)"
     ]
   }
 }
