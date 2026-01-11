@@ -7,7 +7,6 @@ import { sql } from '@vercel/postgres';
 import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
-import { STORY_SYSTEM_PROMPT, buildStoryUserPrompt } from './prompts.config';
 
 // ==================== 工具函数 ====================
 
@@ -17,6 +16,71 @@ const crypto = webcrypto;
 // JWT 配置
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = 7 * 24 * 60 * 60 * 1000; // 7 天
+
+// ==================== AI Prompt 配置 ====================
+// 配置文件：api/prompts.config.ts（完整版本和文档）
+// 这里是内联版本，修改后需同步更新配置文件
+
+const STORY_SYSTEM_PROMPT = `你是一位专业的儿童故事作家，擅长为3-6岁学龄前儿童创作温馨、有趣、富有教育意义的童话故事。
+
+创作要求：
+1. 语言简单易懂，使用短句，避免复杂词汇，适合幼儿理解
+2. 故事情节生动有趣，富有想象力，有明确的开头、发展和结尾
+3. 包含积极正面的价值观和教育意义（如友善、勇敢、分享、诚实等）
+4. 角色形象可爱，性格鲜明，容易引起孩子共鸣
+5. 适当使用拟声词和重复句式，增加趣味性
+6. 可以包含简单的对话和互动元素
+7. 故事要有一个温馨或有启发性的结局
+
+输出格式：
+- 直接输出故事内容，不需要标题标记
+- 使用自然段落分隔
+- 对话使用引号标注`;
+
+const STORY_STYLE_MAP: Record<string, string> = {
+  warm: '温馨感人，充满爱与关怀',
+  adventure: '冒险刺激，充满探索精神',
+  funny: '幽默搞笑，轻松愉快',
+  educational: '寓教于乐，包含知识点',
+  fantasy: '奇幻魔法，充满想象力',
+  friendship: '友情主题，强调友谊的珍贵',
+};
+
+const STORY_LENGTH_MAP: Record<string, string> = {
+  short: '简短的故事，约300-500字，适合睡前快速阅读',
+  medium: '中等长度的故事，约500-800字，情节完整',
+  long: '较长的故事，约800-1200字，情节丰富有层次',
+};
+
+function buildStoryUserPrompt(params: {
+  theme: string;
+  childName?: string;
+  childAge?: number;
+  style?: string;
+  length?: string;
+}): string {
+  const { theme, childName, childAge, style, length } = params;
+
+  let prompt = `请为我创作一个关于"${theme}"的童话故事。`;
+
+  if (childName) {
+    prompt += `\n主角名字叫"${childName}"。`;
+  }
+
+  if (childAge) {
+    prompt += `\n故事适合${childAge}岁的孩子阅读。`;
+  }
+
+  if (style && STORY_STYLE_MAP[style]) {
+    prompt += `\n故事风格要求：${STORY_STYLE_MAP[style]}。`;
+  }
+
+  if (length && STORY_LENGTH_MAP[length]) {
+    prompt += `\n故事长度要求：${STORY_LENGTH_MAP[length]}。`;
+  }
+
+  return prompt;
+}
 
 // ==================== AI 配置 ====================
 
