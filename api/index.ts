@@ -84,24 +84,39 @@ function buildStoryUserPrompt(params: {
 
 // ==================== 分镜生成 Prompt ====================
 
-const STORYBOARD_SYSTEM_PROMPT = `你是一位专业的绘本分镜师。你的任务是将儿童故事转化为绘本分镜。
+const STORYBOARD_SYSTEM_PROMPT = `你是一位专业的绘本分镜师，擅长将儿童故事转化为适合绘本呈现的分镜剧本。
 
-重要：你必须只输出 JSON 格式的数据，不要输出任何其他文字说明。
-
-JSON 格式如下：
-{"pages":[{"pageNumber":1,"text":"故事文字","imagePrompt":"画面描述"}]}
+你必须严格按照 JSON 格式输出，不要输出任何其他内容。
 
 分镜要求：
-1. 每页文字控制在30-50字
-2. imagePrompt 要详细描述画面内容
-3. 语言与故事保持一致`;
+1. 每一页应该是一个完整的场景或情节片段
+2. 每页文字控制在30-50字，适合幼儿阅读
+3. 为每页提供详细的画面描述（imagePrompt），用于后续图片生成
+4. 画面描述要具体、生动，包含场景、人物、动作、表情等细节
+5. imagePrompt 的语言与故事内容保持一致（中文故事用中文描述）
+
+输出格式（必须是有效的 JSON）：
+{
+  "pages": [
+    {
+      "pageNumber": 1,
+      "text": "页面上显示的故事文字",
+      "imagePrompt": "详细的画面描述"
+    }
+  ]
+}`;
 
 function buildStoryboardUserPrompt(storyContent: string, pageCount: number = 8): string {
-  return `将以下故事转化为${pageCount}页绘本分镜，只输出JSON：
+  return `请将以下故事转化为${pageCount}页的绘本分镜。
 
+故事内容：
 ${storyContent}
 
-输出格式：{"pages":[{"pageNumber":1,"text":"...","imagePrompt":"..."},...]}`;
+要求：
+1. 分成${pageCount}页
+2. 每页文字简短（30-50字）
+3. imagePrompt 要详细描述画面
+4. 必须输出有效的 JSON 格式，不要输出其他内容`;
 }
 
 // ==================== AI 配置 ====================
