@@ -1258,6 +1258,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ON rate_limits (user_id, created_at)
       `;
 
+      // ==================== 数据库迁移 ====================
+      // 为已存在的表添加新字段（如果不存在）
+
+      // works 表迁移：添加新字段
+      try {
+        await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS current_step VARCHAR(20) DEFAULT 'input'`;
+        await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS theme VARCHAR(200)`;
+        await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS child_name VARCHAR(50)`;
+        await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS child_age INTEGER`;
+        await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS style VARCHAR(50)`;
+        await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS length VARCHAR(20)`;
+      } catch (migrationError) {
+        console.log('Migration note:', migrationError);
+        // 忽略迁移错误（字段可能已存在）
+      }
+
       return res.status(200).json({
         success: true,
         message: '数据库初始化成功',
