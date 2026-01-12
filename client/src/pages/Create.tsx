@@ -90,7 +90,7 @@ const voiceOptions = [
 ];
 
 export default function Create() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   // 创作流程状态
@@ -106,6 +106,7 @@ export default function Create() {
   const [storyLength, setStoryLength] = useState<"short" | "medium" | "long">("medium");
   const [selectedArtStyle, setSelectedArtStyle] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
+  const [isRestoringDraft, setIsRestoringDraft] = useState(false);
 
   const totalSteps = 5; // 输入 -> 故事 -> 分镜 -> 图片 -> 预览
 
@@ -115,6 +116,40 @@ export default function Create() {
       setLocation("/login");
     }
   }, [authLoading, isAuthenticated, setLocation]);
+
+  // 从 URL 参数恢复草稿
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const draftId = params.get('draft');
+
+    if (draftId && isAuthenticated && !isRestoringDraft) {
+      setIsRestoringDraft(true);
+      create.restoreFromDraft(draftId).then((draft) => {
+        // 恢复本地表单状态
+        if (draft.work.theme) {
+          setStoryInput(draft.work.theme);
+          setSelectedMode("theme");
+        }
+        if (draft.work.childName) setChildName(draft.work.childName);
+        if (draft.work.childAge) setChildAge(draft.work.childAge);
+        if (draft.work.style) setSelectedStoryStyle(draft.work.style);
+        if (draft.work.length) setStoryLength(draft.work.length as any);
+
+        // 根据当前步骤设置页面步骤
+        const stepMap: Record<string, number> = {
+          'input': 1,
+          'story': 2,
+          'storyboard': 3,
+          'images': 4,
+          'completed': 5,
+        };
+        setCurrentStep(stepMap[draft.work.currentStep] || 1);
+        setIsRestoringDraft(false);
+      }).catch(() => {
+        setIsRestoringDraft(false);
+      });
+    }
+  }, [isAuthenticated]);
 
   // 判断是否可以进入下一步
   const canProceed = () => {

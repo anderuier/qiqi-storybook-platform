@@ -260,6 +260,10 @@ export default function MyWorks() {
                   onCloseMenu={() => setShowMenu(null)}
                   onDelete={() => setDeleteConfirm(work.workId)}
                   onTogglePublish={() => handleTogglePublish(work)}
+                  onEdit={() => {
+                    setShowMenu(null);
+                    setLocation(`/create?draft=${work.workId}`);
+                  }}
                 />
               ))}
             </div>
@@ -344,9 +348,10 @@ interface WorkCardProps {
   onCloseMenu: () => void;
   onDelete: () => void;
   onTogglePublish: () => void;
+  onEdit: () => void;
 }
 
-function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, onTogglePublish }: WorkCardProps) {
+function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, onTogglePublish, onEdit }: WorkCardProps) {
   // 格式化日期
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -414,7 +419,10 @@ function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, 
                 onClick={onCloseMenu}
               />
               <div className="absolute right-0 top-10 bg-white rounded-xl shadow-lg border border-border/50 py-2 min-w-[140px] z-20">
-                <button className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2">
+                <button
+                  onClick={onEdit}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+                >
                   <Edit className="w-4 h-4" />
                   编辑
                 </button>

@@ -822,6 +822,142 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // 删除作品
+    if (fullPath.match(/^\/api\/works\/[^/]+$/) && req.method === 'DELETE') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const workId = fullPath.split('/').pop();
+
+      // 验证作品存在且属于当前用户
+      const workResult = await sql`
+        SELECT id FROM works WHERE id = ${workId} AND user_id = ${userPayload.userId}
+      `;
+
+      if (workResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'WORK_NOT_FOUND',
+            message: '作品不存在',
+          },
+        });
+      }
+
+      // 删除作品（级联删除关联的 stories, storyboards, storyboard_pages）
+      await sql`DELETE FROM works WHERE id = ${workId}`;
+
+      return res.status(200).json({
+        success: true,
+        message: '作品已删除',
+      });
+    }
+
+    // 获取作品详情
+    if (fullPath.match(/^\/api\/works\/[^/]+$/) && req.method === 'GET') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const workId = fullPath.split('/').pop();
+
+      // 获取 work 基本信息
+      const workResult = await sql`
+        SELECT id, title, status, current_step, theme, child_name, child_age, style, length, page_count, cover_url, created_at, updated_at
+        FROM works
+        WHERE id = ${workId} AND user_id = ${userPayload.userId}
+      `;
+
+      if (workResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'WORK_NOT_FOUND',
+            message: '作品不存在',
+          },
+        });
+      }
+
+      const work = workResult.rows[0];
+
+      // 获取故事内容
+      const storyResult = await sql`
+        SELECT id, content, word_count FROM stories WHERE work_id = ${workId} LIMIT 1
+      `;
+      const story = storyResult.rows[0] || null;
+
+      // 获取分镜信息
+      const storyboardResult = await sql`
+        SELECT id FROM storyboards WHERE work_id = ${workId} LIMIT 1
+      `;
+      const storyboard = storyboardResult.rows[0] || null;
+
+      // 获取分镜页面
+      let pages: any[] = [];
+      if (storyboard) {
+        const pagesResult = await sql`
+          SELECT id, page_number, text, image_prompt, image_url, audio_url
+          FROM storyboard_pages
+          WHERE storyboard_id = ${storyboard.id}
+          ORDER BY page_number ASC
+        `;
+        pages = pagesResult.rows.map(row => ({
+          pageNumber: row.page_number,
+          text: row.text,
+          imagePrompt: row.image_prompt,
+          imageUrl: row.image_url,
+          audioUrl: row.audio_url,
+        }));
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          work: {
+            id: work.id,
+            title: work.title,
+            status: work.status,
+            currentStep: work.current_step,
+            theme: work.theme,
+            childName: work.child_name,
+            childAge: work.child_age,
+            style: work.style,
+            length: work.length,
+            pageCount: work.page_count,
+            coverUrl: work.cover_url,
+            createdAt: work.created_at,
+            updatedAt: work.updated_at,
+          },
+          story: story ? {
+            id: story.id,
+            content: story.content,
+            wordCount: story.word_count,
+          } : null,
+          storyboard: storyboard ? {
+            id: storyboard.id,
+            pages,
+          } : null,
+        },
+      });
+    }
+
     // ==================== 数据库管理 API ====================
 
     // ==================== AI 故事生成 API ====================
