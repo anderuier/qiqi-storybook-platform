@@ -11,6 +11,8 @@ import {
   StoryboardResponse,
   StoryboardPage,
   TaskResponse,
+  draftsApi,
+  DraftDetail,
 } from '../lib/api';
 
 // 创作步骤
@@ -21,6 +23,9 @@ export interface CreateState {
   step: CreateStep;
   isLoading: boolean;
   error: string | null;
+
+  // 当前作品 ID（草稿 ID）
+  workId: string | null;
 
   // 输入数据
   input: CreateStoryRequest['input'] | null;
@@ -47,6 +52,7 @@ const initialState: CreateState = {
   step: 'input',
   isLoading: false,
   error: null,
+  workId: null,
   input: null,
   story: null,
   storyboard: null,
@@ -78,6 +84,68 @@ export function useCreate() {
     setState(initialState);
   }, []);
 
+  // 从草稿恢复
+  const restoreFromDraft = useCallback(async (draftId: string) => {
+    updateState({ isLoading: true, error: null });
+
+    try {
+      const draft = await draftsApi.getDraft(draftId);
+
+      // 构建恢复的状态
+      const restoredState: Partial<CreateState> = {
+        isLoading: false,
+        workId: draft.work.id,
+        step: draft.work.currentStep as CreateStep,
+        input: {
+          theme: draft.work.theme,
+          childName: draft.work.childName,
+          childAge: draft.work.childAge,
+          style: draft.work.style,
+          length: draft.work.length,
+        },
+      };
+
+      // 恢复故事
+      if (draft.story) {
+        restoredState.story = {
+          storyId: draft.story.id,
+          workId: draft.work.id,
+          title: draft.work.title,
+          content: draft.story.content,
+          wordCount: draft.story.wordCount,
+          estimatedPages: Math.ceil(draft.story.wordCount / 100),
+        };
+      }
+
+      // 恢复分镜
+      if (draft.storyboard) {
+        restoredState.storyboard = {
+          storyboardId: draft.storyboard.id,
+          pageCount: draft.storyboard.pages.length,
+          pages: draft.storyboard.pages,
+        };
+
+        // 恢复已生成的图片
+        const pageImages: Record<number, string> = {};
+        draft.storyboard.pages.forEach((page) => {
+          if (page.imageUrl) {
+            pageImages[page.pageNumber] = page.imageUrl;
+          }
+        });
+        restoredState.pageImages = pageImages;
+      }
+
+      updateState(restoredState);
+      return draft;
+    } catch (err: any) {
+      updateState({
+        isLoading: false,
+        error: err.message || '恢复草稿失败',
+      });
+      throw err;
+    }
+  }, [updateState]);
+
   // 步骤1：生成故事
   const generateStory = useCallback(
     async (input: CreateStoryRequest['input']) => {
@@ -96,6 +164,7 @@ export function useCreate() {
         updateState({
           isLoading: false,
           story,
+          workId: story.workId,
           step: 'story',
         });
 
@@ -114,7 +183,7 @@ export function useCreate() {
   // 步骤2：生成分镜剧本
   const generateStoryboard = useCallback(
     async (pageCount?: number) => {
-      if (!state.story) {
+      if (!state.story || !state.workId) {
         throw new Error('请先生成故事');
       }
 
@@ -127,6 +196,7 @@ export function useCreate() {
         const storyboard = await createApi.generateStoryboard({
           storyContent: state.story.content,
           pageCount,
+          workId: state.workId,
         });
 
         updateState({
@@ -144,7 +214,7 @@ export function useCreate() {
         throw err;
       }
     },
-    [state.story, updateState]
+    [state.story, state.workId, updateState]
   );
 
   // 步骤3：生成单张图片
@@ -318,5 +388,6 @@ export function useCreate() {
     goToStep,
     clearError,
     reset,
+    restoreFromDraft,
   };
 }

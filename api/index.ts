@@ -355,6 +355,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           '/api/auth/register',
           '/api/auth/login',
           '/api/user/me',
+          '/api/drafts',
+          '/api/drafts/:id',
           '/api/create/story',
           '/api/create/storyboard',
         ],
@@ -576,6 +578,188 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // ==================== 草稿管理 API ====================
+
+    // 获取草稿列表
+    if (fullPath === '/api/drafts' && req.method === 'GET') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const result = await sql`
+        SELECT id, title, status, current_step, theme, child_name, child_age, style, length, page_count, cover_url, created_at, updated_at
+        FROM works
+        WHERE user_id = ${userPayload.userId} AND status = 'draft'
+        ORDER BY updated_at DESC
+        LIMIT 20
+      `;
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          drafts: result.rows.map(row => ({
+            id: row.id,
+            title: row.title,
+            status: row.status,
+            currentStep: row.current_step,
+            theme: row.theme,
+            childName: row.child_name,
+            childAge: row.child_age,
+            style: row.style,
+            length: row.length,
+            pageCount: row.page_count,
+            coverUrl: row.cover_url,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          })),
+        },
+      });
+    }
+
+    // 获取草稿详情（用于恢复创作）
+    if (fullPath.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'GET') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const draftId = fullPath.split('/').pop();
+
+      // 获取 work 基本信息
+      const workResult = await sql`
+        SELECT id, title, status, current_step, theme, child_name, child_age, style, length, page_count, cover_url, created_at, updated_at
+        FROM works
+        WHERE id = ${draftId} AND user_id = ${userPayload.userId}
+      `;
+
+      if (workResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'DRAFT_NOT_FOUND',
+            message: '草稿不存在',
+          },
+        });
+      }
+
+      const work = workResult.rows[0];
+
+      // 获取故事内容
+      const storyResult = await sql`
+        SELECT id, content, word_count FROM stories WHERE work_id = ${draftId} LIMIT 1
+      `;
+      const story = storyResult.rows[0] || null;
+
+      // 获取分镜信息
+      const storyboardResult = await sql`
+        SELECT id FROM storyboards WHERE work_id = ${draftId} LIMIT 1
+      `;
+      const storyboard = storyboardResult.rows[0] || null;
+
+      // 获取分镜页面
+      let pages: any[] = [];
+      if (storyboard) {
+        const pagesResult = await sql`
+          SELECT id, page_number, text, image_prompt, image_url, audio_url
+          FROM storyboard_pages
+          WHERE storyboard_id = ${storyboard.id}
+          ORDER BY page_number ASC
+        `;
+        pages = pagesResult.rows.map(row => ({
+          pageNumber: row.page_number,
+          text: row.text,
+          imagePrompt: row.image_prompt,
+          imageUrl: row.image_url,
+          audioUrl: row.audio_url,
+        }));
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          work: {
+            id: work.id,
+            title: work.title,
+            status: work.status,
+            currentStep: work.current_step,
+            theme: work.theme,
+            childName: work.child_name,
+            childAge: work.child_age,
+            style: work.style,
+            length: work.length,
+            pageCount: work.page_count,
+            coverUrl: work.cover_url,
+            createdAt: work.created_at,
+            updatedAt: work.updated_at,
+          },
+          story: story ? {
+            id: story.id,
+            content: story.content,
+            wordCount: story.word_count,
+          } : null,
+          storyboard: storyboard ? {
+            id: storyboard.id,
+            pages,
+          } : null,
+        },
+      });
+    }
+
+    // 删除草稿
+    if (fullPath.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'DELETE') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const draftId = fullPath.split('/').pop();
+
+      // 验证草稿存在且属于当前用户
+      const workResult = await sql`
+        SELECT id FROM works WHERE id = ${draftId} AND user_id = ${userPayload.userId}
+      `;
+
+      if (workResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'DRAFT_NOT_FOUND',
+            message: '草稿不存在',
+          },
+        });
+      }
+
+      // 删除草稿（级联删除关联的 stories, storyboards, storyboard_pages）
+      await sql`DELETE FROM works WHERE id = ${draftId}`;
+
+      return res.status(200).json({
+        success: true,
+        message: '草稿已删除',
+      });
+    }
+
     // ==================== 数据库管理 API ====================
 
     // ==================== AI 故事生成 API ====================
@@ -663,6 +847,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const firstLine = story.split('\n')[0].replace(/^[#\s*]+/, '').trim();
         const title = firstLine.length > 30 ? firstLine.substring(0, 30) + '...' : firstLine || '我的童话故事';
 
+        // 保存到数据库：创建 work 记录
+        await sql`
+          INSERT INTO works (id, user_id, title, status, current_step, theme, child_name, child_age, style, length)
+          VALUES (${workId}, ${userPayload.userId}, ${title}, 'draft', 'story', ${theme}, ${childName || null}, ${childAge || null}, ${style || null}, ${length || null})
+        `;
+
+        // 保存到数据库：创建 story 记录
+        await sql`
+          INSERT INTO stories (id, work_id, content, word_count)
+          VALUES (${storyId}, ${workId}, ${story}, ${story.length})
+        `;
+
         return res.status(200).json({
           success: true,
           data: {
@@ -716,7 +912,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const body = req.body || {};
-      const { storyContent, pageCount = 8 } = body;
+      const { storyContent, pageCount = 8, workId } = body;
 
       if (!storyContent) {
         return res.status(400).json({
@@ -727,6 +923,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
         });
       }
+
+      if (!workId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_PARAMS',
+            message: '请提供作品ID',
+          },
+        });
+      }
+
+      // 验证 work 存在且属于当前用户
+      const workResult = await sql`
+        SELECT id, user_id FROM works WHERE id = ${workId} AND user_id = ${userPayload.userId}
+      `;
+      if (workResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'WORK_NOT_FOUND',
+            message: '作品不存在',
+          },
+        });
+      }
+
+      // 获取关联的 story_id
+      const storyResult = await sql`
+        SELECT id FROM stories WHERE work_id = ${workId} LIMIT 1
+      `;
+      const storyId = storyResult.rows[0]?.id || null;
 
       // 验证页数范围
       const validPageCount = Math.min(Math.max(parseInt(pageCount) || 8, 4), 16);
@@ -781,6 +1007,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // 生成分镜 ID
         const storyboardId = generateId('sb');
+
+        // 保存到数据库：创建 storyboard 记录
+        await sql`
+          INSERT INTO storyboards (id, work_id, story_id)
+          VALUES (${storyboardId}, ${workId}, ${storyId})
+        `;
+
+        // 保存分镜页面
+        const pages = storyboard.pages || [];
+        for (const page of pages) {
+          const pageId = generateId('page');
+          await sql`
+            INSERT INTO storyboard_pages (id, storyboard_id, page_number, text, image_prompt)
+            VALUES (${pageId}, ${storyboardId}, ${page.pageNumber}, ${page.text}, ${page.imagePrompt})
+          `;
+        }
+
+        // 更新 work 的当前步骤和页数
+        await sql`
+          UPDATE works
+          SET current_step = 'storyboard', page_count = ${pages.length}, updated_at = NOW()
+          WHERE id = ${workId}
+        `;
 
         return res.status(200).json({
           success: true,
@@ -886,10 +1135,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           title VARCHAR(200) NOT NULL,
           cover_url VARCHAR(500),
           status VARCHAR(20) DEFAULT 'draft',
+          current_step VARCHAR(20) DEFAULT 'input',
           visibility VARCHAR(20) DEFAULT 'private',
           page_count INTEGER DEFAULT 0,
           views INTEGER DEFAULT 0,
           likes INTEGER DEFAULT 0,
+          theme VARCHAR(200),
+          child_name VARCHAR(50),
+          child_age INTEGER,
+          style VARCHAR(50),
+          length VARCHAR(20),
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )

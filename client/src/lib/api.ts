@@ -238,7 +238,7 @@ export const createApi = {
     request<StoryResponse>({ method: 'POST', url: '/create/story', data }),
 
   // 生成分镜剧本
-  generateStoryboard: (data: { storyContent: string; pageCount?: number }) =>
+  generateStoryboard: (data: { storyContent: string; pageCount?: number; workId: string }) =>
     request<StoryboardResponse>({ method: 'POST', url: '/create/storyboard', data }),
 
   // 生成单张图片
@@ -267,6 +267,59 @@ export const createApi = {
       method: 'POST',
       url: `/create/task/${taskId}/continue`,
     }),
+};
+
+// ============================================
+// 草稿管理 API
+// ============================================
+
+export interface Draft {
+  id: string;
+  title: string;
+  status: string;
+  currentStep: 'input' | 'story' | 'storyboard' | 'images' | 'completed';
+  theme: string;
+  childName?: string;
+  childAge?: number;
+  style?: string;
+  length?: string;
+  pageCount: number;
+  coverUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DraftDetail {
+  work: Draft;
+  story: {
+    id: string;
+    content: string;
+    wordCount: number;
+  } | null;
+  storyboard: {
+    id: string;
+    pages: Array<{
+      pageNumber: number;
+      text: string;
+      imagePrompt: string;
+      imageUrl?: string;
+      audioUrl?: string;
+    }>;
+  } | null;
+}
+
+export const draftsApi = {
+  // 获取草稿列表
+  getDrafts: () =>
+    request<{ drafts: Draft[] }>({ method: 'GET', url: '/drafts' }),
+
+  // 获取草稿详情
+  getDraft: (draftId: string) =>
+    request<DraftDetail>({ method: 'GET', url: `/drafts/${draftId}` }),
+
+  // 删除草稿
+  deleteDraft: (draftId: string) =>
+    request<{ message: string }>({ method: 'DELETE', url: `/drafts/${draftId}` }),
 };
 
 // ============================================
