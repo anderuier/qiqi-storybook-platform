@@ -86,25 +86,24 @@ function buildStoryUserPrompt(params: {
 
 const STORYBOARD_SYSTEM_PROMPT = `你是一位专业的绘本分镜师，擅长将儿童故事转化为适合绘本呈现的分镜剧本。
 
-你必须严格按照 JSON 格式输出，不要输出任何其他内容。
-
 分镜要求：
 1. 每一页应该是一个完整的场景或情节片段
 2. 每页文字控制在30-50字，适合幼儿阅读
-3. 为每页提供详细的画面描述（imagePrompt），用于后续图片生成
-4. 画面描述要具体、生动，包含场景、人物、动作、表情等细节
-5. imagePrompt 的语言与故事内容保持一致（中文故事用中文描述）
+3. 为每页提供详细的画面描述，用于后续图片生成
+4. 画面描述要具体、生动，包含场景、人物、动作、表情、色彩等细节
+5. 画面描述的语言与故事内容保持一致（中文故事用中文描述）
 
-输出格式（必须是有效的 JSON）：
-{
-  "pages": [
-    {
-      "pageNumber": 1,
-      "text": "页面上显示的故事文字",
-      "imagePrompt": "详细的画面描述"
-    }
-  ]
-}`;
+输出格式（严格按照以下格式，每页用分隔线隔开）：
+
+---第1页---
+文字：[这一页的故事文字]
+画面：[详细的画面描述]
+
+---第2页---
+文字：[这一页的故事文字]
+画面：[详细的画面描述]
+
+以此类推...`;
 
 function buildStoryboardUserPrompt(storyContent: string, pageCount: number = 8): string {
   return `请将以下故事转化为${pageCount}页的绘本分镜。
@@ -112,11 +111,30 @@ function buildStoryboardUserPrompt(storyContent: string, pageCount: number = 8):
 故事内容：
 ${storyContent}
 
-要求：
-1. 分成${pageCount}页
-2. 每页文字简短（30-50字）
-3. imagePrompt 要详细描述画面
-4. 必须输出有效的 JSON 格式，不要输出其他内容`;
+请按照格式输出${pageCount}页分镜，每页包含"文字"和"画面"两部分。`;
+}
+
+// 解析分镜文本为结构化数据
+function parseStoryboardText(text: string): Array<{pageNumber: number; text: string; imagePrompt: string}> {
+  const pages: Array<{pageNumber: number; text: string; imagePrompt: string}> = [];
+
+  // 按分隔线分割
+  const sections = text.split(/---第\d+页---/).filter(s => s.trim());
+
+  sections.forEach((section, index) => {
+    const textMatch = section.match(/文字[：:]\s*(.+?)(?=画面[：:]|$)/s);
+    const imageMatch = section.match(/画面[：:]\s*(.+?)$/s);
+
+    if (textMatch || imageMatch) {
+      pages.push({
+        pageNumber: index + 1,
+        text: textMatch ? textMatch[1].trim() : '',
+        imagePrompt: imageMatch ? imageMatch[1].trim() : '',
+      });
+    }
+  });
+
+  return pages;
 }
 
 // ==================== AI 配置 ====================
@@ -1211,54 +1229,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const content = response.choices[0]?.message?.content || '';
 
-        // 解析 JSON 响应
-        let storyboard;
-        try {
-          // 尝试多种方式提取 JSON
-          let jsonStr = content.trim();
+        // 解析分镜文本
+        const pages = parseStoryboardText(content);
 
-          // 移除可能的 BOM 和特殊字符
-          jsonStr = jsonStr.replace(/^\uFEFF/, '');
-
-          // 1. 尝试提取 markdown 代码块中的 JSON
-          const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-          if (codeBlockMatch) {
-            jsonStr = codeBlockMatch[1].trim();
-          } else {
-            // 2. 尝试直接提取 JSON 对象（贪婪匹配最外层的大括号）
-            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              jsonStr = jsonMatch[0];
-            }
-          }
-
-          // 尝试修复常见的 JSON 格式问题
-          // 移除尾部多余的逗号
-          jsonStr = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-
-          storyboard = JSON.parse(jsonStr);
-
-          // 验证数据结构
-          if (!storyboard.pages || !Array.isArray(storyboard.pages)) {
-            throw new Error('分镜数据格式错误：缺少 pages 数组');
-          }
-
-          // 验证每个页面的数据
-          storyboard.pages = storyboard.pages.map((page: any, index: number) => ({
-            pageNumber: page.pageNumber || index + 1,
-            text: page.text || '',
-            imagePrompt: page.imagePrompt || page.image_prompt || '',
-          }));
-
-        } catch (parseError: any) {
-          console.error('JSON Parse Error:', parseError.message);
-          console.error('Raw content:', content);
+        if (pages.length === 0) {
+          console.error('Parse failed, raw content:', content);
           return res.status(500).json({
             success: false,
             error: {
               code: 'PARSE_ERROR',
               message: '分镜数据解析失败，请重试',
-              detail: parseError.message,
               rawContent: content.substring(0, 800),
             },
           });
@@ -1274,7 +1254,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `;
 
         // 保存分镜页面
-        const pages = storyboard.pages || [];
         for (const page of pages) {
           const pageId = generateId('page');
           await sql`
@@ -1294,8 +1273,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           success: true,
           data: {
             storyboardId,
-            pageCount: storyboard.pages?.length || 0,
-            pages: storyboard.pages || [],
+            pageCount: pages.length,
+            pages: pages,
             aiProvider: 'claude',
             aiModel: response.model || 'claude-haiku',
           },
