@@ -84,40 +84,24 @@ function buildStoryUserPrompt(params: {
 
 // ==================== 分镜生成 Prompt ====================
 
-const STORYBOARD_SYSTEM_PROMPT = `你是一位专业的绘本分镜师，擅长将儿童故事转化为适合绘本呈现的分镜剧本。
+const STORYBOARD_SYSTEM_PROMPT = `你是一位专业的绘本分镜师。你的任务是将儿童故事转化为绘本分镜。
+
+重要：你必须只输出 JSON 格式的数据，不要输出任何其他文字说明。
+
+JSON 格式如下：
+{"pages":[{"pageNumber":1,"text":"故事文字","imagePrompt":"画面描述"}]}
 
 分镜要求：
-1. 每一页应该是一个完整的场景或情节片段
-2. 每页文字控制在30-50字，适合幼儿阅读
-3. 为每页提供详细的画面描述，用于后续图片生成
-4. 画面描述要具体、生动，包含场景、人物、动作、表情等细节
-5. 保持故事的连贯性和节奏感
-6. 重要情节可以用多页展现，增强表现力
-7. imagePrompt 的语言与故事内容保持一致（中文故事用中文描述，英文故事用英文描述）
-
-输出格式要求：
-请严格按照以下 JSON 格式输出，不要添加任何其他内容：
-{
-  "pages": [
-    {
-      "pageNumber": 1,
-      "text": "页面上显示的故事文字（30-50字）",
-      "imagePrompt": "详细的画面描述，用于AI绘图（包含场景、人物、动作、表情、色彩等）"
-    }
-  ]
-}`;
+1. 每页文字控制在30-50字
+2. imagePrompt 要详细描述画面内容
+3. 语言与故事保持一致`;
 
 function buildStoryboardUserPrompt(storyContent: string, pageCount: number = 8): string {
-  return `请将以下故事转化为${pageCount}页的绘本分镜：
+  return `将以下故事转化为${pageCount}页绘本分镜，只输出JSON：
 
-故事内容：
 ${storyContent}
 
-要求：
-1. 分成${pageCount}页，每页一个场景
-2. 每页文字简短（30-50字），适合3-6岁儿童朗读
-3. imagePrompt 语言与故事内容保持一致，要详细具体，便于AI绘图
-4. 只输出 JSON，不要有其他内容`;
+输出格式：{"pages":[{"pageNumber":1,"text":"...","imagePrompt":"..."},...]}`;
 }
 
 // ==================== AI 配置 ====================
@@ -1216,19 +1200,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let storyboard;
         try {
           // 尝试多种方式提取 JSON
-          let jsonStr = content;
+          let jsonStr = content.trim();
+
+          // 移除可能的 BOM 和特殊字符
+          jsonStr = jsonStr.replace(/^\uFEFF/, '');
 
           // 1. 尝试提取 markdown 代码块中的 JSON
-          const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+          const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
           if (codeBlockMatch) {
             jsonStr = codeBlockMatch[1].trim();
           } else {
-            // 2. 尝试直接提取 JSON 对象
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            // 2. 尝试直接提取 JSON 对象（贪婪匹配最外层的大括号）
+            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
               jsonStr = jsonMatch[0];
             }
           }
+
+          // 尝试修复常见的 JSON 格式问题
+          // 移除尾部多余的逗号
+          jsonStr = jsonStr.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
 
           storyboard = JSON.parse(jsonStr);
 
@@ -1236,14 +1227,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (!storyboard.pages || !Array.isArray(storyboard.pages)) {
             throw new Error('分镜数据格式错误：缺少 pages 数组');
           }
-        } catch (parseError) {
-          console.error('JSON Parse Error:', parseError, 'Content:', content.substring(0, 1000));
+
+          // 验证每个页面的数据
+          storyboard.pages = storyboard.pages.map((page: any, index: number) => ({
+            pageNumber: page.pageNumber || index + 1,
+            text: page.text || '',
+            imagePrompt: page.imagePrompt || page.image_prompt || '',
+          }));
+
+        } catch (parseError: any) {
+          console.error('JSON Parse Error:', parseError.message);
+          console.error('Raw content:', content);
           return res.status(500).json({
             success: false,
             error: {
               code: 'PARSE_ERROR',
               message: '分镜数据解析失败，请重试',
-              rawContent: content.substring(0, 500),
+              detail: parseError.message,
+              rawContent: content.substring(0, 800),
             },
           });
         }
