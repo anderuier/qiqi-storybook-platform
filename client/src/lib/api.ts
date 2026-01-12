@@ -11,7 +11,7 @@ const API_BASE_URL = '/api';
 // 创建 axios 实例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 120000, // 2分钟超时，AI 生成需要较长时间
   headers: {
     'Content-Type': 'application/json',
   },
@@ -72,6 +72,15 @@ apiClient.interceptors.response.use(
         code: data?.error?.code || 'UNKNOWN_ERROR',
         message: data?.error?.message || '请求失败，请稍后重试',
         status,
+      });
+    }
+
+    // 超时错误
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      return Promise.reject({
+        code: 'TIMEOUT_ERROR',
+        message: '请求超时，AI 正在努力生成中，请稍后重试',
+        status: 0,
       });
     }
 

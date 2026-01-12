@@ -848,16 +848,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const title = firstLine.length > 30 ? firstLine.substring(0, 30) + '...' : firstLine || '我的童话故事';
 
         // 保存到数据库：创建 work 记录
-        await sql`
-          INSERT INTO works (id, user_id, title, status, current_step, theme, child_name, child_age, style, length)
-          VALUES (${workId}, ${userPayload.userId}, ${title}, 'draft', 'story', ${theme}, ${childName || null}, ${childAge || null}, ${style || null}, ${length || null})
-        `;
+        try {
+          await sql`
+            INSERT INTO works (id, user_id, title, status, current_step, theme, child_name, child_age, style, length)
+            VALUES (${workId}, ${userPayload.userId}, ${title}, 'draft', 'story', ${theme}, ${childName || null}, ${childAge || null}, ${style || null}, ${length || null})
+          `;
+        } catch (dbError) {
+          console.error('DB Error (works):', dbError);
+          // 数据库保存失败，但仍然返回故事内容（不影响用户体验）
+          return res.status(200).json({
+            success: true,
+            data: {
+              storyId,
+              workId,
+              title,
+              content: story,
+              wordCount: story.length,
+              estimatedPages: Math.ceil(story.length / 100),
+              aiProvider: 'claude',
+              aiModel: response.model || 'claude-haiku',
+              warning: '故事已生成，但保存草稿失败',
+            },
+          });
+        }
 
         // 保存到数据库：创建 story 记录
-        await sql`
-          INSERT INTO stories (id, work_id, content, word_count)
-          VALUES (${storyId}, ${workId}, ${story}, ${story.length})
-        `;
+        try {
+          await sql`
+            INSERT INTO stories (id, work_id, content, word_count)
+            VALUES (${storyId}, ${workId}, ${story}, ${story.length})
+          `;
+        } catch (dbError) {
+          console.error('DB Error (stories):', dbError);
+          // story 保存失败，但 work 已保存
+        }
 
         return res.status(200).json({
           success: true,
