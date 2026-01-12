@@ -262,7 +262,7 @@ export default function MyWorks() {
                   onTogglePublish={() => handleTogglePublish(work)}
                   onEdit={() => {
                     setShowMenu(null);
-                    setLocation(`/create?draft=${work.workId}`);
+                    window.location.href = `/create?draft=${work.workId}`;
                   }}
                 />
               ))}
@@ -420,14 +420,20 @@ function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, 
               />
               <div className="absolute right-0 top-10 bg-white rounded-xl shadow-lg border border-border/50 py-2 min-w-[140px] z-20">
                 <button
-                  onClick={onEdit}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
                 >
                   <Edit className="w-4 h-4" />
                   编辑
                 </button>
                 <button
-                  onClick={onTogglePublish}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTogglePublish();
+                  }}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
                 >
                   {work.status === "draft" ? (
@@ -452,7 +458,10 @@ function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, 
                 </button>
                 <div className="border-t border-border my-1" />
                 <button
-                  onClick={onDelete}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-red-500"
                 >
                   <Trash2 className="w-4 h-4" />
