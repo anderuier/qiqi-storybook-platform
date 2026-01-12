@@ -82,6 +82,43 @@ function buildStoryUserPrompt(params: {
   return prompt;
 }
 
+// ==================== 分镜生成 Prompt ====================
+
+const STORYBOARD_SYSTEM_PROMPT = `你是一位专业的绘本分镜师，擅长将儿童故事转化为适合绘本呈现的分镜剧本。
+
+分镜要求：
+1. 每一页应该是一个完整的场景或情节片段
+2. 每页文字控制在30-50字，适合幼儿阅读
+3. 为每页提供详细的画面描述，用于后续图片生成
+4. 画面描述要具体、生动，包含场景、人物、动作、表情等细节
+5. 保持故事的连贯性和节奏感
+6. 重要情节可以用多页展现，增强表现力
+
+输出格式要求：
+请严格按照以下 JSON 格式输出，不要添加任何其他内容：
+{
+  "pages": [
+    {
+      "pageNumber": 1,
+      "text": "页面上显示的故事文字（30-50字）",
+      "imagePrompt": "详细的画面描述，用于AI绘图（英文，包含场景、人物、动作、表情、色彩等）"
+    }
+  ]
+}`;
+
+function buildStoryboardUserPrompt(storyContent: string, pageCount: number = 8): string {
+  return `请将以下故事转化为${pageCount}页的绘本分镜：
+
+故事内容：
+${storyContent}
+
+要求：
+1. 分成${pageCount}页，每页一个场景
+2. 每页文字简短（30-50字），适合3-6岁儿童朗读
+3. imagePrompt 用英文描述，要详细具体，便于AI绘图
+4. 只输出 JSON，不要有其他内容`;
+}
+
 // ==================== AI 配置 ====================
 
 // 限流配置
@@ -318,6 +355,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           '/api/auth/login',
           '/api/user/me',
           '/api/create/story',
+          '/api/create/storyboard',
         ],
       });
     }
@@ -639,6 +677,122 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       } catch (error) {
         console.error('AI Error:', error);
+        return res.status(500).json({
+          success: false,
+          error: {
+            code: 'AI_ERROR',
+            message: error instanceof Error ? error.message : 'AI 服务暂时不可用',
+          },
+        });
+      }
+    }
+
+    // 生成分镜
+    if (fullPath === '/api/create/storyboard' && req.method === 'POST') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      // 检查限流
+      const rateLimit = await checkRateLimit(userPayload.userId);
+      if (!rateLimit.allowed) {
+        return res.status(429).json({
+          success: false,
+          error: {
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: `请求太频繁，请 ${rateLimit.retryAfter} 秒后再试`,
+            retryAfter: rateLimit.retryAfter,
+          },
+        });
+      }
+
+      const body = req.body || {};
+      const { storyContent, pageCount = 8 } = body;
+
+      if (!storyContent) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_PARAMS',
+            message: '请提供故事内容',
+          },
+        });
+      }
+
+      // 验证页数范围
+      const validPageCount = Math.min(Math.max(parseInt(pageCount) || 8, 4), 16);
+
+      // 记录请求
+      await recordRequest(userPayload.userId);
+
+      try {
+        const client = getAIClient();
+
+        const userPrompt = buildStoryboardUserPrompt(storyContent, validPageCount);
+
+        const response = await client.chat.completions.create({
+          model: process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022',
+          max_tokens: 4000,
+          temperature: 0.7,
+          messages: [
+            {
+              role: 'system',
+              content: STORYBOARD_SYSTEM_PROMPT,
+            },
+            {
+              role: 'user',
+              content: userPrompt,
+            },
+          ],
+        });
+
+        const content = response.choices[0]?.message?.content || '';
+
+        // 解析 JSON 响应
+        let storyboard;
+        try {
+          // 尝试提取 JSON（可能被包裹在 markdown 代码块中）
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            storyboard = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('无法解析分镜数据');
+          }
+        } catch (parseError) {
+          console.error('JSON Parse Error:', parseError, 'Content:', content);
+          return res.status(500).json({
+            success: false,
+            error: {
+              code: 'PARSE_ERROR',
+              message: '分镜数据解析失败，请重试',
+              rawContent: content.substring(0, 500),
+            },
+          });
+        }
+
+        // 生成分镜 ID
+        const storyboardId = generateId('sb');
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            storyboardId,
+            pageCount: storyboard.pages?.length || 0,
+            pages: storyboard.pages || [],
+            aiProvider: 'claude',
+            aiModel: response.model || 'claude-haiku',
+          },
+        });
+      } catch (error) {
+        console.error('Storyboard AI Error:', error);
         return res.status(500).json({
           success: false,
           error: {
