@@ -355,6 +355,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           '/api/auth/register',
           '/api/auth/login',
           '/api/user/me',
+          '/api/works',
           '/api/drafts',
           '/api/drafts/:id',
           '/api/create/story',
@@ -760,6 +761,67 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // ==================== 作品管理 API ====================
+
+    // 获取我的作品列表（包括草稿和已发布）
+    if (fullPath === '/api/works' && req.method === 'GET') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const status = req.query.status as string || 'all';
+
+      let result;
+      if (status === 'all') {
+        result = await sql`
+          SELECT id, title, status, current_step, cover_url, page_count, views, likes, created_at, updated_at
+          FROM works
+          WHERE user_id = ${userPayload.userId}
+          ORDER BY updated_at DESC
+          LIMIT 50
+        `;
+      } else {
+        result = await sql`
+          SELECT id, title, status, current_step, cover_url, page_count, views, likes, created_at, updated_at
+          FROM works
+          WHERE user_id = ${userPayload.userId} AND status = ${status}
+          ORDER BY updated_at DESC
+          LIMIT 50
+        `;
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          total: result.rows.length,
+          page: 1,
+          pageSize: 50,
+          works: result.rows.map(row => ({
+            workId: row.id,
+            title: row.title,
+            status: row.status,
+            currentStep: row.current_step,
+            coverUrl: row.cover_url,
+            pageCount: row.page_count || 0,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+            stats: {
+              views: row.views || 0,
+              likes: row.likes || 0,
+            },
+          })),
+        },
+      });
+    }
+
     // ==================== 数据库管理 API ====================
 
     // ==================== AI 故事生成 API ====================
@@ -1017,15 +1079,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 解析 JSON 响应
         let storyboard;
         try {
-          // 尝试提取 JSON（可能被包裹在 markdown 代码块中）
-          const jsonMatch = content.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            storyboard = JSON.parse(jsonMatch[0]);
+          // 尝试多种方式提取 JSON
+          let jsonStr = content;
+
+          // 1. 尝试提取 markdown 代码块中的 JSON
+          const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (codeBlockMatch) {
+            jsonStr = codeBlockMatch[1].trim();
           } else {
-            throw new Error('无法解析分镜数据');
+            // 2. 尝试直接提取 JSON 对象
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              jsonStr = jsonMatch[0];
+            }
+          }
+
+          storyboard = JSON.parse(jsonStr);
+
+          // 验证数据结构
+          if (!storyboard.pages || !Array.isArray(storyboard.pages)) {
+            throw new Error('分镜数据格式错误：缺少 pages 数组');
           }
         } catch (parseError) {
-          console.error('JSON Parse Error:', parseError, 'Content:', content);
+          console.error('JSON Parse Error:', parseError, 'Content:', content.substring(0, 1000));
           return res.status(500).json({
             success: false,
             error: {
