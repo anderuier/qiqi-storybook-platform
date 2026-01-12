@@ -113,6 +113,10 @@ docs/SESSION_SUMMARY_*.md
 docs/git-*.md
 docs/tech-overview.md
 docs/项目小结.txt
+docs/*.jpg
+
+# 常用命令备忘
+常用命令.txt
 
 # 忽略所有截图文件（任何位置）
 **/Snipaste_*
