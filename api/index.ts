@@ -847,40 +847,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const firstLine = story.split('\n')[0].replace(/^[#\s*]+/, '').trim();
         const title = firstLine.length > 30 ? firstLine.substring(0, 30) + '...' : firstLine || '我的童话故事';
 
-        // 保存到数据库：创建 work 记录
-        try {
-          await sql`
-            INSERT INTO works (id, user_id, title, status, current_step, theme, child_name, child_age, style, length)
-            VALUES (${workId}, ${userPayload.userId}, ${title}, 'draft', 'story', ${theme}, ${childName || null}, ${childAge || null}, ${style || null}, ${length || null})
-          `;
-        } catch (dbError) {
-          console.error('DB Error (works):', dbError);
-          // 数据库保存失败，但仍然返回故事内容（不影响用户体验）
-          return res.status(200).json({
-            success: true,
-            data: {
-              storyId,
-              workId,
-              title,
-              content: story,
-              wordCount: story.length,
-              estimatedPages: Math.ceil(story.length / 100),
-              aiProvider: 'claude',
-              aiModel: response.model || 'claude-haiku',
-              warning: '故事已生成，但保存草稿失败',
-            },
-          });
+        // 保存到数据库（带重试）
+        let dbSaveSuccess = false;
+        let dbError = null;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            // 创建 work 记录
+            await sql`
+              INSERT INTO works (id, user_id, title, status, current_step, theme, child_name, child_age, style, length)
+              VALUES (${workId}, ${userPayload.userId}, ${title}, 'draft', 'story', ${theme}, ${childName || null}, ${childAge || null}, ${style || null}, ${length || null})
+            `;
+
+            // 创建 story 记录
+            await sql`
+              INSERT INTO stories (id, work_id, content, word_count)
+              VALUES (${storyId}, ${workId}, ${story}, ${story.length})
+            `;
+
+            dbSaveSuccess = true;
+            break;
+          } catch (err) {
+            dbError = err;
+            console.error(`DB save attempt ${attempt} failed:`, err);
+            if (attempt < 3) {
+              // 等待一小段时间后重试
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
         }
 
-        // 保存到数据库：创建 story 记录
-        try {
-          await sql`
-            INSERT INTO stories (id, work_id, content, word_count)
-            VALUES (${storyId}, ${workId}, ${story}, ${story.length})
-          `;
-        } catch (dbError) {
-          console.error('DB Error (stories):', dbError);
-          // story 保存失败，但 work 已保存
+        if (!dbSaveSuccess) {
+          console.error('All DB save attempts failed:', dbError);
+          // 数据库保存完全失败，返回错误让用户重试
+          return res.status(500).json({
+            success: false,
+            error: {
+              code: 'DB_SAVE_ERROR',
+              message: '故事已生成但保存失败，请重新生成',
+              storyPreview: story.substring(0, 200) + '...',
+            },
+          });
         }
 
         return res.status(200).json({
