@@ -238,7 +238,7 @@ export const createApi = {
     request<StoryResponse>({ method: 'POST', url: '/create/story', data }),
 
   // 生成分镜剧本
-  generateStoryboard: (data: { storyId: string; pageCount?: number }) =>
+  generateStoryboard: (data: { storyContent: string; pageCount?: number }) =>
     request<StoryboardResponse>({ method: 'POST', url: '/create/storyboard', data }),
 
   // 生成单张图片

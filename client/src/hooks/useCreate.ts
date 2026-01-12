@@ -125,7 +125,7 @@ export function useCreate() {
 
       try {
         const storyboard = await createApi.generateStoryboard({
-          storyId: state.story.storyId,
+          storyContent: state.story.content,
           pageCount,
         });
 
