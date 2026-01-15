@@ -424,7 +424,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // 调用硅基流动 API
       try {
-        const model = 'black-forest-labs/FLUX.1-schnell';
+        const model = 'Kwai-Kolors/Kolors';
 
         const response = await fetch('https://api.siliconflow.cn/v1/images/generations', {
           method: 'POST',
@@ -435,8 +435,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           body: JSON.stringify({
             model,
             prompt: 'A cute cartoon rabbit in a forest, children book illustration style, watercolor painting, soft colors',
-            image_size: '512x512',
-            num_inference_steps: 20,
           }),
         });
 

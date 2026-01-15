@@ -568,7 +568,7 @@ function generateVolcengineAuth(
 
 /**
  * 使用硅基流动 (SiliconFlow) 生成图片
- * 国内服务，有免费额度，支持 FLUX 等模型
+ * 国内服务，有免费额度，支持 FLUX、Kolors 等模型
  * 文档：https://docs.siliconflow.cn/
  */
 async function generateWithSiliconflow(
@@ -579,13 +579,10 @@ async function generateWithSiliconflow(
     throw new Error('硅基流动 API Key 未配置，请设置 SILICONFLOW_API_KEY 环境变量');
   }
 
-  // 默认使用 FLUX.1-schnell 模型（免费）
-  const model = options.model || process.env.SILICONFLOW_MODEL || 'black-forest-labs/FLUX.1-schnell';
+  // 默认使用 Kolors 模型（免费）
+  const model = options.model || process.env.SILICONFLOW_MODEL || 'Kwai-Kolors/Kolors';
 
-  // 解析尺寸
-  const size = options.size || '1024x1024';
-
-  // 硅基流动使用 OpenAI 兼容格式
+  // 硅基流动 API
   const response = await fetch('https://api.siliconflow.cn/v1/images/generations', {
     method: 'POST',
     headers: {
@@ -595,9 +592,6 @@ async function generateWithSiliconflow(
     body: JSON.stringify({
       model,
       prompt: options.prompt,
-      image_size: size,
-      num_inference_steps: 20,
-      guidance_scale: 7.5,
     }),
   });
 
