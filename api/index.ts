@@ -402,6 +402,93 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // 测试硅基流动图片生成 API
+    if (fullPath === '/api/test-siliconflow') {
+      const apiKey = process.env.SILICONFLOW_API_KEY;
+      const imageProvider = process.env.IMAGE_PROVIDER;
+
+      // 检查环境变量
+      const envCheck = {
+        IMAGE_PROVIDER: imageProvider || '未设置',
+        SILICONFLOW_API_KEY: apiKey ? `${apiKey.substring(0, 10)}...` : '未设置',
+      };
+
+      if (!apiKey) {
+        return res.status(200).json({
+          success: false,
+          message: '硅基流动 API Key 未配置',
+          envCheck,
+          guide: '请在 https://siliconflow.cn/ 注册并获取 API Key，然后在 Vercel 环境变量中设置 SILICONFLOW_API_KEY',
+        });
+      }
+
+      // 调用硅基流动 API
+      try {
+        const model = 'black-forest-labs/FLUX.1-schnell';
+
+        const response = await fetch('https://api.siliconflow.cn/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            prompt: 'A cute cartoon rabbit in a forest, children book illustration style, watercolor painting, soft colors',
+            image_size: '512x512',
+            num_inference_steps: 20,
+          }),
+        });
+
+        const responseText = await response.text();
+
+        if (!response.ok) {
+          return res.status(200).json({
+            success: false,
+            message: '硅基流动 API 调用失败',
+            envCheck,
+            debug: {
+              model,
+              httpStatus: response.status,
+              responseBody: responseText.substring(0, 800),
+            },
+          });
+        }
+
+        const result = JSON.parse(responseText);
+        const imageUrl = result.images?.[0]?.url || result.data?.[0]?.url;
+
+        if (imageUrl) {
+          return res.status(200).json({
+            success: true,
+            message: '硅基流动 API 调用成功！',
+            envCheck,
+            result: {
+              imageUrl: imageUrl.substring(0, 100) + '...',
+              model,
+            },
+          });
+        }
+
+        return res.status(200).json({
+          success: false,
+          message: '硅基流动未返回图片数据',
+          envCheck,
+          debug: {
+            model,
+            responseBody: responseText.substring(0, 500),
+          },
+        });
+      } catch (error: any) {
+        return res.status(200).json({
+          success: false,
+          message: '硅基流动 API 调用异常',
+          envCheck,
+          error: error.message,
+        });
+      }
+    }
+
     // 测试 Google Imagen 图片生成 API
     if (fullPath === '/api/test-imagen') {
       const apiKey = process.env.GOOGLE_API_KEY;

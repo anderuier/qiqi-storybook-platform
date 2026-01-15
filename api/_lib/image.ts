@@ -1,13 +1,13 @@
 /**
  * 图片生成服务封装
- * 支持多种图片生成提供商：DALL-E、Stability、Google Imagen、即梦、自定义接口
+ * 支持多种图片生成提供商：DALL-E、Stability、Google Imagen、即梦、硅基流动、自定义接口
  */
 
 import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // 图片生成提供商类型
-export type ImageProvider = 'dalle' | 'stability' | 'imagen' | 'jimeng' | 'custom';
+export type ImageProvider = 'dalle' | 'stability' | 'imagen' | 'jimeng' | 'siliconflow' | 'custom';
 
 // 获取当前使用的图片生成提供商
 export function getImageProvider(): ImageProvider {
@@ -25,6 +25,20 @@ function getDalleClient(): OpenAI {
     });
   }
   return dalleClient;
+}
+
+// ============================================
+// 硅基流动客户端（使用 OpenAI SDK，兼容格式）
+// ============================================
+let siliconflowClient: OpenAI | null = null;
+function getSiliconflowClient(): OpenAI {
+  if (!siliconflowClient) {
+    siliconflowClient = new OpenAI({
+      apiKey: process.env.SILICONFLOW_API_KEY,
+      baseURL: 'https://api.siliconflow.cn/v1',
+    });
+  }
+  return siliconflowClient;
 }
 
 // ============================================
@@ -95,6 +109,8 @@ export async function generateImage(
       return generateWithImagen(options);
     case 'jimeng':
       return generateWithJimeng(options);
+    case 'siliconflow':
+      return generateWithSiliconflow(options);
     case 'custom':
       return generateWithCustomImage(options);
     default:
@@ -548,6 +564,62 @@ function generateVolcengineAuth(
 ): string {
   // 此函数已废弃，保留仅为兼容性
   return `Bearer ${accessKey}`;
+}
+
+/**
+ * 使用硅基流动 (SiliconFlow) 生成图片
+ * 国内服务，有免费额度，支持 FLUX 等模型
+ * 文档：https://docs.siliconflow.cn/
+ */
+async function generateWithSiliconflow(
+  options: ImageGenerateOptions
+): Promise<ImageGenerateResult> {
+  const apiKey = process.env.SILICONFLOW_API_KEY;
+  if (!apiKey) {
+    throw new Error('硅基流动 API Key 未配置，请设置 SILICONFLOW_API_KEY 环境变量');
+  }
+
+  // 默认使用 FLUX.1-schnell 模型（免费）
+  const model = options.model || process.env.SILICONFLOW_MODEL || 'black-forest-labs/FLUX.1-schnell';
+
+  // 解析尺寸
+  const size = options.size || '1024x1024';
+
+  // 硅基流动使用 OpenAI 兼容格式
+  const response = await fetch('https://api.siliconflow.cn/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      prompt: options.prompt,
+      image_size: size,
+      num_inference_steps: 20,
+      guidance_scale: 7.5,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`硅基流动 API 错误 (${response.status}): ${errorText}`);
+  }
+
+  const result = await response.json();
+
+  // 硅基流动返回格式
+  const imageUrl = result.images?.[0]?.url || result.data?.[0]?.url || '';
+
+  if (!imageUrl) {
+    throw new Error(`硅基流动未返回图片数据: ${JSON.stringify(result)}`);
+  }
+
+  return {
+    imageUrl,
+    provider: 'siliconflow',
+    model,
+  };
 }
 
 /**

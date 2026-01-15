@@ -256,7 +256,7 @@ const createImageSchema = z.object({
   pageNumber: z.number().int().min(1),
   style: z.enum(['watercolor', 'cartoon', 'oil', 'anime', 'flat', '3d']),
   regenerate: z.boolean().optional().default(false),
-  provider: z.enum(['dalle', 'stability', 'imagen', 'jimeng', 'custom']).optional(),
+  provider: z.enum(['dalle', 'stability', 'imagen', 'jimeng', 'siliconflow', 'custom']).optional(),
 });
 
 create.post('/image', async (c) => {
@@ -345,7 +345,7 @@ create.post('/image', async (c) => {
 const createImagesSchema = z.object({
   storyboardId: z.string().min(1),
   style: z.enum(['watercolor', 'cartoon', 'oil', 'anime', 'flat', '3d']),
-  provider: z.enum(['dalle', 'stability', 'imagen', 'jimeng', 'custom']).optional(),
+  provider: z.enum(['dalle', 'stability', 'imagen', 'jimeng', 'siliconflow', 'custom']).optional(),
 });
 
 create.post('/images', async (c) => {
