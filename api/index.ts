@@ -423,8 +423,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // 调用 Google Gemini 图片生成 API
       try {
-        // 使用 Gemini 2.5 Flash Image 模型
-        const model = 'gemini-2.0-flash-exp-image-generation';
+        // 尝试多个模型名称
+        const models = [
+          'gemini-2.0-flash-preview-image-generation',
+          'imagen-3.0-generate-002',
+          'imagegeneration@006',
+        ];
+        const model = models[0];
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
         const requestBody = {
@@ -438,7 +443,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             },
           ],
           generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE'],
+            responseModalities: ['IMAGE'],
           },
         };
 
