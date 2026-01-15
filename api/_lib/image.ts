@@ -319,9 +319,9 @@ async function generateWithJimengAsync(
   // 解析尺寸
   const [width, height] = (options.size || '1024x1024').split('x').map(Number);
 
-  // 请求体
+  // 请求体 - 使用即梦文生图 API
   const requestBody = {
-    req_key: 'high_aes_general_v21_L',
+    req_key: 'jimeng_high_aes_general_v21',
     prompt: options.prompt,
     model_version: model,
     width,
@@ -336,42 +336,53 @@ async function generateWithJimengAsync(
     },
   };
 
+  console.log('即梦请求参数:', JSON.stringify(requestBody, null, 2));
+
   // 发送请求
   const result = await volcengineRequest({
     accessKey,
     secretKey,
-    service: 'cv',
+    service: 'visual',  // 使用 visual 服务
     region: 'cn-north-1',
     action: 'CVProcess',
     version: '2022-08-31',
     body: requestBody,
   });
 
-  // 检查响应
-  if (result.code !== 10000) {
+  console.log('即梦响应:', JSON.stringify(result, null, 2));
+
+  // 检查响应 - 火山引擎返回格式
+  if (result.ResponseMetadata?.Error) {
+    const error = result.ResponseMetadata.Error;
+    throw new Error(`即梦图片生成失败: ${error.Code} - ${error.Message}`);
+  }
+
+  // 检查业务响应码
+  if (result.code && result.code !== 10000) {
     throw new Error(`即梦图片生成失败: ${result.message || JSON.stringify(result)}`);
   }
 
   // 如果直接返回了图片 URL
-  if (result.data?.image_urls?.[0]) {
+  const imageUrls = result.data?.image_urls || result.Result?.data?.image_urls;
+  if (imageUrls?.[0]) {
     return {
-      imageUrl: result.data.image_urls[0],
+      imageUrl: imageUrls[0],
       provider: 'jimeng',
       model,
     };
   }
 
   // 如果返回了 binary_data_base64（base64 编码的图片）
-  if (result.data?.binary_data_base64?.[0]) {
-    const base64Data = result.data.binary_data_base64[0];
+  const binaryData = result.data?.binary_data_base64 || result.Result?.data?.binary_data_base64;
+  if (binaryData?.[0]) {
     return {
-      imageUrl: `data:image/png;base64,${base64Data}`,
+      imageUrl: `data:image/png;base64,${binaryData[0]}`,
       provider: 'jimeng',
       model,
     };
   }
 
-  throw new Error('即梦未返回图片数据');
+  throw new Error(`即梦未返回图片数据: ${JSON.stringify(result)}`);
 }
 
 /**
@@ -396,7 +407,7 @@ async function volcengineRequest(options: VolcengineRequestOptions): Promise<any
   const method = 'POST';
   const contentType = 'application/json';
 
-  // 当前时间
+  // 当前时间 - 使用 UTC 时间
   const now = new Date();
   const xDate = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const shortDate = xDate.substring(0, 8);
@@ -408,7 +419,7 @@ async function volcengineRequest(options: VolcengineRequestOptions): Promise<any
   const crypto = await import('crypto');
   const bodyHash = crypto.createHash('sha256').update(bodyString).digest('hex');
 
-  // 规范请求头
+  // 规范请求头 - 按字母顺序排列
   const signedHeaders = 'content-type;host;x-content-sha256;x-date';
   const canonicalHeaders = [
     `content-type:${contentType}`,
@@ -417,11 +428,11 @@ async function volcengineRequest(options: VolcengineRequestOptions): Promise<any
     `x-date:${xDate}`,
   ].join('\n');
 
-  // 规范查询字符串
-  const queryParams = new URLSearchParams({
-    Action: action,
-    Version: version,
-  });
+  // 规范查询字符串 - 按字母顺序排列
+  const queryParams = new URLSearchParams();
+  queryParams.set('Action', action);
+  queryParams.set('Version', version);
+  queryParams.sort();
   const canonicalQueryString = queryParams.toString();
 
   // 规范请求
@@ -460,6 +471,9 @@ async function volcengineRequest(options: VolcengineRequestOptions): Promise<any
   // 构建 Authorization 头
   const authorization = `HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
+  console.log('火山引擎请求 URL:', `${url}?${canonicalQueryString}`);
+  console.log('火山引擎请求头 X-Date:', xDate);
+
   // 发送请求
   const response = await fetch(`${url}?${canonicalQueryString}`, {
     method,
@@ -473,12 +487,19 @@ async function volcengineRequest(options: VolcengineRequestOptions): Promise<any
     body: bodyString,
   });
 
+  const responseText = await response.text();
+  console.log('火山引擎响应状态:', response.status);
+  console.log('火山引擎响应内容:', responseText);
+
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`火山引擎 API 请求失败 (${response.status}): ${errorText}`);
+    throw new Error(`火山引擎 API 请求失败 (${response.status}): ${responseText}`);
   }
 
-  return response.json();
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    throw new Error(`火山引擎响应解析失败: ${responseText}`);
+  }
 }
 
 /**
