@@ -437,18 +437,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const method = 'POST';
         const contentType = 'application/json';
 
-        // 请求体
+        // 请求体 - 尝试不同的 req_key
         const requestBody = {
-          req_key: 'high_aes_general_v21_L',
-          prompt: 'A cute cartoon rabbit in a forest, children book illustration style',
+          req_key: 'high_aes',  // 尝试更简单的 req_key
+          prompt: 'A cute cartoon rabbit',
           width: 512,
           height: 512,
-          seed: -1,
-          scale: 3.5,
-          ddim_steps: 25,
-          use_sr: true,
           return_url: true,
-          logo_info: { add_logo: false },
         };
 
         // 当前时间
