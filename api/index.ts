@@ -431,7 +431,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const service = 'cv';
         const region = 'cn-north-1';
-        const action = 'CVSync2AsyncSubmitTask';
+        const action = 'CVProcess';  // 官方示例使用 CVProcess
         const version = '2022-08-31';
         const host = 'visual.volcengineapi.com';
         const method = 'POST';
@@ -527,9 +527,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             xDate,
             shortDate,
             credentialScope,
-            canonicalRequestHash: canonicalRequestHash.substring(0, 20) + '...',
+            bodyHashPrefix: bodyHash.substring(0, 20),
+            canonicalRequestPreview: canonicalRequest.substring(0, 200).replace(/\n/g, '\\n'),
+            stringToSignPreview: stringToSign.substring(0, 150).replace(/\n/g, '\\n'),
             signature: signature.substring(0, 20) + '...',
-            authorization: authorization.substring(0, 80) + '...',
             httpStatus: response.status,
             responseBody: responseText.substring(0, 800),
           },
