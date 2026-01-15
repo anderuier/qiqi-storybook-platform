@@ -431,7 +431,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const service = 'cv';
         const region = 'cn-north-1';
-        const action = 'CVProcess';
+        const action = 'CVSync2AsyncSubmitTask';  // 异步提交任务
         const version = '2022-08-31';
         // 火山引擎 CV 服务的正确域名
         const host = 'visual.volcengineapi.com';
