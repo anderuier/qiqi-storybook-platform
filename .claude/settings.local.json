@@ -27,7 +27,13 @@
       "WebFetch(domain:storybook-gamma-ten.vercel.app)",
       "Bash(git rm:*)",
       "Bash(ls:*)",
-      "Bash(npx tsc --noEmit api/index.ts)"
+      "Bash(npx tsc --noEmit api/index.ts)",
+      "WebSearch",
+      "WebFetch(domain:www.volcengine.com)",
+      "Bash(npm search @volcengine)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npx vercel logs:*)",
+      "WebFetch(domain:ai.google.dev)"
     ]
   }
 }
