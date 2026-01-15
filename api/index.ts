@@ -2041,8 +2041,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                   updated_at = CURRENT_TIMESTAMP
               WHERE id = ${taskId}
             `;
-          } catch (imgErr) {
+          } catch (imgErr: any) {
             console.error('第一张图片生成失败:', imgErr);
+            // 更新任务状态为失败
+            await sql`
+              UPDATE tasks
+              SET status = 'failed',
+                  error = ${imgErr.message || '图片生成失败'},
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE id = ${taskId}
+            `;
+
+            return res.status(500).json({
+              success: false,
+              error: {
+                code: 'IMAGE_GENERATION_FAILED',
+                message: '图片生成失败',
+                details: imgErr.message,
+              },
+            });
           }
         }
 
