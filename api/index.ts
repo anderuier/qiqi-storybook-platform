@@ -402,7 +402,100 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 测试即梦图片生成 API
+    // 测试 Google Imagen 图片生成 API
+    if (fullPath === '/api/test-imagen') {
+      const apiKey = process.env.GOOGLE_API_KEY;
+      const imageProvider = process.env.IMAGE_PROVIDER;
+
+      // 检查环境变量
+      const envCheck = {
+        IMAGE_PROVIDER: imageProvider || '未设置',
+        GOOGLE_API_KEY: apiKey ? `${apiKey.substring(0, 10)}...` : '未设置',
+      };
+
+      if (!apiKey) {
+        return res.status(200).json({
+          success: false,
+          message: 'Google API Key 未配置',
+          envCheck,
+        });
+      }
+
+      // 调用 Google Imagen API
+      try {
+        const model = 'imagen-3.0-generate-001';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+
+        const requestBody = {
+          instances: [
+            {
+              prompt: 'A cute cartoon rabbit in a forest, children book illustration style, watercolor',
+            },
+          ],
+          parameters: {
+            sampleCount: 1,
+            aspectRatio: '1:1',
+            safetyFilterLevel: 'block_only_high',
+            personGeneration: 'allow_adult',
+          },
+        };
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        const responseText = await response.text();
+
+        if (!response.ok) {
+          return res.status(200).json({
+            success: false,
+            message: 'Google Imagen API 调用失败',
+            envCheck,
+            debug: {
+              httpStatus: response.status,
+              responseBody: responseText.substring(0, 800),
+            },
+          });
+        }
+
+        const result = JSON.parse(responseText);
+        const predictions = result.predictions;
+
+        if (predictions && predictions[0]?.bytesBase64Encoded) {
+          return res.status(200).json({
+            success: true,
+            message: 'Google Imagen API 调用成功！',
+            envCheck,
+            result: {
+              imageUrl: `data:image/png;base64,${predictions[0].bytesBase64Encoded.substring(0, 50)}...`,
+              model,
+            },
+          });
+        }
+
+        return res.status(200).json({
+          success: false,
+          message: 'Google Imagen 未返回图片数据',
+          envCheck,
+          debug: {
+            responseBody: responseText.substring(0, 500),
+          },
+        });
+      } catch (error: any) {
+        return res.status(200).json({
+          success: false,
+          message: 'Google Imagen API 调用异常',
+          envCheck,
+          error: error.message,
+        });
+      }
+    }
+
+    // 测试即梦图片生成 API（保留用于调试）
     if (fullPath === '/api/test-jimeng') {
       const accessKey = process.env.JIMENG_ACCESS_KEY;
       const secretKey = process.env.JIMENG_SECRET_KEY;

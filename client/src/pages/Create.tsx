@@ -97,9 +97,10 @@ const imageProviders: Array<{
   description: string;
   recommended?: boolean;
 }> = [
-  { id: "jimeng", name: "即梦", description: "字节跳动旗下，国内访问快", recommended: true },
+  { id: "imagen", name: "Google Imagen", description: "Google AI 图片生成，效果优秀", recommended: true },
   { id: "dalle", name: "DALL-E", description: "OpenAI 出品，效果优秀" },
   { id: "stability", name: "Stability AI", description: "Stable Diffusion 官方" },
+  { id: "jimeng", name: "即梦", description: "字节跳动旗下" },
   { id: "custom", name: "自定义", description: "使用自定义 API" },
 ];
 
@@ -119,7 +120,7 @@ export default function Create() {
   const [selectedStoryStyle, setSelectedStoryStyle] = useState<string>("warm");
   const [storyLength, setStoryLength] = useState<"short" | "medium" | "long">("medium");
   const [selectedArtStyle, setSelectedArtStyle] = useState<string | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<ImageProvider>("jimeng");
+  const [selectedProvider, setSelectedProvider] = useState<ImageProvider>("imagen");
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
   const [isRestoringDraft, setIsRestoringDraft] = useState(false);
 

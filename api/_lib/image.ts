@@ -188,46 +188,80 @@ async function generateWithStability(
 /**
  * 使用 Google Imagen 生成图片
  * 文档：https://ai.google.dev/gemini-api/docs/imagen
+ *
+ * 使用 Gemini API 的 imagen-3.0-generate-001 模型
  */
 async function generateWithImagen(
   options: ImageGenerateOptions
 ): Promise<ImageGenerateResult> {
-  const client = getImagenClient();
-  const model = options.model || process.env.IMAGEN_MODEL || 'imagen-3.0-generate-002';
-
-  // 使用 Gemini API 的图片生成功能
-  const imageModel = client.getGenerativeModel({ model });
-
-  const response = await imageModel.generateContent({
-    contents: [
-      {
-        role: 'user',
-        parts: [{ text: options.prompt }],
-      },
-    ],
-    generationConfig: {
-      // Imagen 特定配置
-      responseMimeType: 'image/png',
-    } as any,
-  });
-
-  // 注意：Google Imagen API 的响应格式可能需要根据实际情况调整
-  // 这里是基于文档的预期格式
-  const result = response.response;
-
-  // 如果返回的是 base64 图片数据
-  const imageData = result.candidates?.[0]?.content?.parts?.[0];
-
-  let imageUrl = '';
-  if (imageData && 'inlineData' in imageData && imageData.inlineData) {
-    imageUrl = `data:${imageData.inlineData.mimeType};base64,${imageData.inlineData.data}`;
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    throw new Error('Google API Key 未配置，请设置 GOOGLE_API_KEY 环境变量');
   }
 
-  return {
-    imageUrl,
-    provider: 'imagen',
-    model,
+  const model = options.model || process.env.IMAGEN_MODEL || 'imagen-3.0-generate-001';
+
+  // Google Imagen API endpoint
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+
+  // 解析尺寸
+  const [width, height] = (options.size || '1024x1024').split('x').map(Number);
+
+  // 确定宽高比
+  let aspectRatio = '1:1';
+  if (width > height) {
+    aspectRatio = '16:9';
+  } else if (height > width) {
+    aspectRatio = '9:16';
+  }
+
+  const requestBody = {
+    instances: [
+      {
+        prompt: options.prompt,
+      },
+    ],
+    parameters: {
+      sampleCount: 1,
+      aspectRatio: aspectRatio,
+      safetyFilterLevel: 'block_only_high',
+      personGeneration: 'allow_adult',
+    },
   };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Google Imagen API 错误 (${response.status}): ${errorText}`);
+  }
+
+  const result = await response.json();
+
+  // 解析响应
+  const predictions = result.predictions;
+  if (!predictions || predictions.length === 0) {
+    throw new Error('Google Imagen 未返回图片数据');
+  }
+
+  const imageData = predictions[0];
+
+  // Imagen 返回 base64 编码的图片
+  if (imageData.bytesBase64Encoded) {
+    return {
+      imageUrl: `data:image/png;base64,${imageData.bytesBase64Encoded}`,
+      provider: 'imagen',
+      model,
+    };
+  }
+
+  throw new Error('Google Imagen 响应格式异常');
 }
 
 /**
