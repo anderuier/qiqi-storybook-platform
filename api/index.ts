@@ -414,7 +414,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         IMAGE_PROVIDER: imageProvider || '未设置',
         JIMENG_API_MODE: apiMode,
         JIMENG_ACCESS_KEY: accessKey ? `${accessKey.substring(0, 10)}...` : '未设置',
-        JIMENG_SECRET_KEY: secretKey ? '已设置' : '未设置',
+        JIMENG_SECRET_KEY: secretKey ? `长度=${secretKey.length}` : '未设置',
       };
 
       if (!accessKey || !secretKey) {
@@ -431,16 +431,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const service = 'cv';
         const region = 'cn-north-1';
-        const action = 'CVSync2AsyncSubmitTask';  // 异步提交任务
+        const action = 'CVSync2AsyncSubmitTask';
         const version = '2022-08-31';
-        // 火山引擎 CV 服务的正确域名
         const host = 'visual.volcengineapi.com';
         const method = 'POST';
         const contentType = 'application/json';
 
         // 请求体
         const requestBody = {
-          req_key: 'jimeng_high_aes_general_v21',
+          req_key: 'high_aes_general_v21_L',
           prompt: 'A cute cartoon rabbit in a forest, children book illustration style',
           width: 512,
           height: 512,
@@ -460,7 +459,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const bodyString = JSON.stringify(requestBody);
         const bodyHash = nodeCrypto.createHash('sha256').update(bodyString).digest('hex');
 
-        // 规范请求头
+        // 规范请求头 - 按字母顺序
         const signedHeaders = 'content-type;host;x-content-sha256;x-date';
         const canonicalHeaders = [
           `content-type:${contentType}`,
@@ -470,11 +469,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ].join('\n');
 
         // 规范查询字符串
-        const queryParams = new URLSearchParams();
-        queryParams.set('Action', action);
-        queryParams.set('Version', version);
-        queryParams.sort();
-        const canonicalQueryString = queryParams.toString();
+        const canonicalQueryString = `Action=${action}&Version=${version}`;
 
         // 规范请求
         const canonicalRequest = [
@@ -530,8 +525,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           debug: {
             url,
             xDate,
+            shortDate,
+            credentialScope,
+            canonicalRequestHash: canonicalRequestHash.substring(0, 20) + '...',
+            signature: signature.substring(0, 20) + '...',
+            authorization: authorization.substring(0, 80) + '...',
             httpStatus: response.status,
-            responseBody: responseText.substring(0, 500),
+            responseBody: responseText.substring(0, 800),
           },
         });
       } catch (error: any) {
