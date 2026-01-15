@@ -623,7 +623,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         success: true,
         data: {
-          drafts: result.rows.map(row => ({
+          drafts: result.rows.map((row: any) => ({
             id: row.id,
             title: row.title,
             status: row.status,
@@ -698,7 +698,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE storyboard_id = ${storyboard.id}
           ORDER BY page_number ASC
         `;
-        pages = pagesResult.rows.map(row => ({
+        pages = pagesResult.rows.map((row: any) => ({
           pageNumber: row.page_number,
           text: row.text,
           imagePrompt: row.image_prompt,
@@ -821,7 +821,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           total: result.rows.length,
           page: 1,
           pageSize: 50,
-          works: result.rows.map(row => ({
+          works: result.rows.map((row: any) => ({
             workId: row.id,
             title: row.title,
             status: row.status,
@@ -935,7 +935,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE storyboard_id = ${storyboard.id}
           ORDER BY page_number ASC
         `;
-        pages = pagesResult.rows.map(row => ({
+        pages = pagesResult.rows.map((row: any) => ({
           pageNumber: row.page_number,
           text: row.text,
           imagePrompt: row.image_prompt,
