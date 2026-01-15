@@ -402,6 +402,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // 测试硅基流动图片生成 API（通过正式的 generateImage 函数）
+    if (fullPath === '/api/test-siliconflow-full') {
+      const apiKey = process.env.SILICONFLOW_API_KEY;
+      const imageProvider = process.env.IMAGE_PROVIDER;
+
+      const envCheck = {
+        IMAGE_PROVIDER: imageProvider || '未设置',
+        SILICONFLOW_API_KEY: apiKey ? `${apiKey.substring(0, 10)}...` : '未设置',
+      };
+
+      if (!apiKey) {
+        return res.status(200).json({
+          success: false,
+          message: '硅基流动 API Key 未配置',
+          envCheck,
+        });
+      }
+
+      try {
+        // 动态导入 image 模块
+        const { generateImage, enhancePromptForChildrenBook } = await import('./routes/../_lib/image.js');
+
+        const prompt = 'A cute cartoon rabbit in a forest';
+        const enhancedPrompt = enhancePromptForChildrenBook(prompt, 'watercolor');
+
+        const result = await generateImage({
+          prompt: enhancedPrompt,
+          size: '1024x1024',
+          provider: 'siliconflow',
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: '图片生成成功！',
+          envCheck,
+          result: {
+            imageUrl: result.imageUrl.substring(0, 100) + '...',
+            provider: result.provider,
+            model: result.model,
+          },
+        });
+      } catch (error: any) {
+        return res.status(200).json({
+          success: false,
+          message: '图片生成失败',
+          envCheck,
+          error: error.message,
+          stack: error.stack?.substring(0, 500),
+        });
+      }
+    }
+
     // 测试硅基流动图片生成 API
     if (fullPath === '/api/test-siliconflow') {
       const apiKey = process.env.SILICONFLOW_API_KEY;
