@@ -232,16 +232,34 @@ async function generateWithImagen(
 
 /**
  * 使用即梦 (Jimeng) 生成图片
- * 字节跳动旗下的 AI 图片生成服务
- * 文档：https://www.jimeng.ai/
+ * 字节跳动旗下的 AI 图片生成服务，基于火山引擎
+ * 文档：https://www.volcengine.com/docs/6791/1347773
  *
- * 即梦 API 格式（基于公开信息，实际使用时需要根据官方文档调整）
+ * 即梦支持两种模式：
+ * 1. 同步模式（OpenAI 兼容格式）- 适用于第三方代理
+ * 2. 异步模式（火山引擎原生格式）- 官方 API
  */
 async function generateWithJimeng(
   options: ImageGenerateOptions
 ): Promise<ImageGenerateResult> {
+  const apiMode = process.env.JIMENG_API_MODE || 'sync'; // sync | async
+
+  if (apiMode === 'async') {
+    return generateWithJimengAsync(options);
+  }
+
+  return generateWithJimengSync(options);
+}
+
+/**
+ * 即梦同步模式 - OpenAI 兼容格式
+ * 适用于第三方代理服务
+ */
+async function generateWithJimengSync(
+  options: ImageGenerateOptions
+): Promise<ImageGenerateResult> {
   const apiKey = process.env.JIMENG_API_KEY;
-  const baseUrl = process.env.JIMENG_API_BASE_URL || 'https://jimeng.jianying.com/ai-api/v1';
+  const baseUrl = process.env.JIMENG_API_BASE_URL || 'https://api.jimeng.ai/v1';
   const model = options.model || process.env.JIMENG_MODEL || 'jimeng-2.1';
 
   // 解析尺寸
@@ -256,13 +274,12 @@ async function generateWithJimeng(
     body: JSON.stringify({
       model,
       prompt: options.prompt,
-      negative_prompt: options.negativePrompt || '',
+      negative_prompt: options.negativePrompt || getChildrenBookNegativePrompt(),
       width,
       height,
-      num_images: 1,
+      n: options.n || 1,
       // 即梦特有参数
-      style_reference: null,
-      seed: -1, // 随机种子
+      seed: -1, // 随机种子，-1 表示随机
     }),
   });
 
@@ -273,7 +290,7 @@ async function generateWithJimeng(
 
   const result = await response.json();
 
-  // 即梦返回格式（根据实际 API 调整）
+  // 即梦返回格式
   const imageUrl = result.data?.[0]?.url || result.images?.[0]?.url || '';
 
   return {
@@ -281,6 +298,200 @@ async function generateWithJimeng(
     provider: 'jimeng',
     model,
   };
+}
+
+/**
+ * 即梦异步模式 - 火山引擎原生格式
+ * 官方 API，使用 AK/SK 签名认证
+ * 文档：https://www.volcengine.com/docs/6791/1347773
+ */
+async function generateWithJimengAsync(
+  options: ImageGenerateOptions
+): Promise<ImageGenerateResult> {
+  const accessKey = process.env.JIMENG_ACCESS_KEY;
+  const secretKey = process.env.JIMENG_SECRET_KEY;
+  const model = options.model || process.env.JIMENG_MODEL || 'general_v2.1_L';
+
+  if (!accessKey || !secretKey) {
+    throw new Error('即梦异步模式需要配置 JIMENG_ACCESS_KEY 和 JIMENG_SECRET_KEY');
+  }
+
+  // 解析尺寸
+  const [width, height] = (options.size || '1024x1024').split('x').map(Number);
+
+  // 请求体
+  const requestBody = {
+    req_key: 'high_aes_general_v21_L',
+    prompt: options.prompt,
+    model_version: model,
+    width,
+    height,
+    seed: -1,
+    scale: 3.5,
+    ddim_steps: 25,
+    use_sr: true,
+    return_url: true,
+    logo_info: {
+      add_logo: false,
+    },
+  };
+
+  // 发送请求
+  const result = await volcengineRequest({
+    accessKey,
+    secretKey,
+    service: 'cv',
+    region: 'cn-north-1',
+    action: 'CVProcess',
+    version: '2022-08-31',
+    body: requestBody,
+  });
+
+  // 检查响应
+  if (result.code !== 10000) {
+    throw new Error(`即梦图片生成失败: ${result.message || JSON.stringify(result)}`);
+  }
+
+  // 如果直接返回了图片 URL
+  if (result.data?.image_urls?.[0]) {
+    return {
+      imageUrl: result.data.image_urls[0],
+      provider: 'jimeng',
+      model,
+    };
+  }
+
+  // 如果返回了 binary_data_base64（base64 编码的图片）
+  if (result.data?.binary_data_base64?.[0]) {
+    const base64Data = result.data.binary_data_base64[0];
+    return {
+      imageUrl: `data:image/png;base64,${base64Data}`,
+      provider: 'jimeng',
+      model,
+    };
+  }
+
+  throw new Error('即梦未返回图片数据');
+}
+
+/**
+ * 火山引擎 API 请求封装
+ * 实现 HMAC-SHA256 签名认证
+ */
+interface VolcengineRequestOptions {
+  accessKey: string;
+  secretKey: string;
+  service: string;
+  region: string;
+  action: string;
+  version: string;
+  body: Record<string, any>;
+}
+
+async function volcengineRequest(options: VolcengineRequestOptions): Promise<any> {
+  const { accessKey, secretKey, service, region, action, version, body } = options;
+
+  const host = `${service}.volcengineapi.com`;
+  const url = `https://${host}/`;
+  const method = 'POST';
+  const contentType = 'application/json';
+
+  // 当前时间
+  const now = new Date();
+  const xDate = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const shortDate = xDate.substring(0, 8);
+
+  // 请求体
+  const bodyString = JSON.stringify(body);
+
+  // 计算请求体哈希
+  const crypto = await import('crypto');
+  const bodyHash = crypto.createHash('sha256').update(bodyString).digest('hex');
+
+  // 规范请求头
+  const signedHeaders = 'content-type;host;x-content-sha256;x-date';
+  const canonicalHeaders = [
+    `content-type:${contentType}`,
+    `host:${host}`,
+    `x-content-sha256:${bodyHash}`,
+    `x-date:${xDate}`,
+  ].join('\n');
+
+  // 规范查询字符串
+  const queryParams = new URLSearchParams({
+    Action: action,
+    Version: version,
+  });
+  const canonicalQueryString = queryParams.toString();
+
+  // 规范请求
+  const canonicalRequest = [
+    method,
+    '/',
+    canonicalQueryString,
+    canonicalHeaders + '\n',
+    signedHeaders,
+    bodyHash,
+  ].join('\n');
+
+  // 计算规范请求哈希
+  const canonicalRequestHash = crypto.createHash('sha256').update(canonicalRequest).digest('hex');
+
+  // 凭证范围
+  const credentialScope = `${shortDate}/${region}/${service}/request`;
+
+  // 待签名字符串
+  const stringToSign = [
+    'HMAC-SHA256',
+    xDate,
+    credentialScope,
+    canonicalRequestHash,
+  ].join('\n');
+
+  // 计算签名密钥
+  const kDate = crypto.createHmac('sha256', secretKey).update(shortDate).digest();
+  const kRegion = crypto.createHmac('sha256', kDate).update(region).digest();
+  const kService = crypto.createHmac('sha256', kRegion).update(service).digest();
+  const kSigning = crypto.createHmac('sha256', kService).update('request').digest();
+
+  // 计算签名
+  const signature = crypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex');
+
+  // 构建 Authorization 头
+  const authorization = `HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  // 发送请求
+  const response = await fetch(`${url}?${canonicalQueryString}`, {
+    method,
+    headers: {
+      'Content-Type': contentType,
+      'Host': host,
+      'X-Date': xDate,
+      'X-Content-Sha256': bodyHash,
+      'Authorization': authorization,
+    },
+    body: bodyString,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`火山引擎 API 请求失败 (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * 生成火山引擎 API 签名（已废弃，使用 volcengineRequest 代替）
+ */
+function generateVolcengineAuth(
+  accessKey: string,
+  secretKey: string,
+  service: string,
+  action: string
+): string {
+  // 此函数已废弃，保留仅为兼容性
+  return `Bearer ${accessKey}`;
 }
 
 /**
@@ -335,12 +546,19 @@ export const PRESET_IMAGE_SERVICES = {
     sizes: ['1024x1024', '1536x1536'],
     website: 'https://ai.google.dev/',
   },
-  // 即梦 Jimeng
+  // 即梦 Jimeng（字节跳动/火山引擎）
   jimeng: {
     name: '即梦 (字节跳动)',
-    models: ['jimeng-2.1', 'jimeng-2.0'],
-    sizes: ['1024x1024', '1280x720', '720x1280'],
+    models: ['jimeng-2.1', 'jimeng-2.0', 'general_v2.1_L', 'general_v2.0'],
+    sizes: ['1024x1024', '1280x720', '720x1280', '512x512'],
     website: 'https://www.jimeng.ai/',
+    docs: 'https://www.volcengine.com/docs/6791/1347773',
+    envVars: {
+      sync: ['JIMENG_API_KEY', 'JIMENG_API_BASE_URL', 'JIMENG_MODEL'],
+      async: ['JIMENG_ACCESS_KEY', 'JIMENG_SECRET_KEY', 'JIMENG_API_BASE_URL', 'JIMENG_MODEL'],
+    },
+    modes: ['sync', 'async'],
+    defaultMode: 'sync',
   },
   // 硅基流动 SiliconFlow
   siliconflow: {

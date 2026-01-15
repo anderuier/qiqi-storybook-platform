@@ -256,6 +256,7 @@ const createImageSchema = z.object({
   pageNumber: z.number().int().min(1),
   style: z.enum(['watercolor', 'cartoon', 'oil', 'anime', 'flat', '3d']),
   regenerate: z.boolean().optional().default(false),
+  provider: z.enum(['dalle', 'stability', 'imagen', 'jimeng', 'custom']).optional(),
 });
 
 create.post('/image', async (c) => {
@@ -269,7 +270,7 @@ create.post('/image', async (c) => {
     return errors.invalidParams(c, validation.error);
   }
 
-  const { storyboardId, pageNumber, style, regenerate } = validation.data;
+  const { storyboardId, pageNumber, style, regenerate, provider } = validation.data;
 
   try {
     // 获取分镜页面信息
@@ -313,6 +314,7 @@ create.post('/image', async (c) => {
       size: '1024x1024',
       style: 'vivid',
       quality: 'standard',
+      provider,
     });
 
     // 更新数据库
@@ -343,6 +345,7 @@ create.post('/image', async (c) => {
 const createImagesSchema = z.object({
   storyboardId: z.string().min(1),
   style: z.enum(['watercolor', 'cartoon', 'oil', 'anime', 'flat', '3d']),
+  provider: z.enum(['dalle', 'stability', 'imagen', 'jimeng', 'custom']).optional(),
 });
 
 create.post('/images', async (c) => {
@@ -356,7 +359,7 @@ create.post('/images', async (c) => {
     return errors.invalidParams(c, validation.error);
   }
 
-  const { storyboardId, style } = validation.data;
+  const { storyboardId, style, provider } = validation.data;
 
   try {
     // 获取分镜信息和所有页面
@@ -403,7 +406,7 @@ create.post('/images', async (c) => {
         'generate_images',
         'processing',
         ${totalPages},
-        ${JSON.stringify({ storyboardId, style, pages: [] })}
+        ${JSON.stringify({ storyboardId, style, provider, pages: [] })}
       )
     `;
 
@@ -415,6 +418,7 @@ create.post('/images', async (c) => {
         const result = await generateImage({
           prompt: enhancedPrompt,
           size: '1024x1024',
+          provider,
         });
 
         // 更新页面图片
@@ -432,6 +436,7 @@ create.post('/images', async (c) => {
               result = ${JSON.stringify({
                 storyboardId,
                 style,
+                provider,
                 pages: [{ pageNumber: 1, imageUrl: result.imageUrl }],
               })},
               updated_at = CURRENT_TIMESTAMP
@@ -446,6 +451,7 @@ create.post('/images', async (c) => {
       taskId,
       status: 'processing',
       totalPages,
+      provider: provider || 'default',
       message: '图片生成任务已创建，请使用任务 ID 查询进度',
     });
   } catch (err) {
@@ -555,6 +561,7 @@ create.post('/task/:taskId/continue', async (c) => {
     const taskData = task.result as {
       storyboardId: string;
       style: string;
+      provider?: string;
       pages: Array<{ pageNumber: number; imageUrl: string }>;
     };
 
@@ -616,6 +623,7 @@ create.post('/task/:taskId/continue', async (c) => {
     const result = await generateImage({
       prompt: enhancedPrompt,
       size: '1024x1024',
+      provider: taskData.provider as any,
     });
 
     // 更新页面图片

@@ -241,6 +241,9 @@ export interface TaskResponse {
   error?: string;
 }
 
+// 图片生成提供商类型
+export type ImageProvider = 'dalle' | 'stability' | 'imagen' | 'jimeng' | 'custom';
+
 export const createApi = {
   // 生成故事
   generateStory: (data: CreateStoryRequest) =>
@@ -256,11 +259,12 @@ export const createApi = {
     pageNumber: number;
     style: string;
     regenerate?: boolean;
+    provider?: ImageProvider;
   }) => request<ImageResponse>({ method: 'POST', url: '/create/image', data }),
 
   // 批量生成图片
-  generateImages: (data: { storyboardId: string; style: string }) =>
-    request<{ taskId: string; status: string; totalPages: number }>({
+  generateImages: (data: { storyboardId: string; style: string; provider?: ImageProvider }) =>
+    request<{ taskId: string; status: string; totalPages: number; provider: string }>({
       method: 'POST',
       url: '/create/images',
       data,

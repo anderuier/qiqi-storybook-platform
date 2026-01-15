@@ -31,6 +31,7 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreate } from "@/hooks/useCreate";
 import { Progress } from "@/components/ui/progress";
+import { ImageProvider } from "@/lib/api";
 
 // 创作模式
 const createModes = [
@@ -89,6 +90,19 @@ const voiceOptions = [
   { id: "clone", name: "克隆我的声音", description: "上传30秒录音，AI克隆您的声音", icon: Mic2 },
 ];
 
+// 图片生成提供商选项
+const imageProviders: Array<{
+  id: ImageProvider;
+  name: string;
+  description: string;
+  recommended?: boolean;
+}> = [
+  { id: "jimeng", name: "即梦", description: "字节跳动旗下，国内访问快", recommended: true },
+  { id: "dalle", name: "DALL-E", description: "OpenAI 出品，效果优秀" },
+  { id: "stability", name: "Stability AI", description: "Stable Diffusion 官方" },
+  { id: "custom", name: "自定义", description: "使用自定义 API" },
+];
+
 export default function Create() {
   const [location, setLocation] = useLocation();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -105,6 +119,7 @@ export default function Create() {
   const [selectedStoryStyle, setSelectedStoryStyle] = useState<string>("warm");
   const [storyLength, setStoryLength] = useState<"short" | "medium" | "long">("medium");
   const [selectedArtStyle, setSelectedArtStyle] = useState<string | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<ImageProvider>("jimeng");
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
   const [isRestoringDraft, setIsRestoringDraft] = useState(false);
 
@@ -199,7 +214,7 @@ export default function Create() {
   const handleStartImageGeneration = async () => {
     if (!selectedArtStyle) return;
     try {
-      await create.startImageGeneration(selectedArtStyle);
+      await create.startImageGeneration(selectedArtStyle, selectedProvider);
       setCurrentStep(4);
     } catch (err) {
       // 错误已在 hook 中处理
@@ -551,6 +566,37 @@ export default function Create() {
                         })}
                       </div>
                     </div>
+
+                    {/* 图片生成服务选择 */}
+                    <div>
+                      <label className="block text-sm font-medium mb-3">选择图片生成服务</label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {imageProviders.map((provider) => {
+                          const isSelected = selectedProvider === provider.id;
+                          return (
+                            <div
+                              key={provider.id}
+                              onClick={() => setSelectedProvider(provider.id)}
+                              className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                                isSelected
+                                  ? "border-coral bg-coral/5"
+                                  : "border-border hover:border-muted-foreground/30"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`font-medium text-sm ${isSelected ? "text-coral" : ""}`}>
+                                  {provider.name}
+                                </span>
+                                {provider.recommended && (
+                                  <span className="text-xs bg-mint/20 text-mint px-1.5 py-0.5 rounded">推荐</span>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground">{provider.description}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </>
                 ) : null}
               </div>
@@ -597,7 +643,7 @@ export default function Create() {
                       </div>
                       <p className="text-lg font-medium mb-2 text-red-600">图片生成失败</p>
                       <Button
-                        onClick={() => selectedArtStyle && create.startImageGeneration(selectedArtStyle)}
+                        onClick={() => selectedArtStyle && create.startImageGeneration(selectedArtStyle, selectedProvider)}
                         className="mt-4"
                       >
                         <RefreshCw className="w-4 h-4 mr-2" />

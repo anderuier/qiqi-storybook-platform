@@ -13,6 +13,7 @@ import {
   TaskResponse,
   draftsApi,
   DraftDetail,
+  ImageProvider,
 } from '../lib/api';
 
 // 创作步骤
@@ -219,7 +220,7 @@ export function useCreate() {
 
   // 步骤3：生成单张图片
   const generateImage = useCallback(
-    async (pageNumber: number, style: string) => {
+    async (pageNumber: number, style: string, provider?: ImageProvider) => {
       if (!state.storyboard) {
         throw new Error('请先生成分镜剧本');
       }
@@ -231,6 +232,7 @@ export function useCreate() {
           storyboardId: state.storyboard.storyboardId,
           pageNumber,
           style,
+          provider,
         });
 
         // 更新页面图片
@@ -257,7 +259,7 @@ export function useCreate() {
 
   // 步骤3：批量生成图片（启动任务）
   const startImageGeneration = useCallback(
-    async (style: string) => {
+    async (style: string, provider?: ImageProvider) => {
       if (!state.storyboard) {
         throw new Error('请先生成分镜剧本');
       }
@@ -278,6 +280,7 @@ export function useCreate() {
         const result = await createApi.generateImages({
           storyboardId: state.storyboard.storyboardId,
           style,
+          provider,
         });
 
         updateState({
