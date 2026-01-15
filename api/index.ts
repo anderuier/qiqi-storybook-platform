@@ -429,7 +429,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const nodeCrypto = await import('node:crypto');
 
-        const service = 'visual';
+        const service = 'cv';
         const region = 'cn-north-1';
         const action = 'CVProcess';
         const version = '2022-08-31';

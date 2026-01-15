@@ -342,7 +342,7 @@ async function generateWithJimengAsync(
   const result = await volcengineRequest({
     accessKey,
     secretKey,
-    service: 'visual',  // 使用 visual 服务
+    service: 'cv',  // 使用 cv 服务
     region: 'cn-north-1',
     action: 'CVProcess',
     version: '2022-08-31',
