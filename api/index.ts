@@ -8,6 +8,9 @@ import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
 
+// 图片生成模块
+import { generateImage, enhancePromptForChildrenBook } from './_lib/image';
+
 // ==================== 工具函数 ====================
 
 // 使用 Node.js 的 webcrypto API
@@ -2006,8 +2009,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           )
         `;
 
-        // 动态导入图片生成模块
-        const { generateImage, enhancePromptForChildrenBook } = await import('./_lib/image.js');
+        // 使用静态导入的图片生成模块
 
         // 尝试生成第一张图片
         const firstPage = pages[0];
@@ -2289,8 +2291,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
-        // 动态导入图片生成模块
-        const { generateImage, enhancePromptForChildrenBook } = await import('./_lib/image.js');
+        // 使用静态导入的图片生成模块
 
         // 生成图片
         const enhancedPrompt = enhancePromptForChildrenBook(page.image_prompt, taskData.style);
