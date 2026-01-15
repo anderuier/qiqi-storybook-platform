@@ -425,31 +425,119 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // 尝试调用即梦 API
+      // 直接调用火山引擎 API
       try {
-        const { generateImage } = await import('./_lib/image');
-        const result = await generateImage({
+        const nodeCrypto = await import('node:crypto');
+
+        const service = 'visual';
+        const region = 'cn-north-1';
+        const action = 'CVProcess';
+        const version = '2022-08-31';
+        const host = `${service}.volcengineapi.com`;
+        const method = 'POST';
+        const contentType = 'application/json';
+
+        // 请求体
+        const requestBody = {
+          req_key: 'jimeng_high_aes_general_v21',
           prompt: 'A cute cartoon rabbit in a forest, children book illustration style',
-          size: '512x512',
-          provider: 'jimeng',
+          width: 512,
+          height: 512,
+          seed: -1,
+          scale: 3.5,
+          ddim_steps: 25,
+          use_sr: true,
+          return_url: true,
+          logo_info: { add_logo: false },
+        };
+
+        // 当前时间
+        const now = new Date();
+        const xDate = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        const shortDate = xDate.substring(0, 8);
+
+        const bodyString = JSON.stringify(requestBody);
+        const bodyHash = nodeCrypto.createHash('sha256').update(bodyString).digest('hex');
+
+        // 规范请求头
+        const signedHeaders = 'content-type;host;x-content-sha256;x-date';
+        const canonicalHeaders = [
+          `content-type:${contentType}`,
+          `host:${host}`,
+          `x-content-sha256:${bodyHash}`,
+          `x-date:${xDate}`,
+        ].join('\n');
+
+        // 规范查询字符串
+        const queryParams = new URLSearchParams();
+        queryParams.set('Action', action);
+        queryParams.set('Version', version);
+        queryParams.sort();
+        const canonicalQueryString = queryParams.toString();
+
+        // 规范请求
+        const canonicalRequest = [
+          method,
+          '/',
+          canonicalQueryString,
+          canonicalHeaders + '\n',
+          signedHeaders,
+          bodyHash,
+        ].join('\n');
+
+        const canonicalRequestHash = nodeCrypto.createHash('sha256').update(canonicalRequest).digest('hex');
+        const credentialScope = `${shortDate}/${region}/${service}/request`;
+
+        const stringToSign = [
+          'HMAC-SHA256',
+          xDate,
+          credentialScope,
+          canonicalRequestHash,
+        ].join('\n');
+
+        // 计算签名
+        const kDate = nodeCrypto.createHmac('sha256', secretKey).update(shortDate).digest();
+        const kRegion = nodeCrypto.createHmac('sha256', kDate).update(region).digest();
+        const kService = nodeCrypto.createHmac('sha256', kRegion).update(service).digest();
+        const kSigning = nodeCrypto.createHmac('sha256', kService).update('request').digest();
+        const signature = nodeCrypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex');
+
+        const authorization = `HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+        const url = `https://${host}/?${canonicalQueryString}`;
+
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': contentType,
+            'Host': host,
+            'X-Date': xDate,
+            'X-Content-Sha256': bodyHash,
+            'Authorization': authorization,
+          },
+          body: bodyString,
         });
 
+        const responseText = await response.text();
+
         return res.status(200).json({
-          success: true,
-          message: '即梦 API 调用成功！',
+          success: response.ok,
+          message: response.ok ? '即梦 API 调用成功！' : '即梦 API 调用失败',
           envCheck,
-          result: {
-            imageUrl: result.imageUrl.substring(0, 100) + '...',
-            provider: result.provider,
-            model: result.model,
+          debug: {
+            url,
+            xDate,
+            httpStatus: response.status,
+            responseBody: responseText.substring(0, 500),
           },
         });
       } catch (error: any) {
         return res.status(200).json({
           success: false,
-          message: '即梦 API 调用失败',
+          message: '即梦 API 调用异常',
           envCheck,
           error: error.message,
+          stack: error.stack?.substring(0, 300),
         });
       }
     }
