@@ -421,22 +421,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // 调用 Google Imagen API
+      // 调用 Google Gemini 图片生成 API
       try {
-        const model = 'imagen-3.0-generate-001';
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+        // 使用 Gemini 2.0 Flash 的图片生成功能
+        const model = 'gemini-2.0-flash-exp';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
         const requestBody = {
-          instances: [
+          contents: [
             {
-              prompt: 'A cute cartoon rabbit in a forest, children book illustration style, watercolor',
+              parts: [
+                {
+                  text: 'Generate an image: A cute cartoon rabbit in a forest, children book illustration style, watercolor painting, soft colors, no text',
+                },
+              ],
             },
           ],
-          parameters: {
-            sampleCount: 1,
-            aspectRatio: '1:1',
-            safetyFilterLevel: 'block_only_high',
-            personGeneration: 'allow_adult',
+          generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE'],
           },
         };
 
@@ -453,25 +455,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!response.ok) {
           return res.status(200).json({
             success: false,
-            message: 'Google Imagen API 调用失败',
+            message: 'Google Gemini API 调用失败',
             envCheck,
             debug: {
+              model,
               httpStatus: response.status,
-              responseBody: responseText.substring(0, 800),
+              responseBody: responseText.substring(0, 1000),
             },
           });
         }
 
         const result = JSON.parse(responseText);
-        const predictions = result.predictions;
+        const candidates = result.candidates;
 
-        if (predictions && predictions[0]?.bytesBase64Encoded) {
+        // 查找图片数据
+        let imageData = null;
+        if (candidates && candidates[0]?.content?.parts) {
+          for (const part of candidates[0].content.parts) {
+            if (part.inlineData?.mimeType?.startsWith('image/')) {
+              imageData = part.inlineData;
+              break;
+            }
+          }
+        }
+
+        if (imageData) {
           return res.status(200).json({
             success: true,
-            message: 'Google Imagen API 调用成功！',
+            message: 'Google Gemini 图片生成成功！',
             envCheck,
             result: {
-              imageUrl: `data:image/png;base64,${predictions[0].bytesBase64Encoded.substring(0, 50)}...`,
+              mimeType: imageData.mimeType,
+              imageUrl: `data:${imageData.mimeType};base64,${imageData.data.substring(0, 50)}...`,
               model,
             },
           });
@@ -479,16 +494,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         return res.status(200).json({
           success: false,
-          message: 'Google Imagen 未返回图片数据',
+          message: 'Google Gemini 未返回图片数据',
           envCheck,
           debug: {
-            responseBody: responseText.substring(0, 500),
+            model,
+            responseBody: responseText.substring(0, 800),
           },
         });
       } catch (error: any) {
         return res.status(200).json({
           success: false,
-          message: 'Google Imagen API 调用异常',
+          message: 'Google Gemini API 调用异常',
           envCheck,
           error: error.message,
         });
