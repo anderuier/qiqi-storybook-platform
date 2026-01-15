@@ -402,7 +402,8 @@ interface VolcengineRequestOptions {
 async function volcengineRequest(options: VolcengineRequestOptions): Promise<any> {
   const { accessKey, secretKey, service, region, action, version, body } = options;
 
-  const host = `${service}.volcengineapi.com`;
+  // 火山引擎 CV 服务使用 visual.volcengineapi.com 域名
+  const host = service === 'cv' ? 'visual.volcengineapi.com' : `${service}.volcengineapi.com`;
   const url = `https://${host}/`;
   const method = 'POST';
   const contentType = 'application/json';

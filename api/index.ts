@@ -433,7 +433,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const region = 'cn-north-1';
         const action = 'CVProcess';
         const version = '2022-08-31';
-        const host = `${service}.volcengineapi.com`;
+        // 火山引擎 CV 服务的正确域名
+        const host = 'visual.volcengineapi.com';
         const method = 'POST';
         const contentType = 'application/json';
 
@@ -516,6 +517,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             'Authorization': authorization,
           },
           body: bodyString,
+        }).catch((fetchError: any) => {
+          throw new Error(`Fetch 错误: ${fetchError.message} | cause: ${fetchError.cause?.message || 'unknown'}`);
         });
 
         const responseText = await response.text();
