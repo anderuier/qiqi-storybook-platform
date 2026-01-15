@@ -1911,6 +1911,432 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // ==================== 图片生成 API ====================
+
+    // 批量生成图片
+    if (fullPath === '/api/create/images' && req.method === 'POST') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const body = req.body || {};
+      const { storyboardId, style, provider } = body;
+
+      if (!storyboardId || !style) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_PARAMS',
+            message: '请提供分镜ID和艺术风格',
+          },
+        });
+      }
+
+      try {
+        // 获取分镜信息
+        const storyboardResult = await sql`
+          SELECT sb.id, sb.work_id, w.user_id
+          FROM storyboards sb
+          JOIN works w ON sb.work_id = w.id
+          WHERE sb.id = ${storyboardId}
+        `;
+
+        if (storyboardResult.rows.length === 0) {
+          return res.status(404).json({
+            success: false,
+            error: {
+              code: 'STORYBOARD_NOT_FOUND',
+              message: '分镜不存在',
+            },
+          });
+        }
+
+        const storyboard = storyboardResult.rows[0];
+
+        if (storyboard.user_id !== userPayload.userId) {
+          return res.status(403).json({
+            success: false,
+            error: {
+              code: 'PERMISSION_DENIED',
+              message: '无权访问此分镜',
+            },
+          });
+        }
+
+        // 获取所有页面
+        const pagesResult = await sql`
+          SELECT id, page_number, image_prompt, image_url
+          FROM storyboard_pages
+          WHERE storyboard_id = ${storyboardId}
+          ORDER BY page_number
+        `;
+
+        const pages = pagesResult.rows;
+        const totalPages = pages.length;
+
+        if (totalPages === 0) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              code: 'NO_PAGES',
+              message: '分镜没有页面',
+            },
+          });
+        }
+
+        // 创建异步任务
+        const taskId = generateId('task');
+        await sql`
+          INSERT INTO tasks (id, user_id, type, status, total_items, result)
+          VALUES (
+            ${taskId},
+            ${userPayload.userId},
+            'generate_images',
+            'processing',
+            ${totalPages},
+            ${JSON.stringify({ storyboardId, style, provider, pages: [] })}
+          )
+        `;
+
+        // 动态导入图片生成模块
+        const { generateImage, enhancePromptForChildrenBook } = await import('./_lib/image.js');
+
+        // 尝试生成第一张图片
+        const firstPage = pages[0];
+        if (!firstPage.image_url) {
+          try {
+            const enhancedPrompt = enhancePromptForChildrenBook(firstPage.image_prompt, style);
+            const result = await generateImage({
+              prompt: enhancedPrompt,
+              size: '1024x1024',
+              provider: provider || 'siliconflow',
+            });
+
+            // 更新页面图片
+            await sql`
+              UPDATE storyboard_pages
+              SET image_url = ${result.imageUrl}
+              WHERE id = ${firstPage.id}
+            `;
+
+            // 更新任务进度
+            await sql`
+              UPDATE tasks
+              SET completed_items = 1,
+                  progress = ${Math.round((1 / totalPages) * 100)},
+                  result = ${JSON.stringify({
+                    storyboardId,
+                    style,
+                    provider,
+                    pages: [{ pageNumber: 1, imageUrl: result.imageUrl }],
+                  })},
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE id = ${taskId}
+            `;
+          } catch (imgErr) {
+            console.error('第一张图片生成失败:', imgErr);
+          }
+        }
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            taskId,
+            status: 'processing',
+            totalPages,
+            provider: provider || 'siliconflow',
+            message: '图片生成任务已创建，请使用任务 ID 查询进度',
+          },
+        });
+      } catch (error: any) {
+        console.error('批量图片生成失败:', error);
+        return res.status(500).json({
+          success: false,
+          error: {
+            code: 'SERVER_ERROR',
+            message: '创建图片生成任务失败',
+            details: error.message,
+          },
+        });
+      }
+    }
+
+    // 查询任务状态
+    if (fullPath.startsWith('/api/create/task/') && req.method === 'GET') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const taskId = fullPath.replace('/api/create/task/', '').split('/')[0];
+
+      try {
+        const taskResult = await sql`
+          SELECT id, user_id, type, status, progress, total_items, completed_items, result, error
+          FROM tasks
+          WHERE id = ${taskId}
+        `;
+
+        if (taskResult.rows.length === 0) {
+          return res.status(404).json({
+            success: false,
+            error: {
+              code: 'TASK_NOT_FOUND',
+              message: '任务不存在',
+            },
+          });
+        }
+
+        const task = taskResult.rows[0];
+
+        if (task.user_id !== userPayload.userId) {
+          return res.status(403).json({
+            success: false,
+            error: {
+              code: 'PERMISSION_DENIED',
+              message: '无权访问此任务',
+            },
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            taskId: task.id,
+            type: task.type,
+            status: task.status,
+            progress: task.progress,
+            totalItems: task.total_items,
+            completedItems: task.completed_items,
+            result: task.result,
+            error: task.error,
+          },
+        });
+      } catch (error: any) {
+        console.error('查询任务失败:', error);
+        return res.status(500).json({
+          success: false,
+          error: {
+            code: 'SERVER_ERROR',
+            message: '查询任务失败',
+          },
+        });
+      }
+    }
+
+    // 继续生成下一张图片
+    if (fullPath.includes('/api/create/task/') && fullPath.endsWith('/continue') && req.method === 'POST') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const taskId = fullPath.replace('/api/create/task/', '').replace('/continue', '');
+
+      try {
+        // 查询任务
+        const taskResult = await sql`
+          SELECT id, user_id, type, status, progress, total_items, completed_items, result
+          FROM tasks
+          WHERE id = ${taskId}
+        `;
+
+        if (taskResult.rows.length === 0) {
+          return res.status(404).json({
+            success: false,
+            error: {
+              code: 'TASK_NOT_FOUND',
+              message: '任务不存在',
+            },
+          });
+        }
+
+        const task = taskResult.rows[0];
+
+        if (task.user_id !== userPayload.userId) {
+          return res.status(403).json({
+            success: false,
+            error: {
+              code: 'PERMISSION_DENIED',
+              message: '无权访问此任务',
+            },
+          });
+        }
+
+        if (task.status === 'completed') {
+          return res.status(200).json({
+            success: true,
+            data: {
+              taskId: task.id,
+              status: 'completed',
+              message: '任务已完成',
+            },
+          });
+        }
+
+        if (task.status === 'failed') {
+          return res.status(400).json({
+            success: false,
+            error: {
+              code: 'TASK_FAILED',
+              message: '任务已失败',
+            },
+          });
+        }
+
+        // 解析任务结果
+        const taskData = task.result as {
+          storyboardId: string;
+          style: string;
+          provider?: string;
+          pages: Array<{ pageNumber: number; imageUrl: string }>;
+        };
+
+        // 获取下一个需要生成的页面
+        const nextPageNumber = task.completed_items + 1;
+
+        const pageResult = await sql`
+          SELECT id, page_number, image_prompt, image_url
+          FROM storyboard_pages
+          WHERE storyboard_id = ${taskData.storyboardId}
+            AND page_number = ${nextPageNumber}
+        `;
+
+        if (pageResult.rows.length === 0) {
+          // 没有更多页面，标记任务完成
+          await sql`
+            UPDATE tasks
+            SET status = 'completed', progress = 100, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${taskId}
+          `;
+
+          return res.status(200).json({
+            success: true,
+            data: {
+              taskId: task.id,
+              status: 'completed',
+              message: '所有图片生成完成',
+            },
+          });
+        }
+
+        const page = pageResult.rows[0];
+
+        // 如果页面已有图片，跳过
+        if (page.image_url) {
+          const newCompleted = task.completed_items + 1;
+          const newProgress = Math.round((newCompleted / task.total_items) * 100);
+          const isCompleted = newCompleted >= task.total_items;
+
+          await sql`
+            UPDATE tasks
+            SET completed_items = ${newCompleted},
+                progress = ${newProgress},
+                status = ${isCompleted ? 'completed' : 'processing'},
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${taskId}
+          `;
+
+          return res.status(200).json({
+            success: true,
+            data: {
+              taskId: task.id,
+              status: isCompleted ? 'completed' : 'processing',
+              pageNumber: nextPageNumber,
+              imageUrl: page.image_url,
+              skipped: true,
+              progress: newProgress,
+            },
+          });
+        }
+
+        // 动态导入图片生成模块
+        const { generateImage, enhancePromptForChildrenBook } = await import('./_lib/image.js');
+
+        // 生成图片
+        const enhancedPrompt = enhancePromptForChildrenBook(page.image_prompt, taskData.style);
+
+        const result = await generateImage({
+          prompt: enhancedPrompt,
+          size: '1024x1024',
+          provider: (taskData.provider as any) || 'siliconflow',
+        });
+
+        // 更新页面图片
+        await sql`
+          UPDATE storyboard_pages
+          SET image_url = ${result.imageUrl}
+          WHERE id = ${page.id}
+        `;
+
+        // 更新任务进度
+        const newCompleted = task.completed_items + 1;
+        const newProgress = Math.round((newCompleted / task.total_items) * 100);
+        const isCompleted = newCompleted >= task.total_items;
+
+        // 更新任务结果
+        taskData.pages.push({
+          pageNumber: nextPageNumber,
+          imageUrl: result.imageUrl,
+        });
+
+        await sql`
+          UPDATE tasks
+          SET completed_items = ${newCompleted},
+              progress = ${newProgress},
+              status = ${isCompleted ? 'completed' : 'processing'},
+              result = ${JSON.stringify(taskData)},
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${taskId}
+        `;
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            taskId: task.id,
+            status: isCompleted ? 'completed' : 'processing',
+            pageNumber: nextPageNumber,
+            imageUrl: result.imageUrl,
+            progress: newProgress,
+            provider: result.provider,
+            model: result.model,
+          },
+        });
+      } catch (error: any) {
+        console.error('继续生成图片失败:', error);
+        return res.status(500).json({
+          success: false,
+          error: {
+            code: 'SERVER_ERROR',
+            message: '图片生成失败',
+            details: error.message,
+          },
+        });
+      }
+    }
+
     // 404
     return res.status(404).json({
       success: false,
