@@ -402,6 +402,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // 测试即梦图片生成 API
+    if (fullPath === '/api/test-jimeng') {
+      const accessKey = process.env.JIMENG_ACCESS_KEY;
+      const secretKey = process.env.JIMENG_SECRET_KEY;
+      const apiMode = process.env.JIMENG_API_MODE || 'async';
+      const imageProvider = process.env.IMAGE_PROVIDER;
+
+      // 检查环境变量
+      const envCheck = {
+        IMAGE_PROVIDER: imageProvider || '未设置',
+        JIMENG_API_MODE: apiMode,
+        JIMENG_ACCESS_KEY: accessKey ? `${accessKey.substring(0, 10)}...` : '未设置',
+        JIMENG_SECRET_KEY: secretKey ? '已设置' : '未设置',
+      };
+
+      if (!accessKey || !secretKey) {
+        return res.status(200).json({
+          success: false,
+          message: '即梦 API 密钥未配置',
+          envCheck,
+        });
+      }
+
+      // 尝试调用即梦 API
+      try {
+        const { generateImage } = await import('./_lib/image');
+        const result = await generateImage({
+          prompt: 'A cute cartoon rabbit in a forest, children book illustration style',
+          size: '512x512',
+          provider: 'jimeng',
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: '即梦 API 调用成功！',
+          envCheck,
+          result: {
+            imageUrl: result.imageUrl.substring(0, 100) + '...',
+            provider: result.provider,
+            model: result.model,
+          },
+        });
+      } catch (error: any) {
+        return res.status(200).json({
+          success: false,
+          message: '即梦 API 调用失败',
+          envCheck,
+          error: error.message,
+        });
+      }
+    }
+
     // ==================== 用户认证 API ====================
 
     // 用户注册
