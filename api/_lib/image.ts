@@ -120,11 +120,11 @@ async function generateWithDalle(
     n: 1,
   });
 
-  const image = response.data[0];
+  const image = response.data?.[0];
 
   return {
-    imageUrl: image.url || '',
-    revisedPrompt: image.revised_prompt,
+    imageUrl: image?.url || '',
+    revisedPrompt: image?.revised_prompt,
     provider: 'dalle',
     model,
   };
@@ -219,7 +219,7 @@ async function generateWithImagen(
   const imageData = result.candidates?.[0]?.content?.parts?.[0];
 
   let imageUrl = '';
-  if (imageData && 'inlineData' in imageData) {
+  if (imageData && 'inlineData' in imageData && imageData.inlineData) {
     imageUrl = `data:${imageData.inlineData.mimeType};base64,${imageData.inlineData.data}`;
   }
 
@@ -532,11 +532,11 @@ async function generateWithCustomImage(
     n: 1,
   });
 
-  const image = response.data[0];
+  const image = response.data?.[0];
 
   return {
-    imageUrl: image.url || '',
-    revisedPrompt: image.revised_prompt,
+    imageUrl: image?.url || '',
+    revisedPrompt: image?.revised_prompt,
     provider: 'custom',
     model,
   };
