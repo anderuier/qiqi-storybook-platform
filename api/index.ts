@@ -8,9 +8,6 @@ import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
 
-// 图片生成模块
-import { generateImage, enhancePromptForChildrenBook } from './_lib/image';
-
 // ==================== 工具函数 ====================
 
 // 使用 Node.js 的 webcrypto API
@@ -2009,23 +2006,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           )
         `;
 
-        // 使用静态导入的图片生成模块
-
         // 尝试生成第一张图片
         const firstPage = pages[0];
         if (!firstPage.image_url) {
           try {
-            const enhancedPrompt = enhancePromptForChildrenBook(firstPage.image_prompt, style);
-            const result = await generateImage({
-              prompt: enhancedPrompt,
-              size: '1024x1024',
-              provider: provider || 'siliconflow',
+            // 内联实现硅基流动图片生成
+            const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
+            if (!siliconflowApiKey) {
+              throw new Error('硅基流动 API Key 未配置');
+            }
+
+            // 增强 prompt
+            const stylePrompts: Record<string, string> = {
+              watercolor: 'watercolor painting style, soft colors, gentle brushstrokes',
+              cartoon: 'cartoon style, bright colors, simple shapes',
+              oil: 'oil painting style, rich textures, vibrant colors',
+              anime: 'anime style, Japanese animation, detailed characters',
+              flat: 'flat illustration style, minimalist, clean lines',
+              '3d': '3D rendered style, realistic lighting, depth',
+            };
+            const styleDesc = stylePrompts[style] || stylePrompts.watercolor;
+            const enhancedPrompt = `Children's book illustration, ${firstPage.image_prompt}, ${styleDesc}, safe for children, no text, high quality`;
+
+            const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${siliconflowApiKey}`,
+              },
+              body: JSON.stringify({
+                model: 'Kwai-Kolors/Kolors',
+                prompt: enhancedPrompt,
+              }),
             });
+
+            if (!imgResponse.ok) {
+              const errText = await imgResponse.text();
+              throw new Error(`硅基流动 API 错误: ${errText}`);
+            }
+
+            const imgResult = await imgResponse.json();
+            const imageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
+
+            if (!imageUrl) {
+              throw new Error('硅基流动未返回图片');
+            }
 
             // 更新页面图片
             await sql`
               UPDATE storyboard_pages
-              SET image_url = ${result.imageUrl}
+              SET image_url = ${imageUrl}
               WHERE id = ${firstPage.id}
             `;
 
@@ -2038,7 +2068,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     storyboardId,
                     style,
                     provider,
-                    pages: [{ pageNumber: 1, imageUrl: result.imageUrl }],
+                    pages: [{ pageNumber: 1, imageUrl }],
                   })},
                   updated_at = CURRENT_TIMESTAMP
               WHERE id = ${taskId}
