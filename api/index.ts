@@ -2009,7 +2009,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             'generate_images',
             'processing',
             ${totalPages},
-            ${JSON.stringify({ storyboardId, style, provider, pages: [] })}
+            ${JSON.stringify({ storyboardId, workId: storyboard.work_id, style, provider, pages: [] })}
           )
         `;
 
@@ -2080,6 +2080,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                   progress = ${Math.round((1 / totalPages) * 100)},
                   result = ${JSON.stringify({
                     storyboardId,
+                    workId: storyboard.work_id,
                     style,
                     provider,
                     pages: [{ pageNumber: 1, imageUrl }],
@@ -2254,6 +2255,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             data: {
               taskId: task.id,
               status: 'completed',
+              progress: 100,
+              completedItems: task.completed_items,
+              totalItems: task.total_items,
               message: '任务已完成',
             },
           });
@@ -2272,6 +2276,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 解析任务结果
         const taskData = task.result as {
           storyboardId: string;
+          workId?: string;
           style: string;
           provider?: string;
           pages: Array<{ pageNumber: number; imageUrl: string }>;
@@ -2295,11 +2300,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             WHERE id = ${taskId}
           `;
 
+          // 更新 work 的 current_step 为 'images'（表示图片生成完成）
+          if (taskData.workId) {
+            await sql`
+              UPDATE works
+              SET current_step = 'images', updated_at = CURRENT_TIMESTAMP
+              WHERE id = ${taskData.workId}
+            `;
+          }
+
           return res.status(200).json({
             success: true,
             data: {
               taskId: task.id,
               status: 'completed',
+              progress: 100,
+              completedItems: task.total_items,
+              totalItems: task.total_items,
               message: '所有图片生成完成',
             },
           });
@@ -2322,6 +2339,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             WHERE id = ${taskId}
           `;
 
+          // 如果任务完成，更新 work 的 current_step
+          if (isCompleted && taskData.workId) {
+            await sql`
+              UPDATE works
+              SET current_step = 'images', updated_at = CURRENT_TIMESTAMP
+              WHERE id = ${taskData.workId}
+            `;
+          }
+
           return res.status(200).json({
             success: true,
             data: {
@@ -2331,6 +2357,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               imageUrl: page.image_url,
               skipped: true,
               progress: newProgress,
+              completedItems: newCompleted,
+              totalItems: task.total_items,
             },
           });
         }
@@ -2419,6 +2447,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE id = ${taskId}
         `;
 
+        // 如果任务完成，更新 work 的 current_step
+        if (isCompleted && taskData.workId) {
+          await sql`
+            UPDATE works
+            SET current_step = 'images', updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${taskData.workId}
+          `;
+        }
+
         return res.status(200).json({
           success: true,
           data: {
@@ -2427,6 +2464,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             pageNumber: nextPageNumber,
             imageUrl: result.imageUrl,
             progress: newProgress,
+            completedItems: newCompleted,
+            totalItems: task.total_items,
             provider: result.provider,
             model: result.model,
           },
