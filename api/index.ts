@@ -1807,7 +1807,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           page_number INTEGER NOT NULL,
           text TEXT NOT NULL,
           image_prompt TEXT,
-          image_url VARCHAR(500),
+          image_url TEXT,
           audio_url VARCHAR(500),
           duration INTEGER DEFAULT 0,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -1900,6 +1900,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (migrationError) {
         console.log('Migration note:', migrationError);
         // 忽略迁移错误（字段可能已存在）
+      }
+
+      // storyboard_pages 表迁移：修改 image_url 字段类型为 TEXT（支持长 URL）
+      try {
+        await sql`ALTER TABLE storyboard_pages ALTER COLUMN image_url TYPE TEXT`;
+      } catch (migrationError) {
+        console.log('Migration note (image_url):', migrationError);
       }
 
       return res.status(200).json({
