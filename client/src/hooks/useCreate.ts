@@ -128,12 +128,26 @@ export function useCreate() {
 
         // 恢复已生成的图片
         const pageImages: Record<number, string> = {};
+        let completedCount = 0;
         draft.storyboard.pages.forEach((page) => {
           if (page.imageUrl) {
             pageImages[page.pageNumber] = page.imageUrl;
+            completedCount++;
           }
         });
         restoredState.pageImages = pageImages;
+
+        // 如果所有图片都已生成，恢复 imageTask 状态为 completed
+        const totalPages = draft.storyboard.pages.length;
+        if (completedCount === totalPages && totalPages > 0) {
+          restoredState.imageTask = {
+            taskId: null,
+            status: 'completed',
+            progress: 100,
+            completedPages: completedCount,
+            totalPages: totalPages,
+          };
+        }
       }
 
       updateState(restoredState);
