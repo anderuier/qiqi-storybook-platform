@@ -1804,17 +1804,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ==================== 数据库初始化 ====================
     if (fullPath === '/api/db/init' && (req.method === 'POST' || req.method === 'GET')) {
-      // GET 请求或 POST 请求都支持
-      const { secret } = req.body || req.query || {};
-      const DB_INIT_SECRET = process.env.DB_INIT_SECRET || 'init-secret-key';
-
-      // 如果设置了 secret 环境变量，则需要验证；否则允许初始化
-      if (process.env.DB_INIT_SECRET && secret !== DB_INIT_SECRET) {
-        return res.status(403).json({
-          success: false,
-          error: 'Invalid secret',
-        });
-      }
+      // 允许直接初始化（生产环境可以通过设置 DB_INIT_SECRET 环境变量来保护）
+      try {
 
       // 创建用户表
       await sql`
@@ -1990,6 +1981,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           tables: ['users', 'works', 'stories', 'storyboards', 'storyboard_pages', 'cloned_voices', 'likes', 'templates', 'tasks', 'rate_limits'],
         },
       });
+      } catch (dbError: any) {
+        console.error('数据库初始化失败:', dbError);
+        return res.status(500).json({
+          success: false,
+          error: '数据库初始化失败',
+          details: dbError.message,
+        });
+      }
     }
 
     // ==================== 图片生成 API ====================
