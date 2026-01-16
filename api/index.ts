@@ -7,7 +7,6 @@ import { sql } from '@vercel/postgres';
 import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
-import { generateImage, enhancePromptForChildrenBook } from './_lib/image';
 
 // ==================== 工具函数 ====================
 
@@ -2322,16 +2321,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
-        // 使用静态导入的图片生成模块
+        // 内联实现图片生成（避免静态导入导致的问题）
+        const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
+        if (!siliconflowApiKey) {
+          throw new Error('硅基流动 API Key 未配置');
+        }
 
-        // 生成图片
-        const enhancedPrompt = enhancePromptForChildrenBook(page.image_prompt, taskData.style);
+        // 增强 prompt
+        const stylePrompts: Record<string, string> = {
+          watercolor: 'watercolor painting style, soft colors, gentle brushstrokes',
+          cartoon: 'cartoon style, bright colors, simple shapes',
+          oil: 'oil painting style, rich textures, vibrant colors',
+          anime: 'anime style, Japanese animation, detailed characters',
+          flat: 'flat illustration style, minimalist, clean lines',
+          '3d': '3D rendered style, realistic lighting, depth',
+        };
+        const styleDesc = stylePrompts[taskData.style] || stylePrompts.watercolor;
+        const enhancedPrompt = `Children's book illustration, ${page.image_prompt}, ${styleDesc}, safe for children, no text, high quality`;
 
-        const result = await generateImage({
-          prompt: enhancedPrompt,
-          size: '1024x1024',
-          provider: (taskData.provider as any) || 'siliconflow',
+        // 调用硅基流动 API
+        const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${siliconflowApiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'Kwai-Kolors/Kolors',
+            prompt: enhancedPrompt,
+          }),
         });
+
+        if (!imgResponse.ok) {
+          const errText = await imgResponse.text();
+          throw new Error(`硅基流动 API 错误: ${errText}`);
+        }
+
+        const imgResult = await imgResponse.json();
+        const imageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
+
+        if (!imageUrl) {
+          throw new Error('硅基流动未返回图片');
+        }
+
+        const result = {
+          imageUrl,
+          provider: 'siliconflow',
+          model: 'Kwai-Kolors/Kolors',
+        };
 
         // 更新页面图片
         await sql`
