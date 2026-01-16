@@ -2300,11 +2300,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             WHERE id = ${taskId}
           `;
 
-          // 更新 work 的 current_step 为 'images'（表示图片生成完成）
+          // 更新 work 的 current_step 为 'preview'（表示图片生成完成，进入预览阶段）
           if (taskData.workId) {
             await sql`
               UPDATE works
-              SET current_step = 'images', updated_at = CURRENT_TIMESTAMP
+              SET current_step = 'preview', updated_at = CURRENT_TIMESTAMP
               WHERE id = ${taskData.workId}
             `;
           }

@@ -163,6 +163,7 @@ export default function Create() {
           'story': 2,
           'storyboard': 3,
           'images': 4,
+          'preview': 5,
           'completed': 5,
         };
         setCurrentStep(stepMap[draft.work.currentStep] || 1);
