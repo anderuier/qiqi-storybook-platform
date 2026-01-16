@@ -418,6 +418,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // 测试 Vercel Blob 配置
+    if (fullPath === '/api/test-blob') {
+      const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+
+      const envCheck = {
+        BLOB_READ_WRITE_TOKEN: blobToken ? `${blobToken.substring(0, 20)}...` : '未设置',
+      };
+
+      if (!blobToken) {
+        return res.status(200).json({
+          success: false,
+          message: 'Vercel Blob Token 未配置',
+          envCheck,
+          guide: '请在 Vercel 控制台创建 Blob Store，环境变量 BLOB_READ_WRITE_TOKEN 会自动添加',
+        });
+      }
+
+      try {
+        // 测试上传一个小文件
+        const testContent = `Test file created at ${new Date().toISOString()}`;
+        const blob = await put(`test/test-${Date.now()}.txt`, testContent, {
+          access: 'public',
+          contentType: 'text/plain',
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'Vercel Blob 配置正确！',
+          envCheck,
+          testFile: {
+            url: blob.url,
+            pathname: blob.pathname,
+          },
+        });
+      } catch (error: any) {
+        return res.status(200).json({
+          success: false,
+          message: 'Vercel Blob 上传测试失败',
+          envCheck,
+          error: error.message,
+        });
+      }
+    }
+
     // 测试数据库连接
     if (fullPath === '/api/test-db') {
       const result = await sql`SELECT NOW() as current_time`;
