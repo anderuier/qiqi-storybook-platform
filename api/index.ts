@@ -4,6 +4,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
+import { put } from '@vercel/blob';
 import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
@@ -214,6 +215,33 @@ async function recordRequest(userId: string): Promise<void> {
     `;
   } catch (error) {
     console.error('Record request error:', error);
+  }
+}
+
+// 下载图片并上传到 Vercel Blob
+async function uploadImageToBlob(imageUrl: string, filename: string): Promise<string> {
+  try {
+    // 下载图片
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`下载图片失败: ${response.status}`);
+    }
+
+    const imageBuffer = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') || 'image/png';
+
+    // 上传到 Vercel Blob
+    const blob = await put(filename, imageBuffer, {
+      access: 'public',
+      contentType,
+    });
+
+    console.log(`图片已上传到 Vercel Blob: ${blob.url}`);
+    return blob.url;
+  } catch (error) {
+    console.error('上传图片到 Blob 失败:', error);
+    // 如果上传失败，返回原始 URL
+    return imageUrl;
   }
 }
 
@@ -2060,11 +2088,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             const imgResult = await imgResponse.json();
-            const imageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
+            const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
 
-            if (!imageUrl) {
+            if (!originalImageUrl) {
               throw new Error('硅基流动未返回图片');
             }
+
+            // 上传图片到 Vercel Blob
+            const blobFilename = `storybook/${storyboard.work_id}/page-1-${Date.now()}.png`;
+            const imageUrl = await uploadImageToBlob(originalImageUrl, blobFilename);
 
             // 更新页面图片
             await sql`
@@ -2407,14 +2439,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const imgResult = await imgResponse.json();
-        const imageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
+        const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
 
-        if (!imageUrl) {
+        if (!originalImageUrl) {
           throw new Error('硅基流动未返回图片');
         }
 
+        // 上传图片到 Vercel Blob
+        const blobFilename = `storybook/${taskData.workId || 'unknown'}/page-${nextPageNumber}-${Date.now()}.png`;
+        const finalImageUrl = await uploadImageToBlob(originalImageUrl, blobFilename);
+
         const result = {
-          imageUrl,
+          imageUrl: finalImageUrl,
           provider: 'siliconflow',
           model: 'Kwai-Kolors/Kolors',
         };
