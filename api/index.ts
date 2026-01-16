@@ -7,6 +7,7 @@ import { sql } from '@vercel/postgres';
 import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
+import { generateImage, enhancePromptForChildrenBook } from './_lib/image';
 
 // ==================== 工具函数 ====================
 
