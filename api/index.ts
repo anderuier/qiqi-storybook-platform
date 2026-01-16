@@ -2016,7 +2016,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               throw new Error('硅基流动 API Key 未配置');
             }
 
-            // 增强 prompt
+            // 检查 image_prompt 是否存在
+            if (!firstPage.image_prompt) {
+              throw new Error('分镜页面缺少画面描述 (image_prompt)');
+            }
+
+            // 增强 prompt（将中文描述转换为英文风格描述）
             const stylePrompts: Record<string, string> = {
               watercolor: 'watercolor painting style, soft colors, gentle brushstrokes',
               cartoon: 'cartoon style, bright colors, simple shapes',
@@ -2027,6 +2032,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             };
             const styleDesc = stylePrompts[style] || stylePrompts.watercolor;
             const enhancedPrompt = `Children's book illustration, ${firstPage.image_prompt}, ${styleDesc}, safe for children, no text, high quality`;
+
+            console.log('生成图片 prompt:', enhancedPrompt.substring(0, 200));
 
             const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
               method: 'POST',
@@ -2076,10 +2083,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           } catch (imgErr: any) {
             console.error('第一张图片生成失败:', imgErr);
             // 更新任务状态为失败
+            const errorMessage = imgErr.message || '图片生成失败';
             await sql`
               UPDATE tasks
               SET status = 'failed',
-                  error = ${imgErr.message || '图片生成失败'},
+                  error = ${errorMessage},
                   updated_at = CURRENT_TIMESTAMP
               WHERE id = ${taskId}
             `;
@@ -2088,8 +2096,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               success: false,
               error: {
                 code: 'IMAGE_GENERATION_FAILED',
-                message: '图片生成失败',
-                details: imgErr.message,
+                message: errorMessage,
               },
             });
           }
@@ -2327,6 +2334,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           throw new Error('硅基流动 API Key 未配置');
         }
 
+        // 检查 image_prompt 是否存在
+        if (!page.image_prompt) {
+          throw new Error(`第 ${nextPageNumber} 页缺少画面描述 (image_prompt)`);
+        }
+
         // 增强 prompt
         const stylePrompts: Record<string, string> = {
           watercolor: 'watercolor painting style, soft colors, gentle brushstrokes',
@@ -2338,6 +2350,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         };
         const styleDesc = stylePrompts[taskData.style] || stylePrompts.watercolor;
         const enhancedPrompt = `Children's book illustration, ${page.image_prompt}, ${styleDesc}, safe for children, no text, high quality`;
+
+        console.log(`生成第 ${nextPageNumber} 页图片 prompt:`, enhancedPrompt.substring(0, 200));
 
         // 调用硅基流动 API
         const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
