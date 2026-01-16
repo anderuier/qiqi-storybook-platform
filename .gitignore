@@ -110,10 +110,15 @@ temp/
 
 # docs - 个人笔记和会话记录（不纳入版本控制）
 docs/SESSION_SUMMARY_*.md
+DOCS/SESSION_SUMMARY_*.md
 docs/git-*.md
+DOCS/git-*.md
 docs/tech-overview.md
+DOCS/tech-overview.md
 docs/项目小结.txt
+DOCS/项目小结.txt
 docs/*.jpg
+DOCS/*.jpg
 
 # 常用命令备忘
 常用命令.txt
