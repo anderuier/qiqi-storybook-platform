@@ -32,6 +32,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCreate } from "@/hooks/useCreate";
 import { Progress } from "@/components/ui/progress";
 import { ImageProvider } from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 
 // 创作模式
 const createModes = [
@@ -124,6 +128,7 @@ export default function Create() {
   const [selectedProvider, setSelectedProvider] = useState<ImageProvider>("siliconflow");
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
   const [isRestoringDraft, setIsRestoringDraft] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null); // 图片预览
 
   const totalSteps = 5; // 输入 -> 故事 -> 分镜 -> 图片 -> 预览
 
@@ -226,16 +231,25 @@ export default function Create() {
   // 轮询生成图片
   useEffect(() => {
     if (create.imageTask.status === "processing" && create.imageTask.taskId) {
+      let retryCount = 0;
+      const maxRetries = 3;
+
       const interval = setInterval(async () => {
         try {
           const result = await create.continueImageGeneration();
+          retryCount = 0; // 成功后重置重试计数
           if (result.status === "completed") {
             clearInterval(interval);
           }
         } catch (err) {
-          clearInterval(interval);
+          retryCount++;
+          // 连续失败超过 maxRetries 次才停止
+          if (retryCount >= maxRetries) {
+            clearInterval(interval);
+          }
+          // 否则继续重试
         }
-      }, 2000); // 每2秒生成一张
+      }, 3000); // 每3秒生成一张，给 API 更多时间
 
       return () => clearInterval(interval);
     }
@@ -244,12 +258,14 @@ export default function Create() {
   // 上一步
   const handlePrev = () => {
     if (currentStep > 1) {
+      create.clearError(); // 清除错误
       setCurrentStep(currentStep - 1);
     }
   };
 
   // 下一步
   const handleNext = () => {
+    create.clearError(); // 清除错误
     if (currentStep === 1) {
       handleGenerateStory();
     } else if (currentStep === 2) {
@@ -659,7 +675,11 @@ export default function Create() {
                 {Object.keys(create.pageImages).length > 0 && (
                   <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
                     {Object.entries(create.pageImages).map(([pageNum, url]) => (
-                      <div key={pageNum} className="aspect-square rounded-xl overflow-hidden bg-cream">
+                      <div
+                        key={pageNum}
+                        className="aspect-square rounded-xl overflow-hidden bg-cream cursor-pointer hover:ring-2 hover:ring-coral transition-all"
+                        onClick={() => setPreviewImage(url)}
+                      >
                         <img src={url} alt={`第${pageNum}页`} className="w-full h-full object-cover" />
                       </div>
                     ))}
@@ -766,6 +786,20 @@ export default function Create() {
       </main>
 
       <Footer />
+
+      {/* 图片大图预览 Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl p-2 bg-transparent border-none">
+          {previewImage && (
+            <img
+              src={previewImage}
+              alt="预览大图"
+              className="w-full h-auto rounded-xl"
+              onClick={() => setPreviewImage(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

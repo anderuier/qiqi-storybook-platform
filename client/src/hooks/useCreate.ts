@@ -322,11 +322,12 @@ export function useCreate() {
 
       setState((prev) => ({
         ...prev,
+        error: null, // 清除之前的错误
         imageTask: {
           ...prev.imageTask,
           status: isCompleted ? 'completed' : 'processing',
-          progress: result.progress,
-          completedPages: result.completedItems,
+          progress: result.progress || 0,
+          completedPages: result.completedItems || prev.imageTask.completedPages,
         },
         pageImages: result.imageUrl
           ? {
@@ -339,12 +340,10 @@ export function useCreate() {
 
       return result;
     } catch (err: any) {
+      // 单次失败不要立即标记为 failed，让轮询继续尝试
+      // 只设置错误信息，不改变状态
       updateState({
-        error: err.message || '图片生成失败',
-        imageTask: {
-          ...state.imageTask,
-          status: 'failed',
-        },
+        error: err.message || '图片生成失败，正在重试...',
       });
       throw err;
     }
