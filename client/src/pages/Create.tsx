@@ -174,6 +174,17 @@ export default function Create() {
     }
   }, [isAuthenticated]);
 
+  // 定期同步图片生成状态（每 10 秒）
+  useEffect(() => {
+    if (currentStep === 4 && create.imageTask.taskId && create.imageTask.status === "processing") {
+      const syncInterval = setInterval(() => {
+        create.checkTaskStatus();
+      }, 10000); // 每 10 秒同步一次状态
+
+      return () => clearInterval(syncInterval);
+    }
+  }, [currentStep, create.imageTask.taskId, create.imageTask.status]);
+
   // 判断是否可以进入下一步
   const canProceed = () => {
     switch (currentStep) {
@@ -236,24 +247,41 @@ export default function Create() {
   useEffect(() => {
     if (create.imageTask.status === "processing" && create.imageTask.taskId) {
       let retryCount = 0;
-      const maxRetries = 3;
+      const maxRetries = 10; // 增加重试次数，提高容错性
+      let syncCheckCount = 0;
 
       const interval = setInterval(async () => {
         try {
           const result = await create.continueImageGeneration();
           retryCount = 0; // 成功后重置重试计数
+          syncCheckCount = 0; // 重置同步检查计数
+
           if (result.status === "completed") {
             clearInterval(interval);
           }
         } catch (err) {
           retryCount++;
+          syncCheckCount++;
+
+          // 每 3 次失败后，尝试同步任务状态
+          if (syncCheckCount >= 3) {
+            try {
+              await create.checkTaskStatus();
+              syncCheckCount = 0; // 同步成功后重置
+            } catch (syncErr) {
+              console.error('同步任务状态失败:', syncErr);
+            }
+          }
+
           // 连续失败超过 maxRetries 次才停止
           if (retryCount >= maxRetries) {
+            console.error('图片生成失败次数过多，停止轮询');
             clearInterval(interval);
+            // 最后尝试一次同步状态
+            create.checkTaskStatus().catch(console.error);
           }
-          // 否则继续重试
         }
-      }, 3000); // 每3秒生成一张，给 API 更多时间
+      }, 3000); // 每3秒生成一张
 
       return () => clearInterval(interval);
     }

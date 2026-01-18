@@ -355,21 +355,65 @@ export function useCreate() {
       return result;
     } catch (err: any) {
       // 单次失败不要立即标记为 failed，让轮询继续尝试
-      // 只设置错误信息，不改变状态
-      updateState({
-        error: err.message || '图片生成失败，正在重试...',
-      });
+      // 设置错误信息，但不改变状态
+      const errorMessage = err.message || '图片生成失败，正在重试...';
+
+      setState((prev) => ({
+        ...prev,
+        error: errorMessage,
+      }));
+
+      // 抛出错误让轮询逻辑处理
       throw err;
     }
-  }, [state.imageTask, updateState]);
+  }, [state.imageTask]);
 
-  // 查询任务状态
+  // 查询任务状态（增强版：同步已生成的图片）
   const checkTaskStatus = useCallback(async () => {
     if (!state.imageTask.taskId) return null;
 
     try {
       const result = await createApi.getTask(state.imageTask.taskId);
 
+      // 如果有 workId，从草稿中获取已生成的图片
+      if (state.workId) {
+        try {
+          const draft = await draftsApi.getDraft(state.workId);
+
+          // 同步已生成的图片
+          if (draft.storyboard) {
+            const pageImages: Record<number, string> = {};
+            let completedCount = 0;
+
+            draft.storyboard.pages.forEach((page) => {
+              if (page.imageUrl) {
+                pageImages[page.pageNumber] = page.imageUrl;
+                completedCount++;
+              }
+            });
+
+            // 更新状态，包括图片
+            setState((prev) => ({
+              ...prev,
+              imageTask: {
+                ...prev.imageTask,
+                status: result.status as any,
+                progress: result.progress,
+                completedPages: completedCount, // 使用实际已生成的数量
+                totalPages: draft.storyboard.pages.length,
+              },
+              pageImages: pageImages, // 同步所有已生成的图片
+            }));
+
+            return result;
+          }
+        } catch (draftErr) {
+          console.error('获取草稿失败:', draftErr);
+          // 如果获取草稿失败，仍然更新任务状态
+        }
+      }
+
+      // 如果没有 workId 或获取草稿失败，只更新任务状态
       updateState({
         imageTask: {
           ...state.imageTask,
@@ -381,9 +425,10 @@ export function useCreate() {
 
       return result;
     } catch (err) {
+      console.error('查询任务状态失败:', err);
       return null;
     }
-  }, [state.imageTask, updateState]);
+  }, [state.imageTask, state.workId, updateState]);
 
   // 跳转到指定步骤
   const goToStep = useCallback(
