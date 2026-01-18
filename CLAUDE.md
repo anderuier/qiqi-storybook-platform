@@ -7,17 +7,17 @@
 ## 项目规则
 
 ### 文档管理
-1. 所有生成的文档文件保存到 `DOCS/` 文件夹
+1. 所有生成的文档文件保存到 `docs/` 文件夹
 2. 文档使用 Markdown 格式
 3. 文档内容使用中文
 4. **会话总结规则**：
    - 当用户说 **"总结并保存此次会话的内容，以及当前项目进度"** 时，执行以下操作：
      - 将本次对话内容整理分析归档
-     - 保存为 `DOCS/SESSION_SUMMARY_YYYYMMDD_HHMMSS.md`（当前时间戳）
-     - 更新 `DOCS/CHANGELOG.md` 项目进展记录文件
-   - 每次打开项目时，从 `DOCS/` 文件夹中读取**最新的** `SESSION_SUMMARY_*.md` 文件，以便无缝衔接上次对话
+     - 保存为 `docs/SESSION_SUMMARY_YYYYMMDD_HHMMSS.md`（当前时间戳）
+     - 更新 `docs/CHANGELOG.md` 项目进展记录文件
+   - 每次打开项目时，从 `docs/` 文件夹中读取**最新的** `SESSION_SUMMARY_*.md` 文件，以便无缝衔接上次对话
 5. **项目进展记录**：
-   - 维护唯一的 `DOCS/CHANGELOG.md` 文件
+   - 维护唯一的 `docs/CHANGELOG.md` 文件
    - 记录每次会话的主要更新内容
    - 格式：日期 + 更新摘要 + 详细内容
 
@@ -76,7 +76,7 @@ D:\storybook\
 ├── server/                 # 后端源码
 │   └── index.ts
 ├── shared/                 # 前后端共享代码
-├── DOCS/                   # 项目文档
+├── docs/                   # 项目文档
 │   ├── project-analysis.md
 │   ├── SESSION_SUMMARY.md
 │   ├── git-setup-tutorial.md
@@ -178,23 +178,6 @@ VITE_ANALYTICS_WEBSITE_ID=  # Umami 网站 ID
 4. **依赖安装**: 项目使用 pnpm，不要使用 npm 或 yarn
 
 ---
-
-## 项目状态
-
-### 已完成
-- [x] 前端展示页面
-- [x] UI 组件库 (65个组件)
-- [x] 响应式设计
-- [x] Git 仓库初始化
-- [x] GitHub 远程仓库关联
-
-### 待开发
-- [ ] 后端业务逻辑
-- [ ] AI 故事生成功能
-- [ ] AI 图片生成功能
-- [ ] 语音克隆功能
-- [ ] 用户系统
-- [ ] 数据库集成
 
 ---
 

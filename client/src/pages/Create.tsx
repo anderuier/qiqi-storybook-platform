@@ -221,11 +221,14 @@ export default function Create() {
   // 开始生成图片
   const handleStartImageGeneration = async () => {
     if (!selectedArtStyle) return;
+    // 立即跳转到第 4 步，让用户看到加载状态
+    setCurrentStep(4);
     try {
       await create.startImageGeneration(selectedArtStyle, selectedProvider);
-      setCurrentStep(4);
     } catch (err) {
       // 错误已在 hook 中处理
+      // 如果失败，返回第 3 步
+      setCurrentStep(3);
     }
   };
 
