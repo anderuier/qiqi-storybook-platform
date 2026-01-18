@@ -2236,6 +2236,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
+        // 检查所有页面是否都有 image_prompt
+        const pagesMissingPrompt = pages.filter((p: any) => !p.image_prompt || p.image_prompt.trim() === '');
+        if (pagesMissingPrompt.length > 0) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              code: 'MISSING_IMAGE_PROMPTS',
+              message: `${pagesMissingPrompt.length} 页分镜缺少画面描述，请重新生成分镜`,
+            },
+          });
+        }
+
         // 清空所有页面的旧图片（重新生成时）
         await sql`
           UPDATE storyboard_pages
@@ -2261,15 +2273,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const firstPage = pages[0];
         // 注意：由于我们刚清空了图片，这里 firstPage.image_url 肯定是 null
         try {
+          // 检查 image_prompt 是否存在（虽然前面已经检查过，但再次确保）
+          if (!firstPage.image_prompt || firstPage.image_prompt.trim() === '') {
+            throw new Error('分镜页面缺少画面描述 (image_prompt)');
+          }
+
           // 内联实现硅基流动图片生成
           const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
           if (!siliconflowApiKey) {
             throw new Error('硅基流动 API Key 未配置');
-          }
-
-          // 检查 image_prompt 是否存在
-          if (!firstPage.image_prompt) {
-            throw new Error('分镜页面缺少画面描述 (image_prompt)');
           }
 
           // 增强 prompt（将中文描述转换为英文风格描述）
@@ -2338,7 +2350,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           `;
         } catch (imgErr: any) {
           console.error('第一张图片生成失败:', imgErr);
-          // 更新任务状态为失败
+          // 不再直接返回错误，而是标记任务状态但让后台任务继续
           const errorMessage = imgErr.message || '图片生成失败';
           await sql`
             UPDATE tasks
@@ -2353,6 +2365,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             error: {
               code: 'IMAGE_GENERATION_FAILED',
               message: errorMessage,
+              details: '第一张图片生成失败，请检查分镜描述或重试',
             },
           });
         }
