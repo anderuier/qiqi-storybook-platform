@@ -619,37 +619,6 @@ export default function Create() {
                         })}
                       </div>
                     </div>
-
-                    {/* 图片生成服务选择 */}
-                    <div>
-                      <label className="block text-sm font-medium mb-3">选择图片生成服务</label>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {imageProviders.map((provider) => {
-                          const isSelected = selectedProvider === provider.id;
-                          return (
-                            <div
-                              key={provider.id}
-                              onClick={() => setSelectedProvider(provider.id)}
-                              className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                                isSelected
-                                  ? "border-coral bg-coral/5"
-                                  : "border-border hover:border-muted-foreground/30"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between mb-1">
-                                <span className={`font-medium text-sm ${isSelected ? "text-coral" : ""}`}>
-                                  {provider.name}
-                                </span>
-                                {provider.recommended && (
-                                  <span className="text-xs bg-mint/20 text-mint px-1.5 py-0.5 rounded">推荐</span>
-                                )}
-                              </div>
-                              <p className="text-xs text-muted-foreground">{provider.description}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
                   </>
                 ) : null}
               </div>
@@ -668,7 +637,7 @@ export default function Create() {
                     <>
                       <Loader2 className="w-16 h-16 animate-spin text-coral mx-auto mb-4" />
                       <p className="text-lg font-medium mb-2">
-                        正在生成第 {create.imageTask.completedPages + 1} / {create.imageTask.totalPages} 张图片
+                        正在生成第 {Math.min(create.imageTask.completedPages + 1, create.imageTask.totalPages)} / {create.imageTask.totalPages} 张图片
                       </p>
                       <Progress value={create.imageTask.progress} className="w-full max-w-md mx-auto mb-4" />
                       <p className="text-sm text-muted-foreground">
@@ -708,17 +677,61 @@ export default function Create() {
 
                 {/* 已生成的图片预览 */}
                 {Object.keys(create.pageImages).length > 0 && (
-                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                    {Object.entries(create.pageImages).map(([pageNum, url]) => (
-                      <div
-                        key={pageNum}
-                        className="aspect-square rounded-xl overflow-hidden bg-cream cursor-pointer hover:ring-2 hover:ring-coral transition-all"
-                        onClick={() => setPreviewImage(url)}
-                      >
-                        <img src={url} alt={`第${pageNum}页`} className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-medium text-muted-foreground">
+                        已生成 {Object.keys(create.pageImages).length} / {create.imageTask.totalPages} 张图片
+                      </h3>
+                      {create.imageTask.status === "completed" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (selectedArtStyle && window.confirm('确定要重新生成所有图片吗？')) {
+                              create.startImageGeneration(selectedArtStyle, selectedProvider);
+                            }
+                          }}
+                          className="rounded-full"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          全部重新生成
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                      {Object.entries(create.pageImages).map(([pageNum, url]) => (
+                        <div
+                          key={pageNum}
+                          className="relative aspect-square rounded-xl overflow-hidden bg-cream group"
+                        >
+                          <img
+                            src={url}
+                            alt={`第${pageNum}页`}
+                            className="w-full h-full object-cover cursor-pointer"
+                            onClick={() => setPreviewImage(url)}
+                          />
+                          {create.imageTask.status === "completed" && (
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (selectedArtStyle && window.confirm(`确定要重新生成第 ${pageNum} 张图片吗？`)) {
+                                    create.generateImage(Number(pageNum), selectedArtStyle, selectedProvider);
+                                  }
+                                }}
+                                className="rounded-full"
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                重新生成
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             )}
