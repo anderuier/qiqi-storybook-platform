@@ -281,7 +281,7 @@ export default function Create() {
             create.checkTaskStatus().catch(console.error);
           }
         }
-      }, 3000); // 每3秒生成一张
+      }, 5000); // 改为每 5 秒生成一张，给后端更多时间
 
       return () => clearInterval(interval);
     }

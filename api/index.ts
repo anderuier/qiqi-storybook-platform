@@ -2465,92 +2465,110 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         console.log(`生成第 ${nextPageNumber} 页图片 prompt:`, enhancedPrompt.substring(0, 200));
 
-        // 调用硅基流动 API
-        const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${siliconflowApiKey}`,
-          },
-          body: JSON.stringify({
+        // 调用硅基流动 API（添加超时控制）
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 50000); // 50秒超时
+
+        try {
+          const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${siliconflowApiKey}`,
+            },
+            body: JSON.stringify({
+              model: 'Kwai-Kolors/Kolors',
+              prompt: enhancedPrompt,
+            }),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeout);
+
+          if (!imgResponse.ok) {
+            const errText = await imgResponse.text();
+            throw new Error(`硅基流动 API 错误: ${errText}`);
+          }
+
+          const imgResult = await imgResponse.json();
+          const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
+
+          if (!originalImageUrl) {
+            throw new Error('硅基流动未返回图片');
+          }
+
+          // 上传图片到 Vercel Blob
+          const blobFilename = `storybook/${taskData.workId || 'unknown'}/page-${nextPageNumber}-${Date.now()}.png`;
+          const finalImageUrl = await uploadImageToBlob(originalImageUrl, blobFilename);
+
+          const result = {
+            imageUrl: finalImageUrl,
+            provider: 'siliconflow',
             model: 'Kwai-Kolors/Kolors',
-            prompt: enhancedPrompt,
-          }),
-        });
+          };
 
-        if (!imgResponse.ok) {
-          const errText = await imgResponse.text();
-          throw new Error(`硅基流动 API 错误: ${errText}`);
-        }
-
-        const imgResult = await imgResponse.json();
-        const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
-
-        if (!originalImageUrl) {
-          throw new Error('硅基流动未返回图片');
-        }
-
-        // 上传图片到 Vercel Blob
-        const blobFilename = `storybook/${taskData.workId || 'unknown'}/page-${nextPageNumber}-${Date.now()}.png`;
-        const finalImageUrl = await uploadImageToBlob(originalImageUrl, blobFilename);
-
-        const result = {
-          imageUrl: finalImageUrl,
-          provider: 'siliconflow',
-          model: 'Kwai-Kolors/Kolors',
-        };
-
-        // 更新页面图片
-        await sql`
-          UPDATE storyboard_pages
-          SET image_url = ${result.imageUrl}
-          WHERE id = ${page.id}
-        `;
-
-        // 更新任务进度
-        const newCompleted = task.completed_items + 1;
-        const newProgress = Math.round((newCompleted / task.total_items) * 100);
-        const isCompleted = newCompleted >= task.total_items;
-
-        // 更新任务结果
-        taskData.pages.push({
-          pageNumber: nextPageNumber,
-          imageUrl: result.imageUrl,
-        });
-
-        await sql`
-          UPDATE tasks
-          SET completed_items = ${newCompleted},
-              progress = ${newProgress},
-              status = ${isCompleted ? 'completed' : 'processing'},
-              result = ${JSON.stringify(taskData)},
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${taskId}
-        `;
-
-        // 如果任务完成，更新 work 的 current_step
-        if (isCompleted && taskData.workId) {
+          // 更新页面图片
           await sql`
-            UPDATE works
-            SET current_step = 'images', updated_at = CURRENT_TIMESTAMP
-            WHERE id = ${taskData.workId}
+            UPDATE storyboard_pages
+            SET image_url = ${result.imageUrl}
+            WHERE id = ${page.id}
           `;
-        }
 
-        return res.status(200).json({
-          success: true,
-          data: {
-            taskId: task.id,
-            status: isCompleted ? 'completed' : 'processing',
+          // 更新任务进度
+          const newCompleted = task.completed_items + 1;
+          const newProgress = Math.round((newCompleted / task.total_items) * 100);
+          const isCompleted = newCompleted >= task.total_items;
+
+          // 更新任务结果
+          taskData.pages.push({
             pageNumber: nextPageNumber,
             imageUrl: result.imageUrl,
-            progress: newProgress,
-            completedItems: newCompleted,
-            totalItems: task.total_items,
-            provider: result.provider,
-            model: result.model,
-          },
-        });
+          });
+
+          await sql`
+            UPDATE tasks
+            SET completed_items = ${newCompleted},
+                progress = ${newProgress},
+                status = ${isCompleted ? 'completed' : 'processing'},
+                result = ${JSON.stringify(taskData)},
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${taskId}
+          `;
+
+          // 如果任务完成，更新 work 的 current_step
+          if (isCompleted && taskData.workId) {
+            await sql`
+              UPDATE works
+              SET current_step = 'images', updated_at = CURRENT_TIMESTAMP
+              WHERE id = ${taskData.workId}
+            `;
+          }
+
+          return res.status(200).json({
+            success: true,
+            data: {
+              taskId: task.id,
+              status: isCompleted ? 'completed' : 'processing',
+              pageNumber: nextPageNumber,
+              imageUrl: result.imageUrl,
+              progress: newProgress,
+              completedItems: newCompleted,
+              totalItems: task.total_items,
+              provider: result.provider,
+              model: result.model,
+            },
+          });
+        } catch (fetchError: any) {
+          clearTimeout(timeout);
+          // 处理超时或 API 错误
+          const errorMessage = fetchError.name === 'AbortError'
+            ? '图片生成超时，请重试'
+            : `图片生成失败: ${fetchError.message}`;
+
+          console.error(`生成第 ${nextPageNumber} 页图片失败:`, errorMessage);
+
+          throw new Error(errorMessage);
+        }
       } catch (error: any) {
         console.error('继续生成图片失败:', error);
         return res.status(500).json({
