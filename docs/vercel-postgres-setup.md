@@ -183,7 +183,7 @@ Invoke-RestMethod -Uri "https://storybook-gamma-ten.vercel.app/api/db/init" `
 ## 第六步：验证数据库连接
 
 ### 1. 在 Vercel 控制台查看数据库
-- 进入 **Storage** → 选择你��数据库
+- 进入 **Storage** → 选择你的数据库
 - 点击 **Data** 标签
 - 点击 **Browse Data** 按钮
 - 你应该能看到 8 张表：

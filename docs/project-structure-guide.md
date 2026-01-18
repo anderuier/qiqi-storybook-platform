@@ -110,7 +110,7 @@ client/src/
 │   ├── ui/           # 基础 UI 组件（按钮、输入框等）
 │   ├── Header.tsx    # 页头组件
 │   ├── Footer.tsx    # 页脚组件
-│   ├── Hero.tsx      # 首屏���图组件
+│   ├── Hero.tsx      # 首屏头图组件
 │   └── ...           # 其他业务组件
 │
 ├── hooks/             # 自定义 React Hooks

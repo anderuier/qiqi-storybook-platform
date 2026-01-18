@@ -114,7 +114,7 @@ export async function generateImage(
     case 'custom':
       return generateWithCustomImage(options);
     default:
-      throw new Error(`不支持的图片生成��供商: ${provider}`);
+      throw new Error(`不支持的图片生成提供商: ${provider}`);
   }
 }
 

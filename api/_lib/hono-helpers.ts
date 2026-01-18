@@ -30,7 +30,7 @@ export const errors = {
   permissionDenied: (c: Context) => error(c, 'PERMISSION_DENIED', '无权限执行此操作', 403),
   rateLimited: (c: Context) => error(c, 'RATE_LIMITED', '请求过于频繁，请稍后再试', 429),
   serverError: (c: Context, message = '服务器内部错误') => error(c, 'SERVER_ERROR', message, 500),
-  aiServiceError: (c: Context, message = 'AI 服务暂时不可��') => error(c, 'AI_SERVICE_ERROR', message, 503),
+  aiServiceError: (c: Context, message = 'AI 服务暂时不可用') => error(c, 'AI_SERVICE_ERROR', message, 503),
   methodNotAllowed: (c: Context, allowed: string[]) => error(c, 'METHOD_NOT_ALLOWED', `仅支持 ${allowed.join(', ')} 方法`, 405),
 };
 

@@ -59,7 +59,7 @@ const createModes = [
     id: "custom",
     icon: FileText,
     title: "自定义文本",
-    description: "输���您自己的故事文本，AI为其生成精美插图",
+    description: "输入您自己的故事文本，AI为其生成精美插图",
     example: "适合已有故事内容的家长",
     color: "sunny"
   }

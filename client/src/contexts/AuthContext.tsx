@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // 初始化：检查登���状态
+  // 初始化：检查登录状态
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);

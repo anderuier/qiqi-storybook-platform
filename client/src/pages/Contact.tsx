@@ -24,7 +24,7 @@ const contactInfo = [
     icon: Mail,
     title: "邮箱",
     content: "hello@storybook.ai",
-    description: "工作日24小时内回��",
+    description: "工作日24小时内回复",
     color: "coral"
   },
   {
