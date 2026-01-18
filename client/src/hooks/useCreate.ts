@@ -282,6 +282,8 @@ export function useCreate() {
 
       updateState({
         error: null,
+        retryCount: 0, // 重置重试计数
+        pageImages: {}, // 清空旧图片
         imageTask: {
           taskId: null,
           status: 'processing',

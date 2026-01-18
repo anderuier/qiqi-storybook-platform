@@ -702,13 +702,13 @@ export default function Create() {
                       {Object.entries(create.pageImages).map(([pageNum, url]) => (
                         <div
                           key={pageNum}
-                          className="relative aspect-square rounded-xl overflow-hidden bg-cream group"
+                          className="relative aspect-square rounded-xl overflow-hidden bg-cream group cursor-pointer"
+                          onClick={() => setPreviewImage(url)}
                         >
                           <img
                             src={url}
                             alt={`第${pageNum}页`}
-                            className="w-full h-full object-cover cursor-pointer"
-                            onClick={() => setPreviewImage(url)}
+                            className="w-full h-full object-cover"
                           />
                           {create.imageTask.status === "completed" && (
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

@@ -1993,6 +1993,170 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ==================== 图片生成 API ====================
 
+    // 单张图片生成
+    if (fullPath === '/api/create/image' && req.method === 'POST') {
+      const userPayload = await getUserFromRequest(req);
+
+      if (!userPayload) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '请先登录',
+          },
+        });
+      }
+
+      const body = req.body || {};
+      const { storyboardId, pageNumber, style, provider } = body;
+
+      if (!storyboardId || !pageNumber || !style) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_PARAMS',
+            message: '请提供分镜ID、页码和艺术风格',
+          },
+        });
+      }
+
+      try {
+        // 获取分镜页面信息
+        const pageResult = await sql`
+          SELECT sp.id, sp.page_number, sp.image_prompt, sp.image_url, sb.work_id, w.user_id
+          FROM storyboard_pages sp
+          JOIN storyboards sb ON sp.storyboard_id = sb.id
+          JOIN works w ON sb.work_id = w.id
+          WHERE sp.storyboard_id = ${storyboardId} AND sp.page_number = ${pageNumber}
+        `;
+
+        if (pageResult.rows.length === 0) {
+          return res.status(404).json({
+            success: false,
+            error: {
+              code: 'PAGE_NOT_FOUND',
+              message: '页面不存在',
+            },
+          });
+        }
+
+        const page = pageResult.rows[0];
+
+        if (page.user_id !== userPayload.userId) {
+          return res.status(403).json({
+            success: false,
+            error: {
+              code: 'PERMISSION_DENIED',
+              message: '无权访问此页面',
+            },
+          });
+        }
+
+        // 检查 image_prompt 是否存在
+        if (!page.image_prompt) {
+          return res.status(400).json({
+            success: false,
+            error: {
+              code: 'MISSING_PROMPT',
+              message: `第 ${pageNumber} 页缺少画面描述`,
+            },
+          });
+        }
+
+        // 使用硅基流动生成图片
+        const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
+        if (!siliconflowApiKey) {
+          throw new Error('硅基流动 API Key 未配置');
+        }
+
+        // 增强 prompt
+        const stylePrompts: Record<string, string> = {
+          watercolor: 'watercolor painting style, soft colors, gentle brushstrokes',
+          cartoon: 'cartoon style, bright colors, simple shapes',
+          oil: 'oil painting style, rich textures, vibrant colors',
+          anime: 'anime style, Japanese animation, detailed characters',
+          flat: 'flat illustration style, minimalist, clean lines',
+          '3d': '3D rendered style, realistic lighting, depth',
+        };
+        const styleDesc = stylePrompts[style] || stylePrompts.watercolor;
+        const enhancedPrompt = `Children's book illustration, ${page.image_prompt}, ${styleDesc}, safe for children, no text, high quality`;
+
+        console.log(`重新生成第 ${pageNumber} 页图片 prompt:`, enhancedPrompt.substring(0, 200));
+
+        // 调用硅基流动 API（添加超时控制）
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 50000); // 50秒超时
+
+        try {
+          const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${siliconflowApiKey}`,
+            },
+            body: JSON.stringify({
+              model: 'Kwai-Kolors/Kolors',
+              prompt: enhancedPrompt,
+            }),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeout);
+
+          if (!imgResponse.ok) {
+            const errText = await imgResponse.text();
+            throw new Error(`硅基流动 API 错误: ${errText}`);
+          }
+
+          const imgResult = await imgResponse.json();
+          const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
+
+          if (!originalImageUrl) {
+            throw new Error('硅基流动未返回图片');
+          }
+
+          // 上传图片到 Vercel Blob
+          const blobFilename = `storybook/${page.work_id}/page-${pageNumber}-${Date.now()}.png`;
+          const finalImageUrl = await uploadImageToBlob(originalImageUrl, blobFilename);
+
+          // 更新页面图片
+          await sql`
+            UPDATE storyboard_pages
+            SET image_url = ${finalImageUrl}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${page.id}
+          `;
+
+          return res.status(200).json({
+            success: true,
+            data: {
+              pageNumber: pageNumber,
+              imageUrl: finalImageUrl,
+              provider: 'siliconflow',
+              model: 'Kwai-Kolors/Kolors',
+            },
+          });
+        } catch (fetchError: any) {
+          clearTimeout(timeout);
+          const errorMessage = fetchError.name === 'AbortError'
+            ? '图片生成超时，请重试'
+            : `图片生成失败: ${fetchError.message}`;
+
+          console.error(`生成第 ${pageNumber} 页图片失败:`, errorMessage);
+          throw new Error(errorMessage);
+        }
+      } catch (error: any) {
+        console.error('单张图片生成失败:', error);
+        return res.status(500).json({
+          success: false,
+          error: {
+            code: 'SERVER_ERROR',
+            message: '图片生成失败',
+            details: error.message,
+          },
+        });
+      }
+    }
+
     // 批量生成图片
     if (fullPath === '/api/create/images' && req.method === 'POST') {
       const userPayload = await getUserFromRequest(req);
