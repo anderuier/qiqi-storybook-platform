@@ -246,21 +246,21 @@ export default function Create() {
   // 轮询生成图片
   useEffect(() => {
     if (create.imageTask.status === "processing" && create.imageTask.taskId) {
-      let retryCount = 0;
-      const maxRetries = 10; // 增加重试次数，提高容错性
+      let consecutiveFailures = 0; // 连续失败次数
+      const maxRetries = 10; // 最大重试次数
       let syncCheckCount = 0;
 
       const interval = setInterval(async () => {
         try {
           const result = await create.continueImageGeneration();
-          retryCount = 0; // 成功后重置重试计数
+          consecutiveFailures = 0; // 成功后重置连续失败计数
           syncCheckCount = 0; // 重置同步检查计数
 
           if (result.status === "completed") {
             clearInterval(interval);
           }
         } catch (err) {
-          retryCount++;
+          consecutiveFailures++;
           syncCheckCount++;
 
           // 每 3 次失败后，尝试同步任务状态
@@ -274,7 +274,7 @@ export default function Create() {
           }
 
           // 连续失败超过 maxRetries 次才停止
-          if (retryCount >= maxRetries) {
+          if (consecutiveFailures >= maxRetries) {
             console.error('图片生成失败次数过多，停止轮询');
             clearInterval(interval);
             // 最后尝试一次同步状态
@@ -382,12 +382,15 @@ export default function Create() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm"
+              className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl text-orange-700 text-sm flex items-center justify-between"
             >
-              {create.error}
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>{create.error}</span>
+              </div>
               <button
                 onClick={create.clearError}
-                className="ml-2 underline hover:no-underline"
+                className="ml-2 underline hover:no-underline text-orange-600"
               >
                 关闭
               </button>

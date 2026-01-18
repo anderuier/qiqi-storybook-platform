@@ -24,6 +24,7 @@ export interface CreateState {
   step: CreateStep;
   isLoading: boolean;
   error: string | null;
+  retryCount: number; // 新增：重试计数
 
   // 当前作品 ID（草稿 ID）
   workId: string | null;
@@ -53,6 +54,7 @@ const initialState: CreateState = {
   step: 'input',
   isLoading: false,
   error: null,
+  retryCount: 0,
   workId: null,
   input: null,
   story: null,
@@ -337,6 +339,7 @@ export function useCreate() {
       setState((prev) => ({
         ...prev,
         error: null, // 清除之前的错误
+        retryCount: 0, // 重置重试计数
         imageTask: {
           ...prev.imageTask,
           status: isCompleted ? 'completed' : 'processing',
@@ -354,19 +357,23 @@ export function useCreate() {
 
       return result;
     } catch (err: any) {
-      // 单次失败不要立即标记为 failed，让轮询继续尝试
-      // 设置错误信息，但不改变状态
-      const errorMessage = err.message || '图片生成失败，正在重试...';
+      // 增加重试计数
+      const newRetryCount = state.retryCount + 1;
+
+      // 只在连续失败 5 次以上时才显示错误提示
+      // 前几次失败可能是因为后端还在生成图片
+      const shouldShowError = newRetryCount >= 5;
 
       setState((prev) => ({
         ...prev,
-        error: errorMessage,
+        retryCount: newRetryCount,
+        error: shouldShowError ? (err.message || '图片生成遇到问题，正在重试...') : null,
       }));
 
       // 抛出错误让轮询逻辑处理
       throw err;
     }
-  }, [state.imageTask]);
+  }, [state.imageTask, state.retryCount]);
 
   // 查询任务状态（增强版：同步已生成的图片）
   const checkTaskStatus = useCallback(async () => {
