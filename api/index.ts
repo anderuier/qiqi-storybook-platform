@@ -2559,6 +2559,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           style: string;
           provider?: string;
           pages: Array<{ pageNumber: number; imageUrl: string }>;
+          forceRegenerate?: boolean;
         };
 
         // 获取下一个需要生成的页面
