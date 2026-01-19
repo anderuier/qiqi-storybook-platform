@@ -1122,7 +1122,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // 获取 work 基本信息
       const workResult = await sql`
-        SELECT id, title, status, current_step, theme, child_name, child_age, style, length, art_style, page_count, cover_url, created_at, updated_at
+        SELECT id, title, status, current_step, theme, child_name, child_age, style, length, page_count, cover_url, created_at, updated_at
         FROM works
         WHERE id = ${draftId} AND user_id = ${userPayload.userId}
       `;
@@ -1138,6 +1138,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const work = workResult.rows[0];
+
+      // 尝试获取 art_style 字段（如果存在）
+      let artStyle = null;
+      try {
+        const artStyleResult = await sql`
+          SELECT art_style FROM works WHERE id = ${draftId}
+        `;
+        artStyle = artStyleResult.rows[0]?.art_style || null;
+      } catch (err) {
+        // 字段可能不存在，忽略错误
+        console.log('art_style field may not exist yet');
+      }
 
       // 获取故事内容
       const storyResult = await sql`
@@ -1182,7 +1194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             childAge: work.child_age,
             style: work.style,
             length: work.length,
-            artStyle: work.art_style,
+            artStyle: artStyle,
             pageCount: work.page_count,
             coverUrl: work.cover_url,
             createdAt: work.created_at,
