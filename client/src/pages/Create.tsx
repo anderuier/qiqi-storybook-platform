@@ -157,9 +157,12 @@ export default function Create() {
         if (draft.work.style) setSelectedStoryStyle(draft.work.style);
         if (draft.work.length) setStoryLength(draft.work.length as any);
 
-        // 恢复艺术风格选择（如果有分镜，默认选择第一个风格）
-        if (draft.storyboard && draft.storyboard.pages.length > 0) {
-          // 如果已经有图片生成，默认选择水彩风格（可以根据实际情况调整）
+        // 恢复艺术风格选择
+        if (draft.work.artStyle) {
+          // 如果有保存的艺术风格，使用保存的风格
+          setSelectedArtStyle(draft.work.artStyle);
+        } else if (draft.storyboard && draft.storyboard.pages.length > 0) {
+          // 如果没有保存的风格但有分镜，默认选择水彩风格
           setSelectedArtStyle("watercolor");
         }
 

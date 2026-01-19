@@ -1122,7 +1122,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // 获取 work 基本信息
       const workResult = await sql`
-        SELECT id, title, status, current_step, theme, child_name, child_age, style, length, page_count, cover_url, created_at, updated_at
+        SELECT id, title, status, current_step, theme, child_name, child_age, style, length, art_style, page_count, cover_url, created_at, updated_at
         FROM works
         WHERE id = ${draftId} AND user_id = ${userPayload.userId}
       `;
@@ -1182,6 +1182,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             childAge: work.child_age,
             style: work.style,
             length: work.length,
+            artStyle: work.art_style,
             pageCount: work.page_count,
             coverUrl: work.cover_url,
             createdAt: work.created_at,
@@ -1419,6 +1420,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             childAge: work.child_age,
             style: work.style,
             length: work.length,
+            artStyle: work.art_style,
             pageCount: work.page_count,
             coverUrl: work.cover_url,
             createdAt: work.created_at,
@@ -1962,6 +1964,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS child_age INTEGER`;
         await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS style VARCHAR(50)`;
         await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS length VARCHAR(20)`;
+        await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS art_style VARCHAR(50)`;
       } catch (migrationError) {
         console.log('Migration note:', migrationError);
         // 忽略迁移错误（字段可能已存在）
@@ -2119,12 +2122,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const blobFilename = `storybook/${page.work_id}/page-${pageNumber}-${Date.now()}.png`;
           const finalImageUrl = await uploadImageToBlob(originalImageUrl, blobFilename);
 
+          // 保存旧图片 URL（用于删除）
+          const oldImageUrl = page.image_url;
+
           // 更新页面图片
           await sql`
             UPDATE storyboard_pages
             SET image_url = ${finalImageUrl}, updated_at = CURRENT_TIMESTAMP
             WHERE id = ${page.id}
           `;
+
+          // 保存艺术风格到 work
+          await sql`
+            UPDATE works
+            SET art_style = ${style}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${page.work_id}
+          `;
+
+          // TODO: 删除旧图片（如果存在且是 Vercel Blob 图片）
+          // 这里可以添加删除 Vercel Blob 图片的逻辑
+          if (oldImageUrl && oldImageUrl.includes('vercel-storage.com')) {
+            console.log(`旧图片已被替换: ${oldImageUrl}`);
+            // 可以调用 Vercel Blob 的删除 API
+          }
 
           return res.status(200).json({
             success: true,
@@ -2236,11 +2256,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
-        // 清空所有旧图片（重新生成时）
+        // 检查是否有已生成的图片
+        const hasExistingImages = pages.some((p: any) => p.image_url);
+        const forceRegenerate = hasExistingImages; // 如果有旧图片，标记为强制重新生成
+
+        // 保存艺术风格到 work
         await sql`
-          UPDATE storyboard_pages
-          SET image_url = NULL
-          WHERE storyboard_id = ${storyboardId}
+          UPDATE works
+          SET art_style = ${style}, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${storyboard.work_id}
         `;
 
         // 创建异步任务
@@ -2253,7 +2277,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             'generate_images',
             'processing',
             ${totalPages},
-            ${JSON.stringify({ storyboardId, workId: storyboard.work_id, style, provider, pages: [] })}
+            ${JSON.stringify({
+              storyboardId,
+              workId: storyboard.work_id,
+              style,
+              provider,
+              pages: [],
+              forceRegenerate // 标记是否强制重新生成
+            })}
           )
         `;
 
@@ -2572,8 +2603,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const page = pageResult.rows[0];
 
-        // 如果页面已有图片，跳过
-        if (page.image_url) {
+        // 检查是否强制重新生成
+        const forceRegenerate = taskData.forceRegenerate || false;
+
+        // 如果页面已有图片且不是强制重新生成，跳过
+        if (page.image_url && !forceRegenerate) {
           const newCompleted = task.completed_items + 1;
           const newProgress = Math.round((newCompleted / task.total_items) * 100);
           const isCompleted = newCompleted >= task.total_items;
@@ -2591,7 +2625,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (isCompleted && taskData.workId) {
             await sql`
               UPDATE works
-              SET current_step = 'images', updated_at = CURRENT_TIMESTAMP
+              SET current_step = 'preview', updated_at = CURRENT_TIMESTAMP
               WHERE id = ${taskData.workId}
             `;
           }
@@ -2610,6 +2644,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             },
           });
         }
+
+        // 保存旧图片 URL（用于生成成功后删除）
+        const oldImageUrl = page.image_url;
 
         // 内联实现图片生成（避免静态导入导致的问题）
         const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
@@ -2681,9 +2718,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // 更新页面图片
           await sql`
             UPDATE storyboard_pages
-            SET image_url = ${result.imageUrl}
+            SET image_url = ${result.imageUrl}, updated_at = CURRENT_TIMESTAMP
             WHERE id = ${page.id}
           `;
+
+          // TODO: 删除旧图片（如果存在且是 Vercel Blob 图片）
+          if (oldImageUrl && oldImageUrl.includes('vercel-storage.com')) {
+            console.log(`旧图片已被替换: ${oldImageUrl}`);
+            // 可以调用 Vercel Blob 的删除 API
+          }
 
           // 更新任务进度
           const newCompleted = task.completed_items + 1;
@@ -2710,7 +2753,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (isCompleted && taskData.workId) {
             await sql`
               UPDATE works
-              SET current_step = 'images', updated_at = CURRENT_TIMESTAMP
+              SET current_step = 'preview', updated_at = CURRENT_TIMESTAMP
               WHERE id = ${taskData.workId}
             `;
           }
