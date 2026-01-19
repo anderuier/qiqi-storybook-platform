@@ -2236,6 +2236,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
+        // 清空所有旧图片（重新生成时）
+        await sql`
+          UPDATE storyboard_pages
+          SET image_url = NULL
+          WHERE storyboard_id = ${storyboardId}
+        `;
+
         // 创建异步任务
         const taskId = generateId('task');
         await sql`
