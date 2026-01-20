@@ -8,6 +8,10 @@ import { put } from '@vercel/blob';
 import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
+import { migrateDatabase } from './_lib/db';
+
+// 数据库迁移标记（确保只执行一次）
+let hasMigrated = false;
 
 // ==================== 工具函数 ====================
 
@@ -370,6 +374,12 @@ function generateId(prefix: string = ''): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // 首次请求时执行数据库迁移
+  if (!hasMigrated) {
+    await migrateDatabase();
+    hasMigrated = true;
+  }
+
   // 设置 CORS 头
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -2179,7 +2189,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // 更新页面图片
           await sql`
             UPDATE storyboard_pages
-            SET image_url = ${finalImageUrl}
+            SET image_url = ${finalImageUrl}, updated_at = CURRENT_TIMESTAMP
             WHERE id = ${page.id}
           `;
 

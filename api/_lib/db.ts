@@ -135,6 +135,23 @@ export async function initDatabase() {
   console.log('数据库表初始化完成');
 }
 
+// 迁移数据库（添加缺失的字段）
+export async function migrateDatabase() {
+  try {
+    // 为 storyboard_pages 表添加 updated_at 字段（如果不存在）
+    await sql`
+      ALTER TABLE storyboard_pages
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    `;
+    console.log('数据库迁移完成：storyboard_pages.updated_at 字段已添加');
+  } catch (error: any) {
+    // 如果字段已存在或其他错误，忽略
+    if (!error.message.includes('already exists')) {
+      console.log('数据库迁移跳过或已完成:', error.message);
+    }
+  }
+}
+
 // 生成唯一 ID
 export function generateId(prefix: string = ''): string {
   const timestamp = Date.now().toString(36);
