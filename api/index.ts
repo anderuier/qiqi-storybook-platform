@@ -2853,6 +2853,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (page.image_url && !forceRegenerate) {
           console.log('[Continue 图片生成] 跳过已有图片的页面:', nextPageNumber);
 
+          // 确保 taskData.pages 包含当前页的图片（用于前端同步）
+          const pageExists = taskData.pages.find((p: any) => p.pageNumber === nextPageNumber);
+          if (!pageExists) {
+            taskData.pages.push({
+              pageNumber: nextPageNumber,
+              imageUrl: page.image_url,
+            });
+          }
+
+          // 只有在不是最后一页的情况下才提前返回完成状态
+          // 如果是最后一页且跳过了，需要确保返回的 status 正确
+          const finalStatus = isCompleted ? 'completed' : 'processing';
+
           // 如果任务完成，更新 work 的 current_step
           if (isCompleted && taskData.workId) {
             await sql`
@@ -2866,13 +2879,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             success: true,
             data: {
               taskId: task.id,
-              status: isCompleted ? 'completed' : 'processing',
+              status: finalStatus,
               pageNumber: nextPageNumber,
               imageUrl: page.image_url,
               skipped: true,
               progress: newProgress,
               completedItems: nextPageNumber,
               totalItems: totalItems,
+              pages: taskData.pages, // 返回所有已生成的图片，用于前端同步
             },
           });
         }
@@ -3020,6 +3034,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               totalItems: totalItems,
               provider: result.provider,
               model: result.model,
+              pages: taskData.pages, // 返回所有已生成的图片，用于前端同步
             },
           });
         } catch (fetchError: any) {

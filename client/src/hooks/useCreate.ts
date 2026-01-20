@@ -361,15 +361,21 @@ export function useCreate() {
       const isCompleted = result.status === 'completed';
 
       setState((prev) => {
-        // 更新 pageImages：如果有 imageUrl，使用新图片；如果是 skipped，也要更新
+        // 更新 pageImages：优先使用 pages 数组同步所有图片
         const newPageImages: Record<string, string> = { ...prev.pageImages };
-        if (result.pageNumber && result.imageUrl) {
-          // 有新图片或已有图片，都更新（使用字符串键）
+
+        // 如果返回了 pages 数组，使用它来同步所有图片
+        if (result.pages && result.pages.length > 0) {
+          console.log(`[图片生成] 使用 pages 数组同步 ${result.pages.length} 张图片`);
+          result.pages.forEach((page) => {
+            newPageImages[String(page.pageNumber)] = page.imageUrl;
+          });
+        }
+
+        // 如果没有返回 pages 数组，使用 pageNumber 和 imageUrl
+        if (!result.pages && result.pageNumber && result.imageUrl) {
           newPageImages[String(result.pageNumber)] = result.imageUrl;
           console.log(`[图片生成] 第 ${result.pageNumber} 页图片已更新 (${result.skipped ? '跳过' : '新生成'}):`, result.imageUrl.substring(0, 50) + '...');
-        } else if (result.pageNumber && result.skipped) {
-          // 跳过了此页但没有返回 imageUrl，从数据库获取现有图片
-          console.log(`[图片生成] 第 ${result.pageNumber} 页已跳过但未返回 imageUrl`);
         }
 
         return {

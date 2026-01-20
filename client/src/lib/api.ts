@@ -256,6 +256,7 @@ export interface TaskResponse {
   pageNumber?: number;
   imageUrl?: string;
   skipped?: boolean;
+  pages?: Array<{ pageNumber: number; imageUrl: string }>; // continue 接口直接返回的 pages
 }
 
 // 图片生成提供商类型

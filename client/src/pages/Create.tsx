@@ -700,7 +700,9 @@ export default function Create() {
                       )}
                     </div>
                     <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                      {Object.entries(create.pageImages).map(([pageNum, url]) => (
+                      {Object.entries(create.pageImages)
+                        .sort(([a], [b]) => Number(a) - Number(b))
+                        .map(([pageNum, url]) => (
                         <div
                           key={pageNum}
                           className="relative aspect-square rounded-xl overflow-hidden bg-cream group cursor-pointer"
