@@ -8,10 +8,36 @@ import { put } from '@vercel/blob';
 import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
-import { migrateDatabase } from './_lib/db';
 
 // 数据库迁移标记（确保只执行一次）
 let hasMigrated = false;
+
+// 迁移数据库（添加缺失的字段）
+async function migrateDatabase() {
+  try {
+    // 检查字段是否已存在
+    const checkResult = await sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'storyboard_pages'
+      AND column_name = 'updated_at'
+    `;
+
+    // 如果字段不存在，添加它
+    if (checkResult.rows.length === 0) {
+      await sql`
+        ALTER TABLE storyboard_pages
+        ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      `;
+      console.log('数据库迁移完成：storyboard_pages.updated_at 字段已添加');
+    } else {
+      console.log('数据库迁移：storyboard_pages.updated_at 字段已存在');
+    }
+  } catch (error: any) {
+    // 静默忽略所有错误，避免影响正常请求
+    console.log('数据库迁移跳过:', error.message);
+  }
+}
 
 // ==================== 工具函数 ====================
 
@@ -374,11 +400,11 @@ function generateId(prefix: string = ''): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // 首次请求时执行数据库迁移（暂时禁用以排查问题）
-  // if (!hasMigrated) {
-  //   migrateDatabase().catch(err => console.log('[迁移] 跳过:', err.message));
-  //   hasMigrated = true;
-  // }
+  // 首次请求时执行数据库迁移（不阻塞请求）
+  if (!hasMigrated) {
+    migrateDatabase().catch(err => console.log('[迁移] 跳过:', err.message));
+    hasMigrated = true;
+  }
 
   // 设置 CORS 头
   res.setHeader('Access-Control-Allow-Origin', '*');
