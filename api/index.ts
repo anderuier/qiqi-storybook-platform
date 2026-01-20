@@ -2063,7 +2063,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const page = pageResult.rows[0];
-        console.log('[单张图片生成] page 对象:', page);
+        console.log('[单张图片生成] page 对象:', JSON.stringify(page));
+
+        // 验证 page 对象有必需的字段
+        if (!page || !page.id || !page.work_id) {
+          console.error('[单张图片生成] page 对象缺少必需字段:', page);
+          return res.status(500).json({
+            success: false,
+            error: {
+              code: 'INVALID_DATA',
+              message: '页面数据不完整',
+              details: `page.work_id is ${page?.work_id}, page.id is ${page?.id}`,
+            },
+          });
+        }
 
         if (page.user_id !== userPayload.userId) {
           return res.status(403).json({
