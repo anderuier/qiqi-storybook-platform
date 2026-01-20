@@ -2834,6 +2834,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 保存旧图片 URL（用于生成成功后删除）
         const oldImageUrl = page.image_url;
 
+        // 先更新 completed_items，标记此页面为"处理中"（防止并发请求重复处理同一页）
+        await sql`
+          UPDATE tasks
+          SET completed_items = ${nextPageNumber},
+              progress = ${Math.round((nextPageNumber / task.total_items) * 100)},
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${taskId}
+        `;
+        console.log(`[Continue 图片生成] 已标记第 ${nextPageNumber} 页为处理中`);
+
         // 内联实现图片生成（避免静态导入导致的问题）
         const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
         if (!siliconflowApiKey) {
@@ -2935,7 +2945,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
 
           // 更新任务进度
-          const newCompleted = task.completed_items + 1;
+          // 注意：completed_items 在开始处理时已经更新为 nextPageNumber
+          // 所以这里只需要更新 status 和 result
+          const newCompleted = nextPageNumber; // 已在开始处理时更新
           const newProgress = Math.round((newCompleted / task.total_items) * 100);
           const isCompleted = newCompleted >= task.total_items;
 
