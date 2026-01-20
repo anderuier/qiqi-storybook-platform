@@ -4,6 +4,125 @@
 
 ---
 
+## [2026-01-20] 图片生成问题修复与旧图片自动删除
+
+### 本次更新摘要
+彻底修复图片生成卡住和重新生成失败的问题，实现旧图片自动删除功能，修复多个类型定义和模块导入问题。
+
+### 详细内容
+
+#### 1. 核心问题修复
+
+| 问题 | 原因 | 解决方案 |
+|------|------|----------|
+| 单张图片重新生成失败 | `pageImages` 键类型不一致（数字 vs 字符串） | 统一使用字符串键 |
+| 全部重新生成无响应 | 从分镜页面生成时未设置 `forceRegenerate` | 自动检测并设置标志 |
+| 重新生成后显示旧图片 | `startImageGeneration` 清空了 `pageImages` | 仅在强制重新生成时清空 |
+| 数据库字段不存在 | `storyboard_pages` 表缺少 `updated_at` 字段 | 自动迁移添加字段 |
+| 登录失败（500 错误） | Vercel ESM 模块导入路径问题 | 内联函数避免外部导入 |
+
+#### 2. 新增功能：旧图片自动删除
+
+**实现位置**：
+- 单张图片生成：`api/index.ts:2229-2238`
+- 批量生成图片（第一张）：`api/index.ts:2476-2484`
+- continue 接口（后续图片）：`api/index.ts:2871-2880`
+
+**删除逻辑**：
+```typescript
+// 1. 保存旧图片 URL
+const oldImageUrl = page.image_url;
+
+// 2. 上传新图片并更新数据库（成功后）
+await sql`UPDATE storyboard_pages SET image_url = ${finalImageUrl}...`;
+
+// 3. 删除旧图片
+if (oldImageUrl && oldImageUrl.includes('vercel-storage.com')) {
+  await del(oldImageUrl);
+}
+```
+
+**安全性保证**：
+- 只有新图片成功上传并更新数据库后才删除旧图片
+- 删除失败不影响主流程，只记录日志
+
+#### 3. 数据库迁移自动化
+
+**新增函数**：`migrateDatabase()` 内联在 `api/index.ts`
+
+**功能**：
+- API 启动时自动检测 `storyboard_pages.updated_at` 字段是否存在
+- 如不存在则自动添加
+- 使用 `information_schema` 检查，兼容性更好
+
+#### 4. 类型定义完善
+
+**修改文件**：`client/src/lib/api.ts`
+
+| 接口 | 新增字段 |
+|------|----------|
+| `TaskResponse` | `pageNumber`, `imageUrl`, `skipped` |
+| `Draft` | `artStyle` |
+| `TemplateDetail` | 修复 `previewPages` 类型冲突 |
+
+#### 5. Bug 修复详情
+
+**前端 (`useCreate.ts`)**：
+- `restoreFromDraft`：使用字符串键
+- `checkTaskStatus`：使用字符串键
+- `continueImageGeneration`：使用字符串键
+- 移除不必要的 `as any` 类型断言
+
+**前端 (`Create.tsx`)**：
+- `handleStartImageGeneration`：自动检测并设置 `forceRegenerate`
+- 图片添加 `onError` 处理
+
+**后端 (`api/index.ts`)**：
+- 批量生成支持 `forceRegenerate` 重新生成第一张图片
+- 三处添加旧图片删除逻辑
+- 内联 `migrateDatabase` 函数
+
+#### 6. 提交记录
+
+| Commit ID | 说明 |
+|-----------|------|
+| 62ed177 | 调试：添加 SQL 查询结果的详细日志 |
+| 8e7c126 | 修复：统一 pageImages 键类型为字符串 |
+| 9646494 | 调试：添加前端图片生成的详细日志 |
+| f2a54e9 | 修复：移除 storyboard_pages 表中不存在的 updated_at 字段 |
+| b9b302c | 调试：添加 API 错误拦截器和后端日志 |
+| 47daa53 | 功能：添加数据库迁移功能 |
+| 617e0a7 | 修复：完善类型定义，移除不必要的 as any |
+| 6916e9d | 功能：添加图片加载失败的错误处理 |
+| 8ca276a | 修复：将 migrateDatabase 函数内联到 api/index.ts |
+| 54eba39 | 功能：实现旧图片删除功能 |
+
+### 当前项目状态
+
+| 模块 | 状态 |
+|------|------|
+| 用户认证 | ✅ 完成 |
+| AI 故事生成 | ✅ 完成 |
+| AI 分镜生成 | ✅ 完成 |
+| AI 图片生成 | ✅ 完成 |
+| 图片重新生成（单张） | ✅ 完成 |
+| 图片全部重新生成 | ✅ 完成 |
+| 图片永久存储 | ✅ 完成（Vercel Blob） |
+| 旧图片自动删除 | ✅ 完成 |
+| 草稿保存/恢复 | ✅ 完成 |
+| 图片风格保存 | ✅ 完成 |
+| 数据库迁移自动化 | ✅ 完成 |
+| 绘本预览/播放 | ⏳ 待开发 |
+| 作品发布 | ⏳ 待开发 |
+| 语音朗读 | ⏳ 待开发 |
+
+### 下一步计划
+- 开发绘本预览/播放功能
+- 实现作品发布功能
+- 集成语音朗读功能
+
+---
+
 ## [2026-01-19] 图片风格保存与重新生成功能优化
 
 ### 本次更新摘要
