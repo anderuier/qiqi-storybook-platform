@@ -548,7 +548,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // 调用硅基流动 API
       try {
-        const model = 'Kwai-Kolors/Kolors';
+        const model = 'black-forest-labs/FLUX.1-schnell';
 
         const response = await fetch('https://api.siliconflow.cn/v1/images/generations', {
           method: 'POST',
@@ -2096,11 +2096,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const styleDesc = stylePrompts[style] || stylePrompts.watercolor;
         const enhancedPrompt = `Children's book illustration, ${page.image_prompt}, ${styleDesc}, safe for children, no text, high quality`;
 
-        console.log(`重新生成第 ${pageNumber} 页图片 prompt:`, enhancedPrompt.substring(0, 200));
+        console.log(`[单张图片生成] 第 ${pageNumber} 页 prompt:`, enhancedPrompt.substring(0, 200));
 
         // 调用硅基流动 API（添加超时控制）
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 50000); // 50秒超时
+
+        const requestBody = {
+          model: 'black-forest-labs/FLUX.1-schnell',
+          prompt: enhancedPrompt,
+          image_size: '1024x1024',
+          num_inference_steps: 20,
+        };
+
+        console.log('[单张图片生成] 请求体:', JSON.stringify(requestBody, null, 2));
 
         try {
           const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
@@ -2109,18 +2118,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${siliconflowApiKey}`,
             },
-            body: JSON.stringify({
-              model: 'Kwai-Kolors/Kolors',
-              prompt: enhancedPrompt,
-            }),
+            body: JSON.stringify(requestBody),
             signal: controller.signal,
           });
 
           clearTimeout(timeout);
 
+          console.log('[单张图片生成] 响应状态:', imgResponse.status, imgResponse.statusText);
+
           if (!imgResponse.ok) {
             const errText = await imgResponse.text();
-            throw new Error(`硅基流动 API 错误: ${errText}`);
+            console.error('[单张图片生成] API 错误详情:', errText);
+            throw new Error(`硅基流动 API 错误 (${imgResponse.status}): ${errText}`);
           }
 
           const imgResult = await imgResponse.json();
@@ -2164,7 +2173,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               pageNumber: pageNumber,
               imageUrl: finalImageUrl,
               provider: 'siliconflow',
-              model: 'Kwai-Kolors/Kolors',
+              model: 'black-forest-labs/FLUX.1-schnell',
             },
           });
         } catch (fetchError: any) {
@@ -2345,8 +2354,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 'Authorization': `Bearer ${siliconflowApiKey}`,
               },
               body: JSON.stringify({
-                model: 'Kwai-Kolors/Kolors',
+                model: 'black-forest-labs/FLUX.1-schnell',
                 prompt: enhancedPrompt,
+                image_size: '1024x1024',
+                num_inference_steps: 20,
               }),
             });
 
@@ -2715,16 +2726,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const timeout = setTimeout(() => controller.abort(), 50000); // 50秒超时
 
         try {
+          const requestBody = {
+            model: 'black-forest-labs/FLUX.1-schnell',
+            prompt: enhancedPrompt,
+            image_size: '1024x1024',
+            num_inference_steps: 20,
+          };
+
+          console.log('[Continue 图片生成] 请求体:', JSON.stringify(requestBody, null, 2));
+
           const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${siliconflowApiKey}`,
             },
-            body: JSON.stringify({
-              model: 'Kwai-Kolors/Kolors',
-              prompt: enhancedPrompt,
-            }),
+            body: JSON.stringify(requestBody),
             signal: controller.signal,
           });
 
@@ -2751,7 +2768,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const result = {
             imageUrl: finalImageUrl,
             provider: 'siliconflow',
-            model: 'Kwai-Kolors/Kolors',
+            model: 'black-forest-labs/FLUX.1-schnell',
           };
 
           // 更新页面图片
