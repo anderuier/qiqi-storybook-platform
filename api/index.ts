@@ -2739,25 +2739,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           completedItems: task.completed_items
         });
 
-        // 获取下一个需要生成的页面
-        const nextPageNumber = task.completed_items + 1;
-
-        const pageResult = await sql`
-          SELECT id, page_number, image_prompt, image_url
-          FROM storyboard_pages
-          WHERE storyboard_id = ${taskData.storyboardId}
-            AND page_number = ${nextPageNumber}
+        // 原子更新：completed_items + 1 并返回新值
+        // 这样可以防止并发请求重复处理同一页
+        const updateResult = await sql`
+          UPDATE tasks
+          SET completed_items = completed_items + 1,
+              progress = ROUND((completed_items + 1)::float / total_items * 100),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${taskId} AND status = 'processing'
+          RETURNING completed_items, total_items
         `;
 
-        if (pageResult.rows.length === 0) {
-          // 没有更多页面，标记任务完成
+        if (updateResult.rows.length === 0) {
+          // 任务可能已完成或不存在
+          return res.status(200).json({
+            success: true,
+            data: {
+              taskId: task.id,
+              status: 'completed',
+              progress: 100,
+              completedItems: task.total_items,
+              totalItems: task.total_items,
+              message: '任务已完成',
+            },
+          });
+        }
+
+        const nextPageNumber = updateResult.rows[0].completed_items;
+        const totalItems = updateResult.rows[0].total_items;
+        const newProgress = Math.round((nextPageNumber / totalItems) * 100);
+        const isCompleted = nextPageNumber >= totalItems;
+
+        console.log(`[Continue 图片生成] 原子更新完成，处理第 ${nextPageNumber} 页`);
+
+        // 检查是否已超出总页数（任务完成）
+        if (nextPageNumber > totalItems) {
           await sql`
             UPDATE tasks
             SET status = 'completed', progress = 100, updated_at = CURRENT_TIMESTAMP
             WHERE id = ${taskId}
           `;
 
-          // 更新 work 的 current_step 为 'preview'（表示图片生成完成，进入预览阶段）
           if (taskData.workId) {
             await sql`
               UPDATE works
@@ -2772,16 +2794,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               taskId: task.id,
               status: 'completed',
               progress: 100,
-              completedItems: task.total_items,
-              totalItems: task.total_items,
+              completedItems: totalItems,
+              totalItems: totalItems,
+              message: '所有图片生成完成',
+            },
+          });
+        }
+
+        // 查询要处理的页面
+        const pageResult = await sql`
+          SELECT id, page_number, image_prompt, image_url
+          FROM storyboard_pages
+          WHERE storyboard_id = ${taskData.storyboardId}
+            AND page_number = ${nextPageNumber}
+        `;
+
+        if (pageResult.rows.length === 0) {
+          // 页面不存在（异常情况），标记任务完成
+          await sql`
+            UPDATE tasks
+            SET status = 'completed', progress = 100, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${taskId}
+          `;
+
+          if (taskData.workId) {
+            await sql`
+              UPDATE works
+              SET current_step = 'preview', updated_at = CURRENT_TIMESTAMP
+              WHERE id = ${taskData.workId}
+            `;
+          }
+
+          return res.status(200).json({
+            success: true,
+            data: {
+              taskId: task.id,
+              status: 'completed',
+              progress: 100,
+              completedItems: totalItems,
+              totalItems: totalItems,
               message: '所有图片生成完成',
             },
           });
         }
 
         const page = pageResult.rows[0];
-
-        // 检查是否强制重新生成
         const forceRegenerate = taskData.forceRegenerate || false;
 
         console.log('[Continue 图片生成] 处理页面:', {
@@ -2794,18 +2851,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 如果页面已有图片且不是强制重新生成，跳过
         if (page.image_url && !forceRegenerate) {
           console.log('[Continue 图片生成] 跳过已有图片的页面:', nextPageNumber);
-          const newCompleted = task.completed_items + 1;
-          const newProgress = Math.round((newCompleted / task.total_items) * 100);
-          const isCompleted = newCompleted >= task.total_items;
-
-          await sql`
-            UPDATE tasks
-            SET completed_items = ${newCompleted},
-                progress = ${newProgress},
-                status = ${isCompleted ? 'completed' : 'processing'},
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ${taskId}
-          `;
 
           // 如果任务完成，更新 work 的 current_step
           if (isCompleted && taskData.workId) {
@@ -2825,24 +2870,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               imageUrl: page.image_url,
               skipped: true,
               progress: newProgress,
-              completedItems: newCompleted,
-              totalItems: task.total_items,
+              completedItems: nextPageNumber,
+              totalItems: totalItems,
             },
           });
         }
 
         // 保存旧图片 URL（用于生成成功后删除）
         const oldImageUrl = page.image_url;
-
-        // 先更新 completed_items，标记此页面为"处理中"（防止并发请求重复处理同一页）
-        await sql`
-          UPDATE tasks
-          SET completed_items = ${nextPageNumber},
-              progress = ${Math.round((nextPageNumber / task.total_items) * 100)},
-              updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${taskId}
-        `;
-        console.log(`[Continue 图片生成] 已标记第 ${nextPageNumber} 页为处理中`);
 
         // 内联实现图片生成（避免静态导入导致的问题）
         const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
@@ -2945,11 +2980,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
 
           // 更新任务进度
-          // 注意：completed_items 在开始处理时已经更新为 nextPageNumber
-          // 所以这里只需要更新 status 和 result
-          const newCompleted = nextPageNumber; // 已在开始处理时更新
-          const newProgress = Math.round((newCompleted / task.total_items) * 100);
-          const isCompleted = newCompleted >= task.total_items;
+          // 注意：completed_items 在开始处理时已经通过原子更新
+          // 这里只需要更新 status 和 result
+          // isCompleted 和 newProgress 也已经在前面计算过了
 
           // 更新任务结果
           taskData.pages.push({
@@ -2959,9 +2992,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           await sql`
             UPDATE tasks
-            SET completed_items = ${newCompleted},
-                progress = ${newProgress},
-                status = ${isCompleted ? 'completed' : 'processing'},
+            SET status = ${isCompleted ? 'completed' : 'processing'},
                 result = ${JSON.stringify(taskData)},
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ${taskId}
@@ -2984,8 +3015,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               pageNumber: nextPageNumber,
               imageUrl: result.imageUrl,
               progress: newProgress,
-              completedItems: newCompleted,
-              totalItems: task.total_items,
+              completedItems: nextPageNumber,
+              totalItems: totalItems,
               provider: result.provider,
               model: result.model,
             },
