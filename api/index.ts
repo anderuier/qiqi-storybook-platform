@@ -4,7 +4,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-import { put } from '@vercel/blob';
+import { put, del } from '@vercel/blob';
 import { webcrypto } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
@@ -2226,11 +2226,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             WHERE id = ${page.work_id}
           `;
 
-          // TODO: 删除旧图片（如果存在且是 Vercel Blob 图片）
-          // 这里可以添加删除 Vercel Blob 图片的逻辑
+          // 删除旧图片（如果存在且是 Vercel Blob 图片）
           if (oldImageUrl && oldImageUrl.includes('vercel-storage.com')) {
-            console.log(`旧图片已被替换: ${oldImageUrl}`);
-            // 可以调用 Vercel Blob 的删除 API
+            try {
+              await del(oldImageUrl);
+              console.log(`[单张图片生成] 已删除旧图片: ${oldImageUrl.substring(0, 80)}...`);
+            } catch (delError: any) {
+              console.error(`[单张图片生成] 删除旧图片失败:`, delError.message);
+              // 删除失败不影响主流程，只记录日志
+            }
           }
 
           return res.status(200).json({
@@ -2384,9 +2388,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           )
         `;
 
-        // 尝试生成第一张图片
+        // 尝试生成第一张图片（如果没有图片或需要强制重新生成）
         const firstPage = pages[0];
-        if (!firstPage.image_url) {
+        if (!firstPage.image_url || forceRegenerate) {
+          // 保存旧图片 URL（用于生成成功后删除）
+          const oldImageUrl = firstPage.image_url;
+
           try {
             // 内联实现硅基流动图片生成
             const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
@@ -2465,6 +2472,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                   updated_at = CURRENT_TIMESTAMP
               WHERE id = ${taskId}
             `;
+
+            // 删除旧图片（如果存在且是 Vercel Blob 图片）
+            if (oldImageUrl && oldImageUrl.includes('vercel-storage.com')) {
+              try {
+                await del(oldImageUrl);
+                console.log(`[批量生成图片] 已删除旧图片 (第1页): ${oldImageUrl.substring(0, 80)}...`);
+              } catch (delError: any) {
+                console.error(`[批量生成图片] 删除旧图片失败:`, delError.message);
+              }
+            }
           } catch (imgErr: any) {
             console.error('第一张图片生成失败:', imgErr);
             // 更新任务状态为失败
@@ -2851,10 +2868,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           console.log(`[Continue 图片生成] 第 ${nextPageNumber} 页图片已更新到数据库`);
 
-          // TODO: 删除旧图片（如果存在且是 Vercel Blob 图片）
+          // 删除旧图片（如果存在且是 Vercel Blob 图片）
           if (oldImageUrl && oldImageUrl.includes('vercel-storage.com')) {
-            console.log(`[Continue 图片生成] 旧图片已被替换: ${oldImageUrl.substring(0, 60)} + '...'`);
-            // 可以调用 Vercel Blob 的删除 API
+            try {
+              await del(oldImageUrl);
+              console.log(`[Continue 图片生成] 已删除旧图片 (第${nextPageNumber}页): ${oldImageUrl.substring(0, 80)}...`);
+            } catch (delError: any) {
+              console.error(`[Continue 图片生成] 删除旧图片失败:`, delError.message);
+              // 删除失败不影响主流程，只记录日志
+            }
           }
 
           // 更新任务进度
