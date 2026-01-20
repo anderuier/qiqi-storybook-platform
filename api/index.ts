@@ -2514,6 +2514,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     style,
                     provider,
                     pages: [{ pageNumber: 1, imageUrl }],
+                    forceRegenerate, // 保留强制重新生成标志
                   })},
                   updated_at = CURRENT_TIMESTAMP
               WHERE id = ${taskId}
@@ -2729,6 +2730,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           pages: Array<{ pageNumber: number; imageUrl: string }>;
           forceRegenerate?: boolean;
         };
+
+        console.log('[Continue 图片生成] 任务数据:', {
+          storyboardId: taskData.storyboardId,
+          workId: taskData.workId,
+          style: taskData.style,
+          forceRegenerate: taskData.forceRegenerate,
+          completedItems: task.completed_items
+        });
 
         // 获取下一个需要生成的页面
         const nextPageNumber = task.completed_items + 1;
