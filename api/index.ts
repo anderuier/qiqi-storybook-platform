@@ -548,7 +548,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // 调用硅基流动 API
       try {
-        const model = 'black-forest-labs/FLUX.1-schnell';
+        const model = 'Kwai-Kolors/Kolors';
 
         const response = await fetch('https://api.siliconflow.cn/v1/images/generations', {
           method: 'POST',
@@ -2103,7 +2103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const timeout = setTimeout(() => controller.abort(), 50000); // 50秒超时
 
         const requestBody = {
-          model: 'black-forest-labs/FLUX.1-schnell',
+          model: 'Kwai-Kolors/Kolors',
           prompt: enhancedPrompt,
           image_size: '1024x1024',
           num_inference_steps: 20,
@@ -2133,11 +2133,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
 
           const imgResult = await imgResponse.json();
-          const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
+          console.log('[图片生成] API 返回响应:', JSON.stringify(imgResult).substring(0, 500));
+
+          const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url || imgResult.image_url;
 
           if (!originalImageUrl) {
+            console.error('[图片生成] 无法提取图片 URL，响应键:', Object.keys(imgResult));
             throw new Error('硅基流动未返回图片');
           }
+
+          console.log('[图片生成] 获取图片 URL 成功:', originalImageUrl.substring(0, 80) + '...');
 
           // 上传图片到 Vercel Blob
           const blobFilename = `storybook/${page.work_id}/page-${pageNumber}-${Date.now()}.png`;
@@ -2173,7 +2178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               pageNumber: pageNumber,
               imageUrl: finalImageUrl,
               provider: 'siliconflow',
-              model: 'black-forest-labs/FLUX.1-schnell',
+              model: 'Kwai-Kolors/Kolors',
             },
           });
         } catch (fetchError: any) {
@@ -2354,7 +2359,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 'Authorization': `Bearer ${siliconflowApiKey}`,
               },
               body: JSON.stringify({
-                model: 'black-forest-labs/FLUX.1-schnell',
+                model: 'Kwai-Kolors/Kolors',
                 prompt: enhancedPrompt,
                 image_size: '1024x1024',
                 num_inference_steps: 20,
@@ -2727,7 +2732,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         try {
           const requestBody = {
-            model: 'black-forest-labs/FLUX.1-schnell',
+            model: 'Kwai-Kolors/Kolors',
             prompt: enhancedPrompt,
             image_size: '1024x1024',
             num_inference_steps: 20,
@@ -2753,11 +2758,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
 
           const imgResult = await imgResponse.json();
-          const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
+          console.log('[图片生成] API 返回响应:', JSON.stringify(imgResult).substring(0, 500));
+
+          const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url || imgResult.image_url;
 
           if (!originalImageUrl) {
+            console.error('[图片生成] 无法提取图片 URL，响应键:', Object.keys(imgResult));
             throw new Error('硅基流动未返回图片');
           }
+
+          console.log('[图片生成] 获取图片 URL 成功:', originalImageUrl.substring(0, 80) + '...');
 
           // 上传图片到 Vercel Blob
           const blobFilename = `storybook/${taskData.workId || 'unknown'}/page-${nextPageNumber}-${Date.now()}.png`;
@@ -2768,7 +2778,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const result = {
             imageUrl: finalImageUrl,
             provider: 'siliconflow',
-            model: 'black-forest-labs/FLUX.1-schnell',
+            model: 'Kwai-Kolors/Kolors',
           };
 
           // 更新页面图片
