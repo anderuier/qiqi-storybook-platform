@@ -251,6 +251,7 @@ export function useCreate() {
         throw new Error('请先生成分镜剧本');
       }
 
+      console.log('[前端 generateImage] 开始生成图片:', { pageNumber, style, provider, storyboardId: state.storyboard.storyboardId });
       updateState({ isLoading: true, error: null });
 
       try {
@@ -260,6 +261,8 @@ export function useCreate() {
           style,
           provider,
         });
+
+        console.log('[前端 generateImage] API 返回结果:', result);
 
         // 更新页面图片
         setState((prev) => ({
@@ -271,8 +274,10 @@ export function useCreate() {
           },
         }));
 
+        console.log('[前端 generateImage] 图片已更新到 pageImages');
         return result;
       } catch (err: any) {
+        console.error('[前端 generateImage] 错误:', err);
         updateState({
           isLoading: false,
           error: err.message || '图片生成失败',
