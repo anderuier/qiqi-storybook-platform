@@ -183,17 +183,6 @@ export default function Create() {
     }
   }, [isAuthenticated]);
 
-  // 定期同步图片生成状态（每 10 秒）
-  useEffect(() => {
-    if (currentStep === 4 && create.imageTask.taskId && create.imageTask.status === "processing") {
-      const syncInterval = setInterval(() => {
-        create.checkTaskStatus();
-      }, 10000); // 每 10 秒同步一次状态
-
-      return () => clearInterval(syncInterval);
-    }
-  }, [currentStep, create.imageTask.taskId, create.imageTask.status]);
-
   // 判断是否可以进入下一步
   const canProceed = () => {
     switch (currentStep) {

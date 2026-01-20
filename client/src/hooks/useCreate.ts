@@ -3,7 +3,7 @@
  * 管理故事创作的完整流程状态
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   createApi,
   CreateStoryRequest,
@@ -478,7 +478,8 @@ export function useCreate() {
     [updateState]
   );
 
-  return {
+  // 使用 useMemo 稳定返回的对象引用，避免 useEffect 重复触发
+  return useMemo(() => ({
     ...state,
     generateStory,
     generateStoryboard,
@@ -490,5 +491,17 @@ export function useCreate() {
     clearError,
     reset,
     restoreFromDraft,
-  };
+  }), [
+    state,
+    generateStory,
+    generateStoryboard,
+    generateImage,
+    startImageGeneration,
+    continueImageGeneration,
+    checkTaskStatus,
+    goToStep,
+    clearError,
+    reset,
+    restoreFromDraft,
+  ]);
 }
