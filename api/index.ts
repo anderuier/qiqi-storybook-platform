@@ -2746,12 +2746,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SET completed_items = completed_items + 1,
               progress = ROUND((completed_items + 1)::float / total_items * 100),
               updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${taskId} AND status = 'processing'
-          RETURNING completed_items, total_items
+          WHERE id = ${taskId} AND status = 'processing' AND completed_items < total_items
+          RETURNING completed_items, total_items, status
         `;
 
         if (updateResult.rows.length === 0) {
-          // 任务可能已完成或不存在
+          // 任务可能已完成或已达到 total_items
+          console.log('[Continue 图片生成] 任务已完成或已达到总页数，返回完成状态');
           return res.status(200).json({
             success: true,
             data: {
@@ -2760,7 +2761,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               progress: 100,
               completedItems: task.total_items,
               totalItems: task.total_items,
-              message: '任务已完成',
+              message: '所有图片生成完成',
             },
           });
         }
@@ -2770,7 +2771,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const newProgress = Math.round((nextPageNumber / totalItems) * 100);
         const isCompleted = nextPageNumber >= totalItems;
 
-        console.log(`[Continue 图片生成] 原子更新完成，处理第 ${nextPageNumber} 页`);
+        console.log(`[Continue 图片生成] 原子更新完成，处理第 ${nextPageNumber} / ${totalItems} 页，isCompleted: ${isCompleted}`);
 
         // 检查是否已超出总页数（任务完成）
         if (nextPageNumber > totalItems) {
