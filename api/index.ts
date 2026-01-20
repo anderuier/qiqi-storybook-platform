@@ -2045,6 +2045,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE sp.storyboard_id = ${storyboardId} AND sp.page_number = ${pageNumber}
         `;
 
+        console.log('[单张图片生成] SQL 查询结果:', {
+          rowCount: pageResult.rows.length,
+          storyboardId,
+          pageNumber,
+          firstRow: pageResult.rows[0] ? Object.keys(pageResult.rows[0]) : 'NO_ROWS'
+        });
+
         if (pageResult.rows.length === 0) {
           return res.status(404).json({
             success: false,
@@ -2056,6 +2063,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const page = pageResult.rows[0];
+        console.log('[单张图片生成] page 对象:', page);
 
         if (page.user_id !== userPayload.userId) {
           return res.status(403).json({
