@@ -721,6 +721,10 @@ export default function Create() {
                             src={url}
                             alt={`第${pageNum}页`}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/images/image-placeholder.png';
+                              e.currentTarget.alt = '图片加载失败';
+                            }}
                           />
                           {create.imageTask.status === "completed" && (
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
