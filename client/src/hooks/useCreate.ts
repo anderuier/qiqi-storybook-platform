@@ -366,7 +366,7 @@ export function useCreate() {
           // 有新图片，更新（使用字符串键）
           newPageImages[String(result.pageNumber)] = result.imageUrl;
           console.log(`[图片生成] 第 ${result.pageNumber} 页图片已更新:`, result.imageUrl.substring(0, 50) + '...');
-        } else if (result.pageNumber && (result as any).skipped) {
+        } else if (result.pageNumber && result.skipped) {
           // 跳过了此页，从数据库获取现有图片（如果有）
           console.log(`[图片生成] 第 ${result.pageNumber} 页已跳过（已有图片）`);
         }
@@ -436,7 +436,7 @@ export function useCreate() {
               ...prev,
               imageTask: {
                 ...prev.imageTask,
-                status: result.status as any,
+                status: result.status,
                 progress: result.progress,
                 completedPages: completedCount, // 使用实际已生成的数量
                 totalPages: pages.length,
@@ -456,7 +456,7 @@ export function useCreate() {
       updateState({
         imageTask: {
           ...state.imageTask,
-          status: result.status as any,
+          status: result.status,
           progress: result.progress,
           completedPages: result.completedItems,
         },

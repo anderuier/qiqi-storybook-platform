@@ -245,8 +245,17 @@ export interface TaskResponse {
   progress: number;
   totalItems: number;
   completedItems: number;
-  result?: any;
+  result?: {
+    storyboardId: string;
+    workId: string;
+    style: string;
+    provider?: string;
+    pages: Array<{ pageNumber: number; imageUrl: string }>;
+  };
   error?: string;
+  pageNumber?: number;
+  imageUrl?: string;
+  skipped?: boolean;
 }
 
 // 图片生成提供商类型
