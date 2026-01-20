@@ -320,6 +320,7 @@ export function useCreate() {
           storyboardId: state.storyboard.storyboardId,
           style,
           provider,
+          forceRegenerate,
         });
 
         updateState({

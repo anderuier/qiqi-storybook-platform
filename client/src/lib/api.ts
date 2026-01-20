@@ -280,7 +280,12 @@ export const createApi = {
   }) => request<ImageResponse>({ method: 'POST', url: '/create/image', data }),
 
   // 批量生成图片
-  generateImages: (data: { storyboardId: string; style: string; provider?: ImageProvider }) =>
+  generateImages: (data: {
+    storyboardId: string;
+    style: string;
+    provider?: ImageProvider;
+    forceRegenerate?: boolean;
+  }) =>
     request<{ taskId: string; status: string; totalPages: number; provider: string }>({
       method: 'POST',
       url: '/create/images',

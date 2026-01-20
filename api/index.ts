@@ -2321,9 +2321,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const body = req.body || {};
-      const { storyboardId, style, provider } = body;
+      const { storyboardId, style, provider, forceRegenerate: requestForceRegenerate } = body;
 
-      console.log('[批量生成图片] 开始处理请求:', { storyboardId, style, provider, userId: userPayload.userId });
+      console.log('[批量生成图片] 开始处理请求:', {
+        storyboardId,
+        style,
+        provider,
+        forceRegenerate: requestForceRegenerate,
+        userId: userPayload.userId
+      });
 
       if (!storyboardId || !style) {
         return res.status(400).json({
@@ -2389,11 +2395,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // 检查是否有已生成的图片
         const hasExistingImages = pages.some((p: any) => p.image_url);
-        const forceRegenerate = hasExistingImages; // 如果有旧图片，标记为强制重新生成
+        // 使用前端传递的 forceRegenerate 参数，如果没有传递则根据是否有旧图片自动判断
+        const forceRegenerate = requestForceRegenerate !== undefined ? requestForceRegenerate : hasExistingImages;
 
         console.log('[批量生成图片] 检查已有图片:', {
           totalPages,
           hasExistingImages,
+          requestForceRegenerate,
           forceRegenerate,
           pagesWithImages: pages.filter((p: any) => p.image_url).map((p: any) => p.page_number)
         });
