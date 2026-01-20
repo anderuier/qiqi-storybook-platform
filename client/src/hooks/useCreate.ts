@@ -139,11 +139,11 @@ export function useCreate() {
         };
 
         // 恢复已生成的图片
-        const pageImages: Record<number, string> = {};
+        const pageImages: Record<string, string> = {};
         let completedCount = 0;
         draft.storyboard.pages.forEach((page) => {
           if (page.imageUrl) {
-            pageImages[page.pageNumber] = page.imageUrl;
+            pageImages[String(page.pageNumber)] = page.imageUrl;
             completedCount++;
           }
         });
@@ -264,15 +264,20 @@ export function useCreate() {
 
         console.log('[前端 generateImage] API 返回结果:', result);
 
-        // 更新页面图片
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          pageImages: {
+        // 更新页面图片（使用字符串键）
+        setState((prev) => {
+          const newPageImages = {
             ...prev.pageImages,
-            [pageNumber]: result.imageUrl,
-          },
-        }));
+            [String(pageNumber)]: result.imageUrl,
+          };
+          console.log('[前端 generateImage] 准备更新 pageImages, 新增:', { [pageNumber]: result.imageUrl });
+
+          return {
+            ...prev,
+            isLoading: false,
+            pageImages: newPageImages,
+          };
+        });
 
         console.log('[前端 generateImage] 图片已更新到 pageImages');
         return result;
@@ -356,10 +361,10 @@ export function useCreate() {
 
       setState((prev) => {
         // 更新 pageImages：如果有 imageUrl，使用新图片；如果是 skipped，保留现有图片
-        const newPageImages = { ...prev.pageImages };
+        const newPageImages: Record<string, string> = { ...prev.pageImages };
         if (result.pageNumber && result.imageUrl) {
-          // 有新图片，更新
-          newPageImages[result.pageNumber] = result.imageUrl;
+          // 有新图片，更新（使用字符串键）
+          newPageImages[String(result.pageNumber)] = result.imageUrl;
           console.log(`[图片生成] 第 ${result.pageNumber} 页图片已更新:`, result.imageUrl.substring(0, 50) + '...');
         } else if (result.pageNumber && (result as any).skipped) {
           // 跳过了此页，从数据库获取现有图片（如果有）
@@ -415,13 +420,13 @@ export function useCreate() {
 
           // 同步已生成的图片
           if (draft.storyboard) {
-            const pageImages: Record<number, string> = {};
+            const pageImages: Record<string, string> = {};
             let completedCount = 0;
             const pages = draft.storyboard.pages;
 
             pages.forEach((page) => {
               if (page.imageUrl) {
-                pageImages[page.pageNumber] = page.imageUrl;
+                pageImages[String(page.pageNumber)] = page.imageUrl;
                 completedCount++;
               }
             });
