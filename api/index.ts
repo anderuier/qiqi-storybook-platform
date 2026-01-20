@@ -2012,6 +2012,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (fullPath === '/api/create/image' && req.method === 'POST') {
       const userPayload = await getUserFromRequest(req);
 
+      console.log('[单张图片生成] 收到请求，userPayload:', userPayload ? '已认证' : '未认证');
+
       if (!userPayload) {
         return res.status(401).json({
           success: false,
@@ -2024,6 +2026,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const body = req.body || {};
       const { storyboardId, pageNumber, style, provider } = body;
+
+      console.log('[单张图片生成] 请求参数:', { storyboardId, pageNumber, style, provider });
 
       if (!storyboardId || !pageNumber || !style) {
         return res.status(400).json({

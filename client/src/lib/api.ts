@@ -55,6 +55,14 @@ apiClient.interceptors.response.use(
     return response.data;
   },
   (error: AxiosError<ApiErrorResponse>) => {
+    console.log('[API 错误拦截器] 收到错误:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      code: error.code,
+    });
+
     if (error.response) {
       const { status, data } = error.response;
 
