@@ -2179,7 +2179,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // 更新页面图片
           await sql`
             UPDATE storyboard_pages
-            SET image_url = ${finalImageUrl}, updated_at = CURRENT_TIMESTAMP
+            SET image_url = ${finalImageUrl}
             WHERE id = ${page.id}
           `;
 
