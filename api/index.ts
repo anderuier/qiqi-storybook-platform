@@ -2206,6 +2206,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const body = req.body || {};
       const { storyboardId, style, provider } = body;
 
+      console.log('[批量生成图片] 开始处理请求:', { storyboardId, style, provider, userId: userPayload.userId });
+
       if (!storyboardId || !style) {
         return res.status(400).json({
           success: false,
@@ -2271,6 +2273,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 检查是否有已生成的图片
         const hasExistingImages = pages.some((p: any) => p.image_url);
         const forceRegenerate = hasExistingImages; // 如果有旧图片，标记为强制重新生成
+
+        console.log('[批量生成图片] 检查已有图片:', {
+          totalPages,
+          hasExistingImages,
+          forceRegenerate,
+          pagesWithImages: pages.filter((p: any) => p.image_url).map((p: any) => p.page_number)
+        });
 
         // 保存艺术风格到 work
         await sql`
@@ -2509,6 +2518,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const taskId = fullPath.replace('/api/create/task/', '').replace('/continue', '');
+      console.log('[Continue 图片生成] 收到请求:', { taskId, userId: userPayload.userId });
 
       try {
         // 查询任务
@@ -2529,6 +2539,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const task = taskResult.rows[0];
+        console.log('[Continue 图片生成] 任务状态:', {
+          taskId: task.id,
+          status: task.status,
+          completedItems: task.completed_items,
+          totalItems: task.total_items
+        });
 
         if (task.user_id !== userPayload.userId) {
           return res.status(403).json({
@@ -2619,8 +2635,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 检查是否强制重新生成
         const forceRegenerate = taskData.forceRegenerate || false;
 
+        console.log('[Continue 图片生成] 处理页面:', {
+          nextPageNumber,
+          hasImage: !!page.image_url,
+          forceRegenerate,
+          imageUrl: page.image_url?.substring(0, 50) + '...'
+        });
+
         // 如果页面已有图片且不是强制重新生成，跳过
         if (page.image_url && !forceRegenerate) {
+          console.log('[Continue 图片生成] 跳过已有图片的页面:', nextPageNumber);
           const newCompleted = task.completed_items + 1;
           const newProgress = Math.round((newCompleted / task.total_items) * 100);
           const isCompleted = newCompleted >= task.total_items;
@@ -2684,7 +2708,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const styleDesc = stylePrompts[taskData.style] || stylePrompts.watercolor;
         const enhancedPrompt = `Children's book illustration, ${page.image_prompt}, ${styleDesc}, safe for children, no text, high quality`;
 
-        console.log(`生成第 ${nextPageNumber} 页图片 prompt:`, enhancedPrompt.substring(0, 200));
+        console.log(`[Continue 图片生成] 生成第 ${nextPageNumber} 页图片 prompt:`, enhancedPrompt.substring(0, 200));
 
         // 调用硅基流动 API（添加超时控制）
         const controller = new AbortController();
@@ -2722,6 +2746,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const blobFilename = `storybook/${taskData.workId || 'unknown'}/page-${nextPageNumber}-${Date.now()}.png`;
           const finalImageUrl = await uploadImageToBlob(originalImageUrl, blobFilename);
 
+          console.log(`[Continue 图片生成] 第 ${nextPageNumber} 页图片已上传:`, finalImageUrl.substring(0, 60) + '...');
+
           const result = {
             imageUrl: finalImageUrl,
             provider: 'siliconflow',
@@ -2735,9 +2761,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             WHERE id = ${page.id}
           `;
 
+          console.log(`[Continue 图片生成] 第 ${nextPageNumber} 页图片已更新到数据库`);
+
           // TODO: 删除旧图片（如果存在且是 Vercel Blob 图片）
           if (oldImageUrl && oldImageUrl.includes('vercel-storage.com')) {
-            console.log(`旧图片已被替换: ${oldImageUrl}`);
+            console.log(`[Continue 图片生成] 旧图片已被替换: ${oldImageUrl.substring(0, 60)} + '...'`);
             // 可以调用 Vercel Blob 的删除 API
           }
 

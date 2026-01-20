@@ -244,7 +244,10 @@ export default function Create() {
     // 立即跳转到第 4 步，让用户看到加载状态
     setCurrentStep(4);
     try {
-      await create.startImageGeneration(selectedArtStyle, selectedProvider);
+      // 检查是否已经有生成的图片
+      const hasExistingImages = Object.keys(create.pageImages).length > 0;
+      // 如果已有图片，强制重新生成；否则正常生成
+      await create.startImageGeneration(selectedArtStyle, selectedProvider, hasExistingImages);
     } catch (err) {
       // 错误已在 hook 中处理
       // 如果失败，返回第 3 步
@@ -695,9 +698,9 @@ export default function Create() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
+                          onClick={async () => {
                             if (selectedArtStyle && window.confirm('确定要重新生成所有图片吗？')) {
-                              create.startImageGeneration(selectedArtStyle, selectedProvider);
+                              await create.startImageGeneration(selectedArtStyle, selectedProvider, true);
                             }
                           }}
                           className="rounded-full"

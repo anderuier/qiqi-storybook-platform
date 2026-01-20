@@ -100,11 +100,11 @@ export function useCreate() {
         workId: draft.work.id,
         step: draft.work.currentStep as CreateStep,
         input: {
-          theme: draft.work.theme,
-          childName: draft.work.childName,
-          childAge: draft.work.childAge,
-          style: draft.work.style,
-          length: draft.work.length,
+          theme: draft.work.theme || undefined,
+          childName: draft.work.childName || '',
+          childAge: draft.work.childAge || 4,
+          style: (draft.work.style as any) || 'warm',
+          length: (draft.work.length as any) || 'medium',
         },
       };
 
@@ -117,6 +117,8 @@ export function useCreate() {
           content: draft.story.content,
           wordCount: draft.story.wordCount,
           estimatedPages: Math.ceil(draft.story.wordCount / 100),
+          aiProvider: 'claude',
+          aiModel: 'claude-haiku',
         };
       }
 
@@ -124,8 +126,16 @@ export function useCreate() {
       if (draft.storyboard) {
         restoredState.storyboard = {
           storyboardId: draft.storyboard.id,
+          workId: draft.work.id,
           pageCount: draft.storyboard.pages.length,
-          pages: draft.storyboard.pages,
+          pages: draft.storyboard.pages.map(p => ({
+            pageNumber: p.pageNumber,
+            text: p.text,
+            imagePrompt: p.imagePrompt,
+            duration: 5000, // 默认 duration
+          })),
+          aiProvider: 'claude',
+          aiModel: 'claude-haiku',
         };
 
         // 恢复已生成的图片
@@ -275,7 +285,7 @@ export function useCreate() {
 
   // 步骤3：批量生成图片（启动任务）
   const startImageGeneration = useCallback(
-    async (style: string, provider?: ImageProvider) => {
+    async (style: string, provider?: ImageProvider, forceRegenerate: boolean = false) => {
       if (!state.storyboard) {
         throw new Error('请先生成分镜剧本');
       }
@@ -283,7 +293,8 @@ export function useCreate() {
       updateState({
         error: null,
         retryCount: 0, // 重置重试计数
-        pageImages: {}, // 清空旧图片
+        // 只有在强制重新生成时才清空旧图片，否则保留（避免闪烁）
+        pageImages: forceRegenerate ? {} : state.pageImages,
         imageTask: {
           taskId: null,
           status: 'processing',
@@ -338,24 +349,32 @@ export function useCreate() {
       // 更新任务状态
       const isCompleted = result.status === 'completed';
 
-      setState((prev) => ({
-        ...prev,
-        error: null, // 清除之前的错误
-        retryCount: 0, // 重置重试计数
-        imageTask: {
-          ...prev.imageTask,
-          status: isCompleted ? 'completed' : 'processing',
-          progress: result.progress || 0,
-          completedPages: result.completedItems || prev.imageTask.completedPages,
-        },
-        pageImages: result.imageUrl
-          ? {
-              ...prev.pageImages,
-              [result.pageNumber!]: result.imageUrl,
-            }
-          : prev.pageImages,
-        step: isCompleted ? 'preview' : prev.step,
-      }));
+      setState((prev) => {
+        // 更新 pageImages：如果有 imageUrl，使用新图片；如果是 skipped，保留现有图片
+        const newPageImages = { ...prev.pageImages };
+        if (result.pageNumber && result.imageUrl) {
+          // 有新图片，更新
+          newPageImages[result.pageNumber] = result.imageUrl;
+          console.log(`[图片生成] 第 ${result.pageNumber} 页图片已更新:`, result.imageUrl.substring(0, 50) + '...');
+        } else if (result.pageNumber && (result as any).skipped) {
+          // 跳过了此页，从数据库获取现有图片（如果有）
+          console.log(`[图片生成] 第 ${result.pageNumber} 页已跳过（已有图片）`);
+        }
+
+        return {
+          ...prev,
+          error: null, // 清除之前的错误
+          retryCount: 0, // 重置重试计数
+          imageTask: {
+            ...prev.imageTask,
+            status: isCompleted ? 'completed' : 'processing',
+            progress: result.progress || 0,
+            completedPages: result.completedItems || prev.imageTask.completedPages,
+          },
+          pageImages: newPageImages,
+          step: isCompleted ? 'preview' : prev.step,
+        };
+      });
 
       return result;
     } catch (err: any) {
@@ -393,8 +412,9 @@ export function useCreate() {
           if (draft.storyboard) {
             const pageImages: Record<number, string> = {};
             let completedCount = 0;
+            const pages = draft.storyboard.pages;
 
-            draft.storyboard.pages.forEach((page) => {
+            pages.forEach((page) => {
               if (page.imageUrl) {
                 pageImages[page.pageNumber] = page.imageUrl;
                 completedCount++;
@@ -409,7 +429,7 @@ export function useCreate() {
                 status: result.status as any,
                 progress: result.progress,
                 completedPages: completedCount, // 使用实际已生成的数量
-                totalPages: draft.storyboard.pages.length,
+                totalPages: pages.length,
               },
               pageImages: pageImages, // 同步所有已生成的图片
             }));

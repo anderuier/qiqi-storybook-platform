@@ -296,6 +296,7 @@ export interface Draft {
   childAge?: number;
   style?: string;
   length?: string;
+  artStyle?: string; // 保存的艺术风格
   pageCount: number;
   coverUrl?: string;
   createdAt: string;
@@ -477,7 +478,7 @@ export interface Template {
   category: string;
   tags: string[];
   usageCount: number;
-  previewPages: number;
+  previewPagesCount: number;
 }
 
 export interface TemplateDetail extends Template {
