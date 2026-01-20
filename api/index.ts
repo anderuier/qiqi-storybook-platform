@@ -374,12 +374,11 @@ function generateId(prefix: string = ''): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // 首次请求时执行数据库迁移（不阻塞请求）
-  if (!hasMigrated) {
-    // 使用 fire-and-forget 方式，不等待迁移完成
-    migrateDatabase().catch(err => console.log('[迁移] 跳过:', err.message));
-    hasMigrated = true;
-  }
+  // 首次请求时执行数据库迁移（暂时禁用以排查问题）
+  // if (!hasMigrated) {
+  //   migrateDatabase().catch(err => console.log('[迁移] 跳过:', err.message));
+  //   hasMigrated = true;
+  // }
 
   // 设置 CORS 头
   res.setHeader('Access-Control-Allow-Origin', '*');
