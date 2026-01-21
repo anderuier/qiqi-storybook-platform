@@ -158,7 +158,7 @@ function HeroSection() {
                 <div className="text-xs sm:text-sm text-muted-foreground">绘本已创作</div>
               </div>
               <div className="text-center sm:text-left">
-                <div className="text-2xl sm:text-3xl font-bold text-mint">50+</div>
+                <div className="text-2xl sm:text-3xl font-bold text-mint">20+</div>
                 <div className="text-xs sm:text-sm text-muted-foreground">艺术风格</div>
               </div>
               <div className="text-center sm:text-left">
@@ -233,7 +233,7 @@ function FeaturesSection() {
     {
       icon: Palette,
       title: "多样艺术风格",
-      description: "卡通动漫、水彩手绘、蜡笔涂鸦、3D渲染...50+种风格任您选择，每一页都是艺术品。",
+      description: "卡通动漫、水彩手绘、蜡笔涂鸦、3D渲染...20+种风格任您选择，每一页都是艺术品。",
       color: "mint" as const,
       image: "/images/feature-art.png"
     },
