@@ -2429,6 +2429,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               style,
               provider,
               pages: [],
+              generatedPages: [], // 新增：记录本次新生成的图片（不包括跳过的旧图片）
               forceRegenerate // 标记是否强制重新生成
             })}
           )
@@ -2514,6 +2515,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     style,
                     provider,
                     pages: [{ pageNumber: 1, imageUrl }],
+                    generatedPages: [{ pageNumber: 1, imageUrl }], // 新增：记录本次新生成的图片
                     forceRegenerate, // 保留强制重新生成标志
                   })},
                   updated_at = CURRENT_TIMESTAMP
@@ -2728,8 +2730,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           style: string;
           provider?: string;
           pages: Array<{ pageNumber: number; imageUrl: string }>;
+          generatedPages: Array<{ pageNumber: number; imageUrl: string }>; // 新增：记录本次新生成的图片
           forceRegenerate?: boolean;
         };
+
+        // 确保 generatedPages 存在（兼容旧数据）
+        if (!taskData.generatedPages) {
+          taskData.generatedPages = [];
+        }
 
         console.log('[Continue 图片生成] 任务数据:', {
           storyboardId: taskData.storyboardId,
@@ -2901,6 +2909,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               completedItems: nextPageNumber,
               totalItems: totalItems,
               pages: taskData.pages, // 返回所有已生成的图片，用于前端同步
+              generatedPages: taskData.generatedPages, // 新增：返回本次新生成的图片（用于进度计数）
             },
           });
         }
@@ -3018,6 +3027,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             imageUrl: result.imageUrl,
           });
 
+          // 同时添加到 generatedPages（记录本次新生成的图片）
+          taskData.generatedPages.push({
+            pageNumber: nextPageNumber,
+            imageUrl: result.imageUrl,
+          });
+
           // 判断任务是否完成：当已完成最后一页时任务完成
           const isCompleted = nextPageNumber >= totalItems;
 
@@ -3051,6 +3066,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               provider: result.provider,
               model: result.model,
               pages: taskData.pages, // 返回所有已生成的图片，用于前端同步
+              generatedPages: taskData.generatedPages, // 新增：返回本次新生成的图片（用于进度计数）
             },
           });
         } catch (fetchError: any) {

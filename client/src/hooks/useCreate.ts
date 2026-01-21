@@ -364,7 +364,7 @@ export function useCreate() {
         // 更新 pageImages：优先使用 pages 数组同步所有图片
         const newPageImages: Record<string, string> = { ...prev.pageImages };
 
-        // 如果返回了 pages 数组，使用它来同步所有图片
+        // 如果返回了 pages 数组，使用它来同步所有图片（包括旧图片）
         if (result.pages && result.pages.length > 0) {
           console.log(`[图片生成] 使用 pages 数组同步 ${result.pages.length} 张图片`);
           result.pages.forEach((page) => {
@@ -378,6 +378,10 @@ export function useCreate() {
           console.log(`[图片生成] 第 ${result.pageNumber} 页图片已更新 (${result.skipped ? '跳过' : '新生成'}):`, result.imageUrl.substring(0, 50) + '...');
         }
 
+        // 使用 generatedPages 计算实际新生成的图片数量（不包括跳过的旧图片）
+        const generatedCount = result.generatedPages?.length || 0;
+        console.log(`[图片生成] 进度: 已新生成 ${generatedCount} 张图片`);
+
         return {
           ...prev,
           error: null, // 清除之前的错误
@@ -386,7 +390,7 @@ export function useCreate() {
             ...prev.imageTask,
             status: isCompleted ? 'completed' : 'processing',
             progress: result.progress || 0,
-            completedPages: result.completedItems || prev.imageTask.completedPages,
+            completedPages: generatedCount, // 使用 generatedPages 的长度
           },
           pageImages: newPageImages,
           step: isCompleted ? 'preview' : prev.step,

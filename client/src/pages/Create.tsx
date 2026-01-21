@@ -681,7 +681,7 @@ export default function Create() {
                   <>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-sm font-medium text-muted-foreground">
-                        已生成 {Object.keys(create.pageImages).length} / {create.imageTask.totalPages} 张图片
+                        已生成 {create.imageTask.completedPages} / {create.imageTask.totalPages} 张图片
                       </h3>
                       {create.imageTask.status === "completed" && (
                         <Button
