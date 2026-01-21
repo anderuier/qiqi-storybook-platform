@@ -3051,6 +3051,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           console.error(`生成第 ${nextPageNumber} 页图片失败:`, errorMessage);
 
+          // 关键修复：API 调用失败时回滚 completed_items
+          // 这样前端重试时可以继续处理失败的图片
+          try {
+            await sql`
+              UPDATE tasks
+              SET completed_items = completed_items - 1,
+                  progress = ROUND((completed_items - 1)::float / total_items * 100),
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE id = ${taskId}
+            `;
+            console.log(`[Continue 图片生成] 已回滚 completed_items (${nextPageNumber} -> ${nextPageNumber - 1})`);
+          } catch (rollbackError: any) {
+            console.error('[Continue 图片生成] 回滚 completed_items 失败:', rollbackError.message);
+          }
+
           throw new Error(errorMessage);
         }
       } catch (error: any) {
