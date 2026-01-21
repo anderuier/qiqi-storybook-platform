@@ -360,6 +360,10 @@ export function useCreate() {
       // 更新任务状态
       const isCompleted = result.status === 'completed';
 
+      // 使用 generatedPages 计算实际新生成的图片数量（不包括跳过的旧图片）
+      const generatedCount = result.generatedPages?.length || 0;
+      console.log(`[图片生成] 后端返回: status=${result.status}, generatedPages=${generatedCount}, progress=${result.progress}`);
+
       setState((prev) => {
         // 更新 pageImages：优先使用 pages 数组同步所有图片
         const newPageImages: Record<string, string> = { ...prev.pageImages };
@@ -377,10 +381,6 @@ export function useCreate() {
           newPageImages[String(result.pageNumber)] = result.imageUrl;
           console.log(`[图片生成] 第 ${result.pageNumber} 页图片已更新 (${result.skipped ? '跳过' : '新生成'}):`, result.imageUrl.substring(0, 50) + '...');
         }
-
-        // 使用 generatedPages 计算实际新生成的图片数量（不包括跳过的旧图片）
-        const generatedCount = result.generatedPages?.length || 0;
-        console.log(`[图片生成] 进度: 已新生成 ${generatedCount} 张图片`);
 
         return {
           ...prev,
@@ -427,7 +427,8 @@ export function useCreate() {
       // 优先使用后端返回的 generatedPages 来计算新生成的图片数量
       // 这样可以避免把旧图片计入"本次新生成"的进度
       const generatedCount = result.result?.generatedPages?.length || 0;
-      console.log(`[checkTaskStatus] 使用 generatedPages 计算进度: ${generatedCount} 张`);
+      console.log(`[checkTaskStatus] 后端返回: status=${result.status}, generatedPages=${generatedCount}, progress=${result.progress}`);
+      console.log(`[checkTaskStatus] result.result:`, result.result);
 
       // 如果有 workId，从草稿中获取已生成的图片（用于显示，但不用于计数）
       if (state.workId) {
