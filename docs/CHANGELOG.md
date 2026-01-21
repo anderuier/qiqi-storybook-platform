@@ -4,6 +4,80 @@
 
 ---
 
+## [2026-01-21] 图片生成进度计数修复（JSONB 原子操作）
+
+### 本次更新摘要
+使用 PostgreSQL JSONB 原子追加操作解决 `generatedPages` 并发覆盖问题，确保进度计数准确。新增图片生成页面显示当前艺术风格。
+
+### 详细内容
+
+#### 1. generatedPages 并发覆盖问题修复
+
+**问题现象**：
+- 日志显示 `generatedPages=2` 重复多次，但 progress 持续增长
+- 第 3 页生成成功后日志显示 "generatedPages 现在有 2 张"（应该是 3 张）
+- 最终进度停留在 5/8 或 4/8，而不是 8/8
+
+**根因分析**：
+```
+虽然 completed_items 有原子更新保护，但 result JSON 字段没有：
+
+请求A（第二页）      请求B（第三页）
+     │                   │
+     ├─读取 result       ├─读取 result
+     │  generatedPages=1 │  generatedPages=1 ← 旧数据！
+     │                   │
+     ├─原子更新          ├─原子更新
+     │  completed_items=2│  completed_items=3
+     │                   │
+     ├─生成图片...       ├─生成图片...
+     │                   │
+     └─保存 result       └─保存 result
+        [第1页,第2页]        [第1页,第3页] ← 覆盖！
+```
+
+**解决方案**：使用 PostgreSQL JSONB 函数在 SQL 中原子性地追加到数组
+
+```sql
+-- 原子追加到 generatedPages 数组
+UPDATE tasks
+SET result = jsonb_set(
+  result,
+  '{generatedPages}',
+  COALESCE(result->'generatedPages', '[]'::jsonb) || 新数据::jsonb,
+  true
+)
+WHERE id = ${taskId}
+```
+
+**Commit**: `88bff82`
+
+#### 2. 新增：图片生成页面显示当前艺术风格
+
+**修改位置**：`client/src/pages/Create.tsx`
+
+在第四步图片生成页面，标题下方显示当前选择的艺术风格名称（如 "当前风格：扁平插画"）
+
+**Commit**: `030e376`
+
+### 测试结果
+
+用户反馈："试了两次都成功了"
+
+- ✅ 进度正确显示（1/8 → 2/8 → ... → 8/8）
+- ✅ `generatedPages` 正确递增
+- ✅ 并发请求不再相互覆盖
+- ✅ 最终进度显示 8/8
+
+### 提交记录
+
+| Commit ID | 说明 |
+|-----------|------|
+| 88bff82 | 修复：使用 JSONB 原子追加解决 generatedPages 并发覆盖问题 |
+| 030e376 | 新增：图片生成页面显示当前艺术风格 |
+
+---
+
 ## [2026-01-21] 图片生成并发控制与显示同步修复
 
 ### 本次更新摘要
