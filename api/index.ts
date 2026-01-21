@@ -2769,11 +2769,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const nextPageNumber = updateResult.rows[0].completed_items;
         const totalItems = updateResult.rows[0].total_items;
         const newProgress = Math.round((nextPageNumber / totalItems) * 100);
-        const isCompleted = nextPageNumber >= totalItems;
 
-        console.log(`[Continue 图片生成] 原子更新完成，处理第 ${nextPageNumber} / ${totalItems} 页，isCompleted: ${isCompleted}`);
+        console.log(`[Continue 图片生成] 原子更新完成，处理第 ${nextPageNumber} / ${totalItems} 页`);
 
         // 检查是否已超出总页数（任务完成）
+        // 注意：只有在 nextPageNumber > totalItems 时才返回完成
+        // 当 nextPageNumber == totalItems 时，仍需处理最后一张图片
         if (nextPageNumber > totalItems) {
           await sql`
             UPDATE tasks
@@ -2862,8 +2863,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
           }
 
-          // 只有在不是最后一页的情况下才提前返回完成状态
-          // 如果是最后一页且跳过了，需要确保返回的 status 正确
+          // 判断任务是否完成：当已完成最后一页时任务完成
+          const isCompleted = nextPageNumber >= totalItems;
+
+          // 只有在不是最后一页的情况下才继续处理，否则返回完成状态
           const finalStatus = isCompleted ? 'completed' : 'processing';
 
           // 如果任务完成，更新 work 的 current_step
@@ -2997,13 +3000,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // 更新任务进度
           // 注意：completed_items 在开始处理时已经通过原子更新
           // 这里只需要更新 status 和 result
-          // isCompleted 和 newProgress 也已经在前面计算过了
 
           // 更新任务结果
           taskData.pages.push({
             pageNumber: nextPageNumber,
             imageUrl: result.imageUrl,
           });
+
+          // 判断任务是否完成：当已完成最后一页时任务完成
+          const isCompleted = nextPageNumber >= totalItems;
 
           await sql`
             UPDATE tasks
