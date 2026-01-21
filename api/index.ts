@@ -2869,13 +2869,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // 只有在不是最后一页的情况下才继续处理，否则返回完成状态
           const finalStatus = isCompleted ? 'completed' : 'processing';
 
-          // 如果任务完成，更新 work 的 current_step
-          if (isCompleted && taskData.workId) {
+          // 如果任务完成，更新任务状态和 work 的 current_step
+          if (isCompleted) {
+            // 同时更新 tasks.status 和 works.current_step
             await sql`
-              UPDATE works
-              SET current_step = 'preview', updated_at = CURRENT_TIMESTAMP
-              WHERE id = ${taskData.workId}
+              UPDATE tasks
+              SET status = 'completed',
+                  progress = 100,
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE id = ${taskId}
             `;
+
+            if (taskData.workId) {
+              await sql`
+                UPDATE works
+                SET current_step = 'preview', updated_at = CURRENT_TIMESTAMP
+                WHERE id = ${taskData.workId}
+              `;
+            }
           }
 
           return res.status(200).json({
