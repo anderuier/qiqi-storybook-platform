@@ -2739,6 +2739,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           taskData.generatedPages = [];
         }
 
+        console.log('[Continue 图片生成] 从数据库读取的 generatedPages 数量:', taskData.generatedPages.length);
         console.log('[Continue 图片生成] 任务数据:', {
           storyboardId: taskData.storyboardId,
           workId: taskData.workId,
@@ -2884,12 +2885,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const finalStatus = isCompleted ? 'completed' : 'processing';
 
           // 如果任务完成，更新任务状态和 work 的 current_step
+          // 同时也要更新 result（确保 generatedPages 被保存）
           if (isCompleted) {
-            // 同时更新 tasks.status 和 works.current_step
+            // 同时更新 tasks.status、works.current_step 和 result
             await sql`
               UPDATE tasks
               SET status = 'completed',
                   progress = 100,
+                  result = ${JSON.stringify(taskData)},
                   updated_at = CURRENT_TIMESTAMP
               WHERE id = ${taskId}
             `;
@@ -2901,6 +2904,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 WHERE id = ${taskData.workId}
               `;
             }
+          } else {
+            // 即使未完成，也要更新 result（确保 generatedPages 被保存）
+            await sql`
+              UPDATE tasks
+              SET result = ${JSON.stringify(taskData)},
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE id = ${taskId}
+            `;
           }
 
           console.log(`[Continue 图片生成 跳过] 返回数据: generatedPages=${taskData.generatedPages.length}, progress=${newProgress}, status=${finalStatus}`);
