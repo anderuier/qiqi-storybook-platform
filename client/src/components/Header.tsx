@@ -65,7 +65,7 @@ export default function Header() {
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-coral to-mint bg-clip-text text-transparent">
-              童话绘本工坊
+              柒柒の魔法绘本屋
             </span>
           </Link>
           

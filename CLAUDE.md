@@ -1,4 +1,4 @@
-# 童话绘本工坊 (qiqi-storybook-platform)
+# 柒柒の魔法绘本屋 (qiqi-storybook-platform)
 
 一个基于 AI 的交互式童话故事创作平台，帮助家长为 3-6 岁学龄前儿童创作个性化的绘本故事。
 

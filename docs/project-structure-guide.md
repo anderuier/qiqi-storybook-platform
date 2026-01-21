@@ -380,4 +380,4 @@ pnpm check
 ---
 
 *创建日期: 2026-01-05*
-*适用项目: 童话绘本工坊 (qiqi-storybook-platform)*
+*适用项目: 柒柒の魔法绘本屋 (qiqi-storybook-platform)*

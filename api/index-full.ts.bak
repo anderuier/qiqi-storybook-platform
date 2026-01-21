@@ -32,7 +32,7 @@ app.get('/health', (c) => {
     success: true,
     data: {
       status: 'ok',
-      message: '童话绘本工坊 API 服务运行正常',
+      message: '柒柒の魔法绘本屋 API 服务运行正常',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
     },

@@ -1,5 +1,5 @@
 /**
- * 童话绘本工坊 - 首页
+ * 柒柒の魔法绘本屋 - 首页
  * 设计风格：梦幻童话风格 (Whimsical Storybook)
  * 色彩：珊瑚粉、薄荷绿、阳光黄、奶油白
  */
@@ -295,7 +295,7 @@ function HowItWorksSection() {
     {
       number: 3,
       title: "选择艺术风格",
-      description: "从50+种精美艺术风格中选择最适合的绘本风格",
+      description: "从20+种精美艺术风格中选择最适合的绘本风格",
       color: "sunny" as const
     },
     {

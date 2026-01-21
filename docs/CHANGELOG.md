@@ -1,4 +1,4 @@
-# 童话绘本工坊 - 项目更新日志 (CHANGELOG)
+# 柒柒の魔法绘本屋 - 项目更新日志 (CHANGELOG)
 
 记录项目每次更新的内容，按时间倒序排列。
 
@@ -818,7 +818,7 @@ Error: No more than 12 Serverless Functions can be added to a Deployment on the 
 ## [2026-01-08] Vercel 部署配置与网站上线
 
 ### 本次更新摘要
-完成 Vercel 部署配置，将童话绘本工坊成功发布到互联网，可通过公网访问。
+完成 Vercel 部署配置，将柒柒の魔法绘本屋成功发布到互联网，可通过公网访问。
 
 ### 详细内容
 

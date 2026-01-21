@@ -45,9 +45,9 @@ const values = [
 
 // 里程碑数据
 const milestones = [
-  { number: "10,000+", label: "绘本已创作", icon: BookOpen },
-  { number: "5,000+", label: "幸福家庭", icon: Users },
-  { number: "50+", label: "艺术风格", icon: Star },
+  { number: "5,000+", label: "绘本已创作", icon: BookOpen },
+  { number: "1,000+", label: "幸福家庭", icon: Users },
+  { number: "20+", label: "艺术风格", icon: Star },
   { number: "99%", label: "好评率", icon: Award }
 ];
 
@@ -71,7 +71,7 @@ export default function AboutSection() {
             用<span className="text-coral">AI和爱</span>，为孩子创造美好童年
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            童话绘本工坊致力于帮助每个家庭创作专属的绘本故事，让亲子时光更加温馨美好
+            柒柒の魔法绘本屋致力于帮助父母创作专属自己宝贝的绘本故事，让您的亲子时光更加温馨美好
           </p>
         </motion.div>
 
@@ -115,7 +115,7 @@ export default function AboutSection() {
             <h3 className="text-2xl font-bold mb-6">我们的故事</h3>
             <div className="space-y-4 text-muted-foreground">
               <p>
-                童话绘本工坊诞生于一个简单的愿望：让每个孩子都能拥有属于自己的童话故事。
+                柒柒の魔法绘本屋诞生于一个简单的愿望：让每个孩子都能拥有属于自己的童话故事。
               </p>
               <p>
                 我们相信，最好的故事来自于爱。当AI技术与父母的爱相结合，就能创造出独一无二的绘本作品。

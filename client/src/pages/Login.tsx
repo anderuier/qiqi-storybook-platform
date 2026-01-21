@@ -129,7 +129,7 @@ export default function Login() {
               <BookOpen className="w-10 h-10 text-coral" />
             </div>
             <h1 className="text-4xl font-bold mb-4">
-              童话绘本工坊
+              柒柒の魔法绘本屋
             </h1>
             <p className="text-lg text-muted-foreground max-w-md">
               用AI和爱为3-6岁学龄前儿童创作独一无二的个性化绘本
@@ -181,7 +181,7 @@ export default function Login() {
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-coral to-coral/80 flex items-center justify-center">
               <BookOpen className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold">童话绘本工坊</span>
+            <span className="text-2xl font-bold">柒柒の魔法绘本屋</span>
           </div>
 
           {/* 表单卡片 */}

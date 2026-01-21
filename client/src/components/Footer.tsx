@@ -17,7 +17,7 @@ export default function Footer() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-coral to-coral/80 flex items-center justify-center">
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold">童话绘本工坊</span>
+              <span className="text-xl font-bold">柒柒の魔法绘本屋</span>
             </Link>
             <p className="text-muted-foreground text-sm mb-4">
               用AI和爱为3-6岁学龄前儿童创作独一无二的个性化绘本，让每个孩子都有属于自己的童话故事。
@@ -105,7 +105,7 @@ export default function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground text-center md:text-left">
-            © 2026 童话绘本工坊. 保留所有权利.
+            © 2026 柒柒の魔法绘本屋. 保留所有权利.
           </p>
           <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6">
             <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
