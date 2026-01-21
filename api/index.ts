@@ -2903,6 +2903,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
           }
 
+          console.log(`[Continue 图片生成 跳过] 返回数据: generatedPages=${taskData.generatedPages.length}, progress=${newProgress}, status=${finalStatus}`);
+
           return res.status(200).json({
             success: true,
             data: {
@@ -3039,6 +3041,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             imageUrl: result.imageUrl,
           });
 
+          console.log(`[Continue 图片生成] 第 ${nextPageNumber} 页生成成功，generatedPages 现在有 ${taskData.generatedPages.length} 张`);
+
           // 判断任务是否完成：当已完成最后一页时任务完成
           const isCompleted = nextPageNumber >= totalItems;
 
@@ -3058,6 +3062,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               WHERE id = ${taskData.workId}
             `;
           }
+
+          console.log(`[Continue 图片生成] 返回数据: generatedPages=${taskData.generatedPages.length}, progress=${newProgress}, status=${isCompleted ? 'completed' : 'processing'}`);
 
           return res.status(200).json({
             success: true,
