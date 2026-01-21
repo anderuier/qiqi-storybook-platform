@@ -424,7 +424,12 @@ export function useCreate() {
     try {
       const result = await createApi.getTask(state.imageTask.taskId);
 
-      // 如果有 workId，从草稿中获取已生成的图片
+      // 优先使用后端返回的 generatedPages 来计算新生成的图片数量
+      // 这样可以避免把旧图片计入"本次新生成"的进度
+      const generatedCount = result.result?.generatedPages?.length || 0;
+      console.log(`[checkTaskStatus] 使用 generatedPages 计算进度: ${generatedCount} 张`);
+
+      // 如果有 workId，从草稿中获取已生成的图片（用于显示，但不用于计数）
       if (state.workId) {
         try {
           const draft = await draftsApi.getDraft(state.workId);
@@ -432,27 +437,25 @@ export function useCreate() {
           // 同步已生成的图片
           if (draft.storyboard) {
             const pageImages: Record<string, string> = {};
-            let completedCount = 0;
             const pages = draft.storyboard.pages;
 
             pages.forEach((page) => {
               if (page.imageUrl) {
                 pageImages[String(page.pageNumber)] = page.imageUrl;
-                completedCount++;
               }
             });
 
-            // 更新状态，包括图片
+            // 更新状态
             setState((prev) => ({
               ...prev,
               imageTask: {
                 ...prev.imageTask,
                 status: result.status,
                 progress: result.progress,
-                completedPages: completedCount, // 使用实际已生成的数量
+                completedPages: generatedCount, // 使用 generatedPages 的长度（新生成的图片数量）
                 totalPages: pages.length,
               },
-              pageImages: pageImages, // 同步所有已生成的图片
+              pageImages: pageImages, // 同步所有已生成的图片（用于显示）
             }));
 
             return result;
@@ -469,7 +472,7 @@ export function useCreate() {
           ...state.imageTask,
           status: result.status,
           progress: result.progress,
-          completedPages: result.completedItems,
+          completedPages: generatedCount, // 使用 generatedPages 的长度
         },
       });
 
