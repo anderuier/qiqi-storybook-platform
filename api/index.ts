@@ -2770,6 +2770,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               completedItems: task.total_items,
               totalItems: task.total_items,
               message: '所有图片生成完成',
+              pages: taskData.pages, // 返回所有已生成的图片
+              generatedPages: taskData.generatedPages, // 返回本次新生成的图片
             },
           });
         }
@@ -2807,6 +2809,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               completedItems: totalItems,
               totalItems: totalItems,
               message: '所有图片生成完成',
+              pages: taskData.pages, // 返回所有已生成的图片
+              generatedPages: taskData.generatedPages, // 返回本次新生成的图片
             },
           });
         }
@@ -2844,6 +2848,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               completedItems: totalItems,
               totalItems: totalItems,
               message: '所有图片生成完成',
+              pages: taskData.pages, // 返回所有已生成的图片
+              generatedPages: taskData.generatedPages, // 返回本次新生成的图片
             },
           });
         }
