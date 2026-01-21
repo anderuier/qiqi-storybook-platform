@@ -632,6 +632,11 @@ export default function Create() {
                   <ImageIcon className="w-6 h-6 text-coral" />
                   生成插图
                 </h2>
+                {selectedArtStyle && (
+                  <p className="text-sm text-muted-foreground">
+                    当前风格：{artStyles.find(s => s.id === selectedArtStyle)?.name || selectedArtStyle}
+                  </p>
+                )}
 
                 <div className="text-center py-8">
                   {create.imageTask.status === "processing" && (
