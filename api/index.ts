@@ -2869,30 +2869,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (page.image_url && !forceRegenerate) {
           console.log('[Continue 图片生成] 跳过已有图片的页面:', nextPageNumber);
 
-          // 确保 taskData.pages 包含当前页的图片（用于前端同步）
-          const pageExists = taskData.pages.find((p: any) => p.pageNumber === nextPageNumber);
-          if (!pageExists) {
-            taskData.pages.push({
-              pageNumber: nextPageNumber,
-              imageUrl: page.image_url,
-            });
-          }
+          // 使用 JSONB 函数原子性地追加到 pages 数组（但不添加到 generatedPages，因为这是旧图片）
+          const pageEntry = JSON.stringify({
+            pageNumber: nextPageNumber,
+            imageUrl: page.image_url,
+          });
+
+          await sql`
+            UPDATE tasks
+            SET result = jsonb_set(
+              COALESCE(result, '{}'::jsonb),
+              '{pages}',
+              COALESCE(result->'pages', '[]'::jsonb) || ${pageEntry}::jsonb,
+              true
+            ),
+            updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${taskId}
+          `;
 
           // 判断任务是否完成：当已完成最后一页时任务完成
           const isCompleted = nextPageNumber >= totalItems;
-
-          // 只有在不是最后一页的情况下才继续处理，否则返回完成状态
           const finalStatus = isCompleted ? 'completed' : 'processing';
 
           // 如果任务完成，更新任务状态和 work 的 current_step
-          // 同时也要更新 result（确保 generatedPages 被保存）
           if (isCompleted) {
-            // 同时更新 tasks.status、works.current_step 和 result
             await sql`
               UPDATE tasks
               SET status = 'completed',
                   progress = 100,
-                  result = ${JSON.stringify(taskData)},
                   updated_at = CURRENT_TIMESTAMP
               WHERE id = ${taskId}
             `;
@@ -2904,17 +2908,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 WHERE id = ${taskData.workId}
               `;
             }
-          } else {
-            // 即使未完成，也要更新 result（确保 generatedPages 被保存）
-            await sql`
-              UPDATE tasks
-              SET result = ${JSON.stringify(taskData)},
-                  updated_at = CURRENT_TIMESTAMP
-              WHERE id = ${taskId}
-            `;
           }
 
-          console.log(`[Continue 图片生成 跳过] 返回数据: generatedPages=${taskData.generatedPages.length}, progress=${newProgress}, status=${finalStatus}`);
+          // 读取更新后的数据用于返回
+          const updatedTask = await sql<{ result: any }[]>`
+            SELECT result FROM tasks WHERE id = ${taskId}
+          `;
+          const updatedResult = updatedTask.rows[0].result as any;
+
+          console.log(`[Continue 图片生成 跳过] 返回数据: generatedPages=${updatedResult.generatedPages?.length || 0}, progress=${newProgress}, status=${finalStatus}`);
 
           return res.status(200).json({
             success: true,
@@ -2927,8 +2929,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               progress: newProgress,
               completedItems: nextPageNumber,
               totalItems: totalItems,
-              pages: taskData.pages, // 返回所有已生成的图片，用于前端同步
-              generatedPages: taskData.generatedPages, // 新增：返回本次新生成的图片（用于进度计数）
+              pages: updatedResult.pages || [], // 返回所有已生成的图片，用于前端同步
+              generatedPages: updatedResult.generatedPages || [], // 返回本次新生成的图片（用于进度计数）
             },
           });
         }
@@ -3040,30 +3042,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // 注意：completed_items 在开始处理时已经通过原子更新
           // 这里只需要更新 status 和 result
 
-          // 更新任务结果
-          taskData.pages.push({
-            pageNumber: nextPageNumber,
-            imageUrl: result.imageUrl,
-          });
-
-          // 同时添加到 generatedPages（记录本次新生成的图片）
-          taskData.generatedPages.push({
-            pageNumber: nextPageNumber,
-            imageUrl: result.imageUrl,
-          });
-
-          console.log(`[Continue 图片生成] 第 ${nextPageNumber} 页生成成功，generatedPages 现在有 ${taskData.generatedPages.length} 张`);
-
           // 判断任务是否完成：当已完成最后一页时任务完成
           const isCompleted = nextPageNumber >= totalItems;
+
+          // 使用 JSONB 函数原子性地追加到 pages 和 generatedPages 数组
+          // 这样可以防止并发请求相互覆盖
+          const newPageEntry = JSON.stringify({
+            pageNumber: nextPageNumber,
+            imageUrl: result.imageUrl,
+          });
 
           await sql`
             UPDATE tasks
             SET status = ${isCompleted ? 'completed' : 'processing'},
-                result = ${JSON.stringify(taskData)},
+                result = jsonb_set(
+                  COALESCE(result, '{}'::jsonb),
+                  '{pages}',
+                  COALESCE(result->'pages', '[]'::jsonb) || ${newPageEntry}::jsonb,
+                  true
+                ),
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ${taskId}
           `;
+
+          // 更新 generatedPages（记录本次新生成的图片）
+          await sql`
+            UPDATE tasks
+            SET result = jsonb_set(
+              result,
+              '{generatedPages}',
+              COALESCE(result->'generatedPages', '[]'::jsonb) || ${newPageEntry}::jsonb,
+              true
+            ),
+            updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${taskId}
+          `;
+
+          // 读取更新后的 generatedPages 数量用于日志
+          const updatedTask = await sql<{ result: any }[]>`
+            SELECT result FROM tasks WHERE id = ${taskId}
+          `;
+          const updatedResult = updatedTask.rows[0].result as any;
+          console.log(`[Continue 图片生成] 第 ${nextPageNumber} 页生成成功，generatedPages 现在有 ${updatedResult.generatedPages?.length || 0} 张`);
 
           // 如果任务完成，更新 work 的 current_step
           if (isCompleted && taskData.workId) {
@@ -3074,7 +3094,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             `;
           }
 
-          console.log(`[Continue 图片生成] 返回数据: generatedPages=${taskData.generatedPages.length}, progress=${newProgress}, status=${isCompleted ? 'completed' : 'processing'}`);
+          // 返回最新数据（从数据库读取的 generatedPages）
+          const finalGeneratedPages = updatedResult.generatedPages || [];
+          console.log(`[Continue 图片生成] 返回数据: generatedPages=${finalGeneratedPages.length}, progress=${newProgress}, status=${isCompleted ? 'completed' : 'processing'}`);
 
           return res.status(200).json({
             success: true,
@@ -3088,8 +3110,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               totalItems: totalItems,
               provider: result.provider,
               model: result.model,
-              pages: taskData.pages, // 返回所有已生成的图片，用于前端同步
-              generatedPages: taskData.generatedPages, // 新增：返回本次新生成的图片（用于进度计数）
+              pages: updatedResult.pages || [], // 返回所有已生成的图片，用于前端同步
+              generatedPages: finalGeneratedPages, // 返回本次新生成的图片（用于进度计数）
             },
           });
         } catch (fetchError: any) {
