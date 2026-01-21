@@ -4,6 +4,92 @@
 
 ---
 
+## [2026-01-22] 首页在线演示书页翻页效果
+
+### 本次更新摘要
+完成首页在线演示组件的重构，实现真实的书页翻页动画效果。配置本地开发环境直接请求 Vercel API，添加用户默认头像。
+
+### 详细内容
+
+#### 1. 首页在线演示组件重构
+
+**设计目标**：
+- 左半边显示 1:1 尺寸的绘本图片
+- 右半边显示绘本文字内容
+- 翻页轴心在书本中线（图片和文字分界线）
+- 模拟真实书页翻页动画
+
+**技术实现**：
+
+使用 CSS 3D 变换和 Framer Motion 实现翻页效果：
+
+```typescript
+// 向后翻页（下一页）
+<motion.div
+  style={{ transformOrigin: "left center" }}
+  initial={{ rotateY: 0 }}
+  animate={{ rotateY: -180 }}
+>
+  {/* 正面：当前页文字 */}
+  <div style={{ backfaceVisibility: "hidden" }}>...</div>
+  {/* 背面：下一页图片 */}
+  <div style={{ transform: "rotateY(180deg)" }}>...</div>
+</motion.div>
+
+// 向前翻页（上一页）
+<motion.div
+  style={{ transformOrigin: "right center" }}
+  initial={{ rotateY: 0 }}
+  animate={{ rotateY: 180 }}
+>
+  {/* 正面：当前页图片 */}
+  <div style={{ backfaceVisibility: "hidden" }}>...</div>
+  {/* 背面：上一页文字 */}
+  <div style={{ transform: "rotateY(-180deg)" }}>...</div>
+</motion.div>
+```
+
+**新增功能**：
+- 键盘方向键翻页支持（← →）
+- 自动播放功能（4秒间隔）
+- 翻页阴影动画效果
+- 可爱的渐变文字样式
+
+**文件修改**：`client/src/components/DemoSection.tsx`
+
+#### 2. 本地开发环境配置
+
+**问题**：本地 `pnpm dev` 启动后，登录、保存草稿等功能无法使用
+
+**原因**：Vite 代理配置超时，网络无法直接访问 Vercel
+
+**解决方案**：修改 API 基础 URL 配置，开发环境直接请求 Vercel API
+
+```typescript
+// client/src/lib/api.ts
+const API_BASE_URL = import.meta.env.DEV
+  ? 'https://storybook-gamma-ten.vercel.app/api'
+  : '/api';
+```
+
+#### 3. 用户默认头像
+
+**问题**：浏览器控制台显示 404 错误，缺少 `avatar-default.png`
+
+**解决方案**：添加默认头像图片到 `client/public/images/avatar-default.png`
+
+**Commit**: `b0e6188`
+
+### 提交记录
+
+| Commit ID | 说明 |
+|-----------|------|
+| b0e6188 | 新增：添加用户默认头像图片 |
+| 28a286c | 配置：开发环境直接请求 Vercel API |
+| 9773b87 | 新增：首页在线演示组件书页翻页效果 |
+
+---
+
 ## [2026-01-21] 图片生成进度计数修复（JSONB 原子操作）
 
 ### 本次更新摘要
