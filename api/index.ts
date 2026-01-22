@@ -1351,16 +1351,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (workIds.length > 0) {
         // 查询每个作品的第一张已生成的图片
-        // 使用展开语法将数组传递给 IN 子句
-        const placeholders = workIds.map((_: any, i: number) => `$${i + 1}`).join(',');
-        const imagesResult = await sql.query(
+        // 使用 sql.unsafe 构建带参数的 IN 查询
+        const idList = workIds.map((id: string) => `'${id.replace(/'/g, "''")}'`).join(',');
+        const imagesResult = await sql.unsafe(
           `SELECT DISTINCT ON (sb.work_id) sp.image_url, sb.work_id
            FROM storyboard_pages sp
            JOIN storyboards sb ON sp.storyboard_id = sb.id
-           WHERE sb.work_id IN (${placeholders})
+           WHERE sb.work_id IN (${idList})
            AND sp.image_url IS NOT NULL
-           ORDER BY sb.work_id, sp.page_number ASC`,
-          workIds
+           ORDER BY sb.work_id, sp.page_number ASC`
         );
 
         for (const row of imagesResult.rows) {
