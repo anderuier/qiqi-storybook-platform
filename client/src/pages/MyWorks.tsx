@@ -372,7 +372,7 @@ function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, 
       {/* 封面图 */}
       <div className="relative aspect-[4/3] bg-gradient-to-br from-cream to-coral/10 overflow-hidden">
         <img
-          src={work.coverUrl || "/images/demo-book.png"}
+          src={work.firstImageUrl || work.coverUrl || "/images/draft-default.png"}
           alt={work.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />

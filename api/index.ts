@@ -1345,6 +1345,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `;
       }
 
+      // 为每个作品查询第一张分镜图片（用于草稿预览）
+      const workIds = result.rows.map((row: any) => row.id);
+      const firstImages: Record<string, string> = {};
+
+      if (workIds.length > 0) {
+        // 查询每个作品的第一张已生成的图片
+        const imagesResult = await sql`
+          SELECT DISTINCT ON (sb.work_id) sp.image_url, sb.work_id
+          FROM storyboard_pages sp
+          JOIN storyboards sb ON sp.storyboard_id = sb.id
+          WHERE sb.work_id IN ${sql(workIds)}
+          AND sp.image_url IS NOT NULL
+          ORDER BY sb.work_id, sp.page_number ASC
+        `;
+
+        for (const row of imagesResult.rows) {
+          firstImages[row.work_id] = row.image_url;
+        }
+      }
+
       return res.status(200).json({
         success: true,
         data: {
@@ -1357,6 +1377,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             status: row.status,
             currentStep: row.current_step,
             coverUrl: row.cover_url,
+            firstImageUrl: firstImages[row.id] || null, // 第一张分镜图片
             pageCount: row.page_count || 0,
             createdAt: row.created_at,
             updatedAt: row.updated_at,

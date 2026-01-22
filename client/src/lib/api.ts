@@ -372,6 +372,7 @@ export interface Work {
   workId: string;
   title: string;
   coverUrl?: string;
+  firstImageUrl?: string | null; // 第一张分镜图片（用于草稿预览）
   status: 'draft' | 'published';
   pageCount: number;
   createdAt: string;

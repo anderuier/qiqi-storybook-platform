@@ -26,16 +26,8 @@ export default defineConfig({
   server: {
     port: 3000,
     strictPort: false, // Will find next available port if 3000 is busy
-    host: true,
-    allowedHosts: [
-      ".manuspre.computer",
-      ".manus.computer",
-      ".manus-asia.computer",
-      ".manuscomputer.ai",
-      ".manusvm.computer",
-      "localhost",
-      "127.0.0.1",
-    ],
+    host: "0.0.0.0", // 监听所有网络接口，支持局域网访问
+    allowedHosts: "all", // 允许所有主机访问（包括局域网 IP）
     fs: {
       strict: true,
       deny: ["**/.*"],
