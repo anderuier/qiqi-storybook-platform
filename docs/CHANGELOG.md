@@ -4,7 +4,93 @@
 
 ---
 
-## [2026-01-22] 首页在线演示书页翻页效果
+## [2026-01-22] 局域网开发配置与草稿列表图片预览
+
+### 本次更新摘要
+完成开发环境局域网访问配置，解决手机端无法访问本地开发服务器的问题。实现草稿列表图片预览功能，已生成图片的草稿显示第一张分镜图，未生成的显示默认占位图。
+
+### 详细内容
+
+#### 1. 局域网开发访问配置
+
+**问题**：本地 `pnpm dev` 启动后，手机端无法通过局域网 IP 访问开发服务器。
+
+**原因**：
+1. Vite 配置中 `allowedHosts` 只允许特定域名
+2. Windows 防火墙阻止了 Node.js 的入站连接
+
+**解决方案**：
+
+1. **修改 `vite.config.ts`**：
+   ```typescript
+   server: {
+     port: 3000,
+     host: "0.0.0.0", // 监听所有网络接口
+     allowedHosts: "all", // 允许所有主机访问
+   }
+   ```
+
+2. **添加防火墙规则**：
+   ```powershell
+   New-NetFirewallRule -DisplayName 'Node.js Development Server' `
+     -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
+   ```
+
+**文件修改**：`vite.config.ts`
+
+#### 2. 草稿列表图片预览功能
+
+**需求**：
+- 已生成分镜图片的草稿 → 显示第一张分镜图
+- 未生成图片的草稿 → 显示默认占位图
+
+**技术实现**：
+
+使用 `LEFT JOIN LATERAL` 子查询在主查询中获取第一张分镜图片：
+
+```sql
+SELECT
+  w.*, sp.image_url as first_image_url
+FROM works w
+LEFT JOIN LATERAL (
+  SELECT sp.image_url, sb.work_id
+  FROM storyboard_pages sp
+  JOIN storyboards sb ON sp.storyboard_id = sb.id
+  WHERE sb.work_id = w.id AND sp.image_url IS NOT NULL
+  ORDER BY sp.page_number ASC
+  LIMIT 1
+) sp ON true
+WHERE w.user_id = ${userId}
+```
+
+**文件修改**：
+- `api/index.ts` - 后端返回 `firstImageUrl` 字段
+- `client/src/lib/api.ts` - Work 接口添加 `firstImageUrl`
+- `client/src/pages/MyWorks.tsx` - 显示逻辑：`firstImageUrl || coverUrl || "/images/draft-default.png"`
+- `client/public/images/draft-default.png` - 新增默认占位图
+
+#### 3. Vercel 部署问题修复
+
+| 尝试 | 问题 | 原因 |
+|------|------|------|
+| 第1次 | `sql(workIds)` 语法错误 | Vercel Postgres 不支持 |
+| 第2次 | `sql.query` 不存在 | `sql` 是模板标签函数 |
+| 第3次 | `sql.unsafe` 不存在 | `sql` 对象无此方法 |
+| **最终** | ✅ `LEFT JOIN LATERAL` 子查询 | 直接在主查询中获取 |
+
+### 提交记录
+
+| Commit ID | 说明 |
+|-----------|------|
+| 3ea7f98 | 修复：使用 LEFT JOIN LATERAL 获取第一张分镜图片 |
+| 1e86761 | 修复：使用 sql.unsafe 方法构建 IN 查询（第3次尝试） |
+| 991329a | 修复：Vercel 部署时 SQL 查询语法错误（第2次尝试） |
+| 6d42381 | 新增：草稿列表显示分镜图片预览 |
+| eec6845 | 优化：首页在线演示书页翻页效果 |
+
+---
+
+## [2026-01-22] 首页在线演示书页翻页效果（早间更新）
 
 ### 本次更新摘要
 完成首页在线演示组件的重构，实现真实的书页翻页动画效果。配置本地开发环境直接请求 Vercel API，添加用户默认头像。
