@@ -1329,42 +1329,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let result;
       if (status === 'all') {
         result = await sql`
-          SELECT id, title, status, current_step, cover_url, page_count, views, likes, created_at, updated_at
-          FROM works
-          WHERE user_id = ${userPayload.userId}
-          ORDER BY updated_at DESC
+          SELECT
+            w.id, w.title, w.status, w.current_step, w.cover_url, w.page_count, w.views, w.likes, w.created_at, w.updated_at,
+            sp.image_url as first_image_url
+          FROM works w
+          LEFT JOIN LATERAL (
+            SELECT sp.image_url, sb.work_id
+            FROM storyboard_pages sp
+            JOIN storyboards sb ON sp.storyboard_id = sb.id
+            WHERE sb.work_id = w.id AND sp.image_url IS NOT NULL
+            ORDER BY sp.page_number ASC
+            LIMIT 1
+          ) sp ON true
+          WHERE w.user_id = ${userPayload.userId}
+          ORDER BY w.updated_at DESC
           LIMIT 50
         `;
       } else {
         result = await sql`
-          SELECT id, title, status, current_step, cover_url, page_count, views, likes, created_at, updated_at
-          FROM works
-          WHERE user_id = ${userPayload.userId} AND status = ${status}
-          ORDER BY updated_at DESC
+          SELECT
+            w.id, w.title, w.status, w.current_step, w.cover_url, w.page_count, w.views, w.likes, w.created_at, w.updated_at,
+            sp.image_url as first_image_url
+          FROM works w
+          LEFT JOIN LATERAL (
+            SELECT sp.image_url, sb.work_id
+            FROM storyboard_pages sp
+            JOIN storyboards sb ON sp.storyboard_id = sb.id
+            WHERE sb.work_id = w.id AND sp.image_url IS NOT NULL
+            ORDER BY sp.page_number ASC
+            LIMIT 1
+          ) sp ON true
+          WHERE w.user_id = ${userPayload.userId} AND w.status = ${status}
+          ORDER BY w.updated_at DESC
           LIMIT 50
         `;
-      }
-
-      // 为每个作品查询第一张分镜图片（用于草稿预览）
-      const workIds = result.rows.map((row: any) => row.id);
-      const firstImages: Record<string, string> = {};
-
-      if (workIds.length > 0) {
-        // 查询每个作品的第一张已生成的图片
-        // 使用 sql.unsafe 构建带参数的 IN 查询
-        const idList = workIds.map((id: string) => `'${id.replace(/'/g, "''")}'`).join(',');
-        const imagesResult = await sql.unsafe(
-          `SELECT DISTINCT ON (sb.work_id) sp.image_url, sb.work_id
-           FROM storyboard_pages sp
-           JOIN storyboards sb ON sp.storyboard_id = sb.id
-           WHERE sb.work_id IN (${idList})
-           AND sp.image_url IS NOT NULL
-           ORDER BY sb.work_id, sp.page_number ASC`
-        );
-
-        for (const row of imagesResult.rows) {
-          firstImages[row.work_id] = row.image_url;
-        }
       }
 
       return res.status(200).json({
@@ -1379,7 +1377,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             status: row.status,
             currentStep: row.current_step,
             coverUrl: row.cover_url,
-            firstImageUrl: firstImages[row.id] || null, // 第一张分镜图片
+            firstImageUrl: row.first_image_url || null, // 第一张分镜图片
             pageCount: row.page_count || 0,
             createdAt: row.created_at,
             updatedAt: row.updated_at,
