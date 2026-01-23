@@ -7,107 +7,34 @@
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import {
-  BookOpen,
-  Palette,
   Mic2,
   Sparkles,
   ChevronRight,
   ChevronLeft,
-  Wand2,
-  FileText,
-  ScrollText,
   Check,
-  Upload,
-  Volume2,
   Loader2,
-  RefreshCw,
-  Eye,
-  Image as ImageIcon
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreate } from "@/hooks/useCreate";
-import { Progress } from "@/components/ui/progress";
 import { ImageProvider } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-
-// 创作模式
-const createModes = [
-  {
-    id: "theme",
-    icon: Wand2,
-    title: "主题故事",
-    description: "输入一个主题，AI为您生成完整的童话故事",
-    example: "例如：小兔子的森林冒险、勇敢的小消防员",
-    color: "coral"
-  },
-  {
-    id: "poem",
-    icon: ScrollText,
-    title: "古诗词改编",
-    description: "选择一首古诗词，AI将其改编成有趣的儿童故事",
-    example: "例如：静夜思、春晓、咏鹅",
-    color: "mint"
-  },
-  {
-    id: "custom",
-    icon: FileText,
-    title: "自定义文本",
-    description: "输入您自己的故事文本，AI为其生成精美插图",
-    example: "适合已有故事内容的家长",
-    color: "sunny"
-  }
-];
-
-// 艺术风格
-const artStyles = [
-  { id: "watercolor", name: "水彩手绘", image: "/images/demo-book.png" },
-  { id: "cartoon", name: "卡通动漫", image: "/images/demo-book.png" },
-  { id: "flat", name: "扁平插画", image: "/images/demo-book.png" },
-  { id: "3d", name: "3D渲染", image: "/images/demo-book.png" },
-  { id: "anime", name: "动漫风格", image: "/images/demo-book.png" },
-  { id: "oil", name: "油画风格", image: "/images/demo-book.png" },
-];
-
-// 故事风格
-const storyStyles = [
-  { id: "warm", name: "温馨感人" },
-  { id: "adventure", name: "冒险刺激" },
-  { id: "funny", name: "幽默搞笑" },
-  { id: "educational", name: "寓教于乐" },
-  { id: "fantasy", name: "奇幻梦幻" },
-  { id: "friendship", name: "友情故事" },
-];
-
-// 语音选项
-const voiceOptions = [
-  { id: "female_gentle", name: "温柔女声", description: "甜美温柔的女性配音", icon: Volume2 },
-  { id: "female_lively", name: "活泼女声", description: "活泼开朗的女性配音", icon: Volume2 },
-  { id: "male_warm", name: "温暖男声", description: "温暖亲切的男性配音", icon: Volume2 },
-  { id: "child_cute", name: "童声朗读", description: "活泼可爱的儿童配音", icon: Volume2 },
-  { id: "clone", name: "克隆我的声音", description: "上传30秒录音，AI克隆您的声音", icon: Mic2 },
-];
-
-// 图片生成提供商选项
-const imageProviders: Array<{
-  id: ImageProvider;
-  name: string;
-  description: string;
-  recommended?: boolean;
-}> = [
-  { id: "siliconflow", name: "硅基流动", description: "国内服务，免费额度，FLUX 模型", recommended: true },
-  { id: "imagen", name: "Google Imagen", description: "Google AI 图片生成" },
-  { id: "dalle", name: "DALL-E", description: "OpenAI 出品" },
-  { id: "stability", name: "Stability AI", description: "Stable Diffusion 官方" },
-  { id: "jimeng", name: "即梦", description: "字节跳动旗下" },
-  { id: "custom", name: "自定义", description: "使用自定义 API" },
-];
+// 创作流程子组件
+import {
+  StepIndicator,
+  InputStep,
+  StoryStep,
+  StoryboardStep,
+  ImagesStep,
+  VoiceStep,
+  totalSteps,
+} from "@/components/create";
 
 export default function Create() {
   const [location, setLocation] = useLocation();
@@ -129,8 +56,6 @@ export default function Create() {
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
   const [isRestoringDraft, setIsRestoringDraft] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null); // 图片预览
-
-  const totalSteps = 5; // 输入 -> 故事 -> 分镜 -> 图片 -> 预览
 
   // 检查登录状态
   useEffect(() => {
@@ -347,36 +272,7 @@ export default function Create() {
           </motion.div>
 
           {/* 步骤指示器 */}
-          <div className="flex items-center justify-center gap-2 mb-10">
-            {["输入", "故事", "分镜", "图片", "完成"].map((label, index) => {
-              const step = index + 1;
-              return (
-                <div key={step} className="flex items-center">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
-                        step === currentStep
-                          ? "bg-coral text-white shadow-lg shadow-coral/25"
-                          : step < currentStep
-                          ? "bg-mint text-white"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {step < currentStep ? <Check className="w-5 h-5" /> : step}
-                    </div>
-                    <span className="text-xs mt-1 text-muted-foreground">{label}</span>
-                  </div>
-                  {step < 5 && (
-                    <div
-                      className={`w-8 md:w-12 h-1 mx-1 rounded ${
-                        step < currentStep ? "bg-mint" : "bg-muted"
-                      }`}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <StepIndicator currentStep={currentStep} />
 
           {/* 错误提示 */}
           {create.error && (
@@ -409,392 +305,72 @@ export default function Create() {
           >
             {/* 步骤1：输入信息 */}
             {currentStep === 1 && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <BookOpen className="w-6 h-6 text-coral" />
-                  创作信息
-                </h2>
-
-                {/* 孩子信息 */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">孩子的名字</label>
-                    <input
-                      type="text"
-                      value={childName}
-                      onChange={(e) => setChildName(e.target.value)}
-                      placeholder="输入孩子的名字"
-                      className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">孩子的年龄</label>
-                    <select
-                      value={childAge}
-                      onChange={(e) => setChildAge(Number(e.target.value))}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
-                    >
-                      {[3, 4, 5, 6].map((age) => (
-                        <option key={age} value={age}>{age}岁</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* 创作模式 */}
-                <div>
-                  <label className="block text-sm font-medium mb-3">选择创作模式</label>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    {createModes.map((mode) => {
-                      const Icon = mode.icon;
-                      const isSelected = selectedMode === mode.id;
-                      return (
-                        <div
-                          key={mode.id}
-                          onClick={() => setSelectedMode(mode.id)}
-                          className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                            isSelected
-                              ? "border-coral bg-coral/5"
-                              : "border-border hover:border-muted-foreground/30"
-                          }`}
-                        >
-                          <Icon className={`w-6 h-6 mb-2 ${isSelected ? "text-coral" : "text-muted-foreground"}`} />
-                          <h3 className="font-semibold text-sm">{mode.title}</h3>
-                          <p className="text-xs text-muted-foreground mt-1">{mode.description}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 故事主题/内容 */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {selectedMode === "custom" ? "故事内容" : "故事主题"}
-                  </label>
-                  <textarea
-                    value={storyInput}
-                    onChange={(e) => setStoryInput(e.target.value)}
-                    placeholder={
-                      selectedMode === "theme"
-                        ? "请输入故事主题，例如：小兔子的森林冒险..."
-                        : selectedMode === "poem"
-                        ? "请输入古诗词标题，例如：静夜思..."
-                        : "请输入您的故事内容..."
-                    }
-                    className="w-full h-32 p-4 rounded-2xl border-2 border-border focus:border-coral focus:outline-none resize-none"
-                  />
-                </div>
-
-                {/* 故事风格和长度 */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">故事风格</label>
-                    <select
-                      value={selectedStoryStyle}
-                      onChange={(e) => setSelectedStoryStyle(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
-                    >
-                      {storyStyles.map((style) => (
-                        <option key={style.id} value={style.id}>{style.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">故事长度</label>
-                    <select
-                      value={storyLength}
-                      onChange={(e) => setStoryLength(e.target.value as any)}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
-                    >
-                      <option value="short">短篇 (4-6页)</option>
-                      <option value="medium">中篇 (6-10页)</option>
-                      <option value="long">长篇 (10-15页)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
+              <InputStep
+                childName={childName}
+                setChildName={setChildName}
+                childAge={childAge}
+                setChildAge={setChildAge}
+                selectedMode={selectedMode}
+                setSelectedMode={setSelectedMode}
+                storyInput={storyInput}
+                setStoryInput={setStoryInput}
+                selectedStoryStyle={selectedStoryStyle}
+                setSelectedStoryStyle={setSelectedStoryStyle}
+                storyLength={storyLength}
+                setStoryLength={setStoryLength}
+              />
             )}
 
             {/* 步骤2：查看生成的故事 */}
             {currentStep === 2 && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <FileText className="w-6 h-6 text-mint" />
-                  AI 生成的故事
-                </h2>
-
-                {create.isLoading ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <Loader2 className="w-12 h-12 animate-spin text-coral mb-4" />
-                    <p className="text-muted-foreground">AI 正在创作故事...</p>
-                    <p className="text-sm text-muted-foreground mt-2">预计需要 10-20 秒</p>
-                  </div>
-                ) : create.story ? (
-                  <>
-                    <div className="bg-cream/30 rounded-2xl p-6">
-                      <h3 className="text-lg font-bold mb-4">{create.story.title}</h3>
-                      <div className="prose prose-sm max-w-none whitespace-pre-wrap">
-                        {create.story.content}
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>字数：{create.story.wordCount} 字</span>
-                      <span>预计页数：{create.story.estimatedPages} 页</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        create.reset();
-                        setCurrentStep(1);
-                      }}
-                      className="rounded-full"
-                    >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      重新生成
-                    </Button>
-                  </>
-                ) : null}
-              </div>
+              <StoryStep
+                story={create.story}
+                isLoading={create.isLoading}
+                onRegenerate={() => {
+                  create.reset();
+                  setCurrentStep(1);
+                }}
+              />
             )}
 
             {/* 步骤3：分镜和选择艺术风格 */}
             {currentStep === 3 && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <Palette className="w-6 h-6 text-sunny" />
-                  分镜剧本 & 艺术风格
-                </h2>
-
-                {create.isLoading ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <Loader2 className="w-12 h-12 animate-spin text-mint mb-4" />
-                    <p className="text-muted-foreground">AI 正在生成分镜剧本...</p>
-                  </div>
-                ) : create.storyboard ? (
-                  <>
-                    {/* 分镜预览 */}
-                    <div className="bg-cream/30 rounded-2xl p-4">
-                      <h3 className="font-semibold mb-3">分镜剧本 ({create.storyboard.pageCount} 页)</h3>
-                      <div className="space-y-3 max-h-60 overflow-y-auto">
-                        {create.storyboard.pages.map((page) => (
-                          <div key={page.pageNumber} className="bg-white rounded-xl p-3 text-sm">
-                            <span className="font-medium text-coral">第 {page.pageNumber} 页：</span>
-                            <span className="text-muted-foreground ml-2">{page.text}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 艺术风格选择 */}
-                    <div>
-                      <label className="block text-sm font-medium mb-3">选择艺术风格</label>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {artStyles.map((style) => {
-                          const isSelected = selectedArtStyle === style.id;
-                          return (
-                            <div
-                              key={style.id}
-                              onClick={() => setSelectedArtStyle(style.id)}
-                              className={`relative rounded-2xl overflow-hidden cursor-pointer transition-all ${
-                                isSelected ? "ring-4 ring-sunny shadow-lg" : "hover:shadow-md"
-                              }`}
-                            >
-                              <div className="aspect-square bg-gradient-to-br from-cream to-mint/10">
-                                <img
-                                  src={style.image}
-                                  alt={style.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                                <span className="text-white font-medium text-sm">{style.name}</span>
-                              </div>
-                              {isSelected && (
-                                <div className="absolute top-2 right-2 w-6 h-6 bg-sunny rounded-full flex items-center justify-center">
-                                  <Check className="w-4 h-4 text-white" />
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </>
-                ) : null}
-              </div>
+              <StoryboardStep
+                storyboard={create.storyboard}
+                isLoading={create.isLoading}
+                selectedArtStyle={selectedArtStyle}
+                setSelectedArtStyle={setSelectedArtStyle}
+              />
             )}
 
             {/* 步骤4：图片生成进度 */}
             {currentStep === 4 && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <ImageIcon className="w-6 h-6 text-coral" />
-                  生成插图
-                </h2>
-                {selectedArtStyle && (
-                  <p className="text-sm text-muted-foreground">
-                    当前风格：{artStyles.find(s => s.id === selectedArtStyle)?.name || selectedArtStyle}
-                  </p>
-                )}
-
-                <div className="text-center py-8">
-                  {create.imageTask.status === "processing" && (
-                    <>
-                      <Loader2 className="w-16 h-16 animate-spin text-coral mx-auto mb-4" />
-                      <p className="text-lg font-medium mb-2">
-                        正在生成第 {Math.min(create.imageTask.completedPages + 1, create.imageTask.totalPages)} / {create.imageTask.totalPages} 张图片
-                      </p>
-                      <Progress value={create.imageTask.progress} className="w-full max-w-md mx-auto mb-4" />
-                      <p className="text-sm text-muted-foreground">
-                        AI 正在为每一页绘制精美插图，请耐心等待...
-                      </p>
-                    </>
-                  )}
-
-                  {create.imageTask.status === "completed" && (
-                    <>
-                      <div className="w-16 h-16 bg-mint rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Check className="w-8 h-8 text-white" />
-                      </div>
-                      <p className="text-lg font-medium mb-2">所有插图生成完成！</p>
-                      <p className="text-sm text-muted-foreground">
-                        共生成 {create.imageTask.totalPages} 张精美插图
-                      </p>
-                    </>
-                  )}
-
-                  {create.imageTask.status === "failed" && (
-                    <>
-                      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-2xl">😢</span>
-                      </div>
-                      <p className="text-lg font-medium mb-2 text-red-600">图片生成失败</p>
-                      <Button
-                        onClick={() => selectedArtStyle && create.startImageGeneration(selectedArtStyle, selectedProvider)}
-                        className="mt-4"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        重试
-                      </Button>
-                    </>
-                  )}
-                </div>
-
-                {/* 已生成的图片预览 */}
-                {Object.keys(create.pageImages).length > 0 && (
-                  <>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-medium text-muted-foreground">
-                        已生成 {create.imageTask.completedPages} / {create.imageTask.totalPages} 张图片
-                      </h3>
-                      {create.imageTask.status === "completed" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            if (selectedArtStyle && window.confirm('确定要重新生成所有图片吗？')) {
-                              await create.startImageGeneration(selectedArtStyle, selectedProvider, true);
-                            }
-                          }}
-                          className="rounded-full"
-                        >
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                          全部重新生成
-                        </Button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                      {Object.entries(create.pageImages)
-                        .sort(([a], [b]) => Number(a) - Number(b))
-                        .map(([pageNum, url]) => (
-                        <div
-                          key={pageNum}
-                          className="relative aspect-square rounded-xl overflow-hidden bg-cream group cursor-pointer"
-                          onClick={() => setPreviewImage(url)}
-                        >
-                          <img
-                            src={url}
-                            alt={`第${pageNum}页`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = '/images/image-placeholder.png';
-                              e.currentTarget.alt = '图片加载失败';
-                            }}
-                          />
-                          {create.imageTask.status === "completed" && (
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (selectedArtStyle && window.confirm(`确定要重新生成第 ${pageNum} 张图片吗？`)) {
-                                    create.generateImage(Number(pageNum), selectedArtStyle, selectedProvider);
-                                  }
-                                }}
-                                className="rounded-full"
-                              >
-                                <RefreshCw className="w-3 h-3 mr-1" />
-                                重新生成
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+              <ImagesStep
+                imageTask={create.imageTask}
+                pageImages={create.pageImages}
+                selectedArtStyle={selectedArtStyle}
+                selectedProvider={selectedProvider}
+                onRetry={() => selectedArtStyle && create.startImageGeneration(selectedArtStyle, selectedProvider)}
+                onRegenerateAll={async () => {
+                  if (selectedArtStyle && window.confirm('确定要重新生成所有图片吗？')) {
+                    await create.startImageGeneration(selectedArtStyle, selectedProvider, true);
+                  }
+                }}
+                onRegenerateOne={(pageNum) => {
+                  if (selectedArtStyle && window.confirm(`确定要重新生成第 ${pageNum} 张图片吗？`)) {
+                    create.generateImage(pageNum, selectedArtStyle, selectedProvider);
+                  }
+                }}
+                onPreviewImage={setPreviewImage}
+              />
             )}
 
             {/* 步骤5：选择语音并完成 */}
             {currentStep === 5 && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <Mic2 className="w-6 h-6 text-coral" />
-                  选择朗读语音
-                </h2>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  {voiceOptions.map((voice) => {
-                    const Icon = voice.icon;
-                    const isSelected = selectedVoice === voice.id;
-                    return (
-                      <div
-                        key={voice.id}
-                        onClick={() => setSelectedVoice(voice.id)}
-                        className={`p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${
-                          isSelected
-                            ? "border-coral bg-coral/5"
-                            : "border-border hover:border-muted-foreground/30"
-                        }`}
-                      >
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          isSelected ? "bg-coral/20" : "bg-muted"
-                        }`}>
-                          <Icon className={`w-6 h-6 ${isSelected ? "text-coral" : "text-muted-foreground"}`} />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold mb-1">{voice.name}</h3>
-                          <p className="text-sm text-muted-foreground">{voice.description}</p>
-                          {voice.id === "clone" && isSelected && (
-                            <Button variant="outline" size="sm" className="mt-3 rounded-full">
-                              <Upload className="w-4 h-4 mr-2" />
-                              上传录音
-                            </Button>
-                          )}
-                        </div>
-                        {isSelected && <Check className="w-5 h-5 text-coral" />}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <p className="text-sm text-muted-foreground text-center">
-                  语音功能即将上线，目前可先跳过此步骤
-                </p>
-              </div>
+              <VoiceStep
+                selectedVoice={selectedVoice}
+                setSelectedVoice={setSelectedVoice}
+              />
             )}
           </motion.div>
 
