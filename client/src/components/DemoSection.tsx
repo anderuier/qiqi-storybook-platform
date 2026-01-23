@@ -11,7 +11,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "wouter";
 
 export default function DemoSection() {
@@ -40,7 +40,7 @@ export default function DemoSection() {
     };
   }, []);
 
-  const pages = [
+  const pages = useMemo(() => [
     { text: "从前,在一片神奇的森林里,住着一只勇敢的小兔子,它的名字叫小白。", image: "/images/demo-page-1.png" },
     { text: "小白有一双明亮的眼睛和一颗善良的心。它最喜欢在森林里探险,寻找新朋友。", image: "/images/demo-page-2.png" },
     { text: "一天,小白听说森林深处有一朵神奇的七色花,能实现一个愿望。它决定去寻找这朵花。", image: "/images/demo-page-3.png" },
@@ -48,13 +48,13 @@ export default function DemoSection() {
     { text: "送完小松鼠后,小白继续前进。它穿过了彩虹桥,来到了花的所在地。", image: "/images/demo-page-5.png" },
     { text: "七色花真的在那里!小白许下了愿望:'希望森林里的小动物们都能快乐!'", image: "/images/demo-page-6.png" },
     { text: "从此以后,森林里充满了欢声笑语。小白成为了大家心中的小英雄。", image: "/images/demo-page-7.png" },
-  ];
+  ], []);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (isFlipping || currentPage >= pages.length - 1) return;
     setDirection("next");
     setIsFlipping(true);
-    
+
     // 移动端竖屏模式：直接切换页面，不需要等待动画
     if (!isLandscape) {
       setCurrentPage(prev => prev + 1);
@@ -63,13 +63,13 @@ export default function DemoSection() {
         setDirection(null);
       }, 300);
     }
-  };
+  }, [isFlipping, currentPage, pages.length, isLandscape]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     if (isFlipping || currentPage <= 0) return;
     setDirection("prev");
     setIsFlipping(true);
-    
+
     // 移动端竖屏模式：直接切换页面，不需要等待动画
     if (!isLandscape) {
       setCurrentPage(prev => prev - 1);
@@ -78,7 +78,7 @@ export default function DemoSection() {
         setDirection(null);
       }, 300);
     }
-  };
+  }, [isFlipping, currentPage, isLandscape]);
 
   const onFlipComplete = () => {
     // 仅在横屏/桌面模式下通过动画回调更新页面
@@ -88,14 +88,15 @@ export default function DemoSection() {
     setDirection(null);
   };
 
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === "ArrowLeft" || e.key === "ArrowUp") handlePrev();
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") handleNext();
+  }, [handlePrev, handleNext]);
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") handlePrev();
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") handleNext();
-    };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentPage, isFlipping]);
+  }, [handleKeyDown]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -104,7 +105,7 @@ export default function DemoSection() {
       else setIsPlaying(false);
     }, 4000);
     return () => clearInterval(timer);
-  }, [currentPage, isPlaying, isFlipping]);
+  }, [isPlaying, handleNext, currentPage, pages.length]);
 
   const cuteTextStyle = "text-base md:text-xl leading-relaxed text-center font-bold bg-gradient-to-br from-coral via-orange-400 to-amber-400 bg-clip-text text-transparent drop-shadow-sm tracking-wide";
 
