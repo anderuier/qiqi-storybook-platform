@@ -4,6 +4,94 @@
 
 ---
 
+## [2026-01-23] 性能优化：useMemo/useCallback 与 WebP 图片迁移
+
+### 本次更新摘要
+完成 DemoSection 组件的性能优化（useMemo/useCallback），将所有图片从 PNG 格式迁移到 WebP 格式。图片体积减少约 70-95%，大幅提升加载速度。
+
+### 详细内容
+
+#### 1. useMemo/useCallback 优化
+
+**目标文件**: `client/src/components/DemoSection.tsx`
+
+| 项目 | 优化方式 | 收益 |
+|------|----------|------|
+| `pages` 数组 | `useMemo` 缓存 | 只创建一次，节省内存 |
+| `handleNext` 函数 | `useCallback` 缓存 | 函数引用稳定 |
+| `handlePrev` 函数 | `useCallback` 缓存 | 函数引用稳定 |
+| `handleKeyDown` 函数 | `useCallback` 缓存 | 函数引用稳定 |
+| 键盘事件 useEffect | 优化依赖项 | 减少事件监听器解绑/重绑 |
+
+**Commit**: `4cc48cf`
+
+#### 2. 图片格式迁移（PNG → WebP）
+
+**迁移规模**:
+- 删除 PNG 文件：34 个
+- 添加 WebP 文件：34 个
+- 修改代码文件：13 个
+
+**文件体积对比**:
+| 文件类型 | PNG 大小 | WebP 大小 | 收益 |
+|---------|---------|----------|------|
+| 单张图片 | 5-8 MB | 80-500 KB | 减少 70-95% |
+| 总体（估算） | ~200 MB | ~10 MB | 减少 ~95% |
+
+**修改的代码文件**:
+- `AboutSection.tsx` - about-story.webp
+- `Home.tsx` - hero-illustration.webp, feature-*.webp
+- `Gallery.tsx` - demo-book.webp, default-avatar.webp
+- `Login.tsx` - hero-illustration.webp
+- `Templates.tsx` - demo-book.webp
+- `MyWorks.tsx` - draft-default.webp
+- `DemoSection.tsx` - demo-page-1~7.webp
+- `constants.ts` - demo-book.webp
+- `ImagesStep.tsx` - image-placeholder.webp
+- `Header.tsx` - avatar-default.webp
+- `GallerySection.tsx` - avatar-1~6.webp, work-1~6.webp
+- `TemplateSection.tsx` - template-*.webp
+- `ProfileTab.tsx` - avatar-default.webp
+
+**Commit**: `36c4c1c`
+
+### 当前项目状态
+
+| 模块 | 状态 |
+|------|------|
+| 前端 UI | ✅ 完成 |
+| 路由懒加载 | ✅ 完成 |
+| 组件拆分 | ✅ 完成 |
+| React.memo 优化 | ✅ 完成 |
+| 图片懒加载 | ✅ 完成 |
+| useMemo/useCallback | ✅ 完成 |
+| WebP 图片格式 | ✅ 完成 |
+| 用户认证 | ✅ 完成 |
+| AI 故事生成 | ✅ 完成 |
+| AI 分镜生成 | ✅ 完成 |
+| AI 图片生成 | ✅ 完成 |
+| 图片永久存储 | ✅ 完成（Vercel Blob） |
+| 草稿保存/恢复 | ✅ 完成 |
+| 绘本预览/播放 | ⏳ 待开发 |
+| 作品发布 | ⏳ 待开发 |
+| 语音朗读 | ⏳ 待开发 |
+
+### 下一步计划
+
+**性能优化**:
+- Polling exponential backoff in useCreate.ts
+- 检查 lucide-react import pattern（确保 tree-shaking）
+- useCallback 优化其他组件
+- useMemo 优化其他组件
+- Bundle 分析工具集成
+
+**功能开发**:
+- 开发绘本预览/播放功能
+- 实现作品发布功能
+- 集成语音朗读功能
+
+---
+
 ## [2026-01-22] 局域网开发配置与草稿列表图片预览
 
 ### 本次更新摘要
