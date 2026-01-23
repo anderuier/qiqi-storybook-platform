@@ -1,37 +1,44 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { RouteLoading } from "./components/RouteLoading";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import Home from "./pages/Home";
-import Create from "./pages/Create";
-import Login from "./pages/Login";
-import Templates from "./pages/Templates";
-import Gallery from "./pages/Gallery";
-import Help from "./pages/Help";
-import Contact from "./pages/Contact";
-import MyWorks from "./pages/MyWorks";
-import AccountSettings from "./pages/AccountSettings";
+
+// 路由懒加载：将页面组件拆分为独立 chunk，按需加载
+// 这样可以减少首屏 JS 体积，提升首屏加载速度
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const Home = lazy(() => import("./pages/Home"));
+const Create = lazy(() => import("./pages/Create"));
+const Login = lazy(() => import("./pages/Login"));
+const Templates = lazy(() => import("./pages/Templates"));
+const Gallery = lazy(() => import("./pages/Gallery"));
+const Help = lazy(() => import("./pages/Help"));
+const Contact = lazy(() => import("./pages/Contact"));
+const MyWorks = lazy(() => import("./pages/MyWorks"));
+const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 
 
 function Router() {
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/create"} component={Create} />
-      <Route path={"/login"} component={Login} />
-      <Route path={"/templates"} component={Templates} />
-      <Route path={"/gallery"} component={Gallery} />
-      <Route path={"/help"} component={Help} />
-      <Route path={"/contact"} component={Contact} />
-      <Route path={"/my-works"} component={MyWorks} />
-      <Route path={"/settings"} component={AccountSettings} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<RouteLoading />}>
+      <Switch>
+        <Route path={"/"} component={Home} />
+        <Route path={"/create"} component={Create} />
+        <Route path={"/login"} component={Login} />
+        <Route path={"/templates"} component={Templates} />
+        <Route path={"/gallery"} component={Gallery} />
+        <Route path={"/help"} component={Help} />
+        <Route path={"/contact"} component={Contact} />
+        <Route path={"/my-works"} component={MyWorks} />
+        <Route path={"/settings"} component={AccountSettings} />
+        <Route path={"/404"} component={NotFound} />
+        {/* Final fallback route */}
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
