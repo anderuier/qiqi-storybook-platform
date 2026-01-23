@@ -260,11 +260,18 @@ function WorkCard({ work, index, onLike }: WorkCardProps) {
       className="group bg-white rounded-2xl overflow-hidden border border-border/50 hover:border-coral/30 transition-all card-shadow-hover"
     >
       {/* 封面图 */}
-      <div className="relative aspect-[4/3] bg-gradient-to-br from-cream to-coral/10 overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden">
+        {/* 占位背景图 */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: 'url(/images/placeholder-bg.webp)' }}
+        />
+        {/* 实际图片 */}
         <img
           src={work.coverUrl || "/images/demo-book.png"}
           alt={work.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+          className="relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
 
         {/* 播放按钮 */}
@@ -290,6 +297,7 @@ function WorkCard({ work, index, onLike }: WorkCardProps) {
             <img
               src={work.author.avatar || "/images/default-avatar.png"}
               alt={work.author.nickname}
+              loading="lazy"
               className="w-full h-full object-cover"
             />
           </div>

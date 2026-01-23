@@ -116,13 +116,20 @@ export const ImagesStep = memo(function ImagesStep({
               .map(([pageNum, url]) => (
               <div
                 key={pageNum}
-                className="relative aspect-square rounded-xl overflow-hidden bg-cream group cursor-pointer"
+                className="relative aspect-square rounded-xl overflow-hidden group cursor-pointer"
                 onClick={() => onPreviewImage(url)}
               >
+                {/* 占位背景图 */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: 'url(/images/placeholder-bg.webp)' }}
+                />
+                {/* 实际图片 */}
                 <img
                   src={url}
                   alt={`第${pageNum}页`}
-                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  className="relative z-10 w-full h-full object-cover"
                   onError={(e) => {
                     e.currentTarget.src = '/images/image-placeholder.png';
                     e.currentTarget.alt = '图片加载失败';

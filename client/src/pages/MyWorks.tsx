@@ -370,11 +370,18 @@ function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, 
       className="group bg-white rounded-2xl overflow-hidden border border-border/50 hover:border-coral/30 transition-all card-shadow-hover"
     >
       {/* 封面图 */}
-      <div className="relative aspect-[4/3] bg-gradient-to-br from-cream to-coral/10 overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden">
+        {/* 占位背景图 */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: 'url(/images/placeholder-bg.webp)' }}
+        />
+        {/* 实际图片 */}
         <img
           src={work.firstImageUrl || work.coverUrl || "/images/draft-default.png"}
           alt={work.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+          className="relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
 
         {/* 播放按钮 */}

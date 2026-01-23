@@ -252,11 +252,18 @@ function TemplateCard({ template, index }: TemplateCardProps) {
       className={`group bg-white rounded-2xl overflow-hidden border border-border/50 ${colors.border} transition-all card-shadow-hover cursor-pointer`}
     >
       {/* 封面图 */}
-      <div className="relative aspect-[4/3] bg-gradient-to-br from-cream to-mint/10 overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden">
+        {/* 占位背景图 */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: 'url(/images/placeholder-bg.webp)' }}
+        />
+        {/* 实际图片 */}
         <img
           src={template.coverUrl || "/images/demo-book.png"}
           alt={template.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+          className="relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
           <Heart className="w-3 h-3 text-coral fill-coral" />
