@@ -41,13 +41,13 @@ export default function DemoSection() {
   }, []);
 
   const pages = useMemo(() => [
-    { text: "从前,在一片神奇的森林里,住着一只勇敢的小兔子,它的名字叫小白。", image: "/images/demo-page-1.png" },
-    { text: "小白有一双明亮的眼睛和一颗善良的心。它最喜欢在森林里探险,寻找新朋友。", image: "/images/demo-page-2.png" },
-    { text: "一天,小白听说森林深处有一朵神奇的七色花,能实现一个愿望。它决定去寻找这朵花。", image: "/images/demo-page-3.png" },
-    { text: "在路上,小白遇到了迷路的小松鼠。'别担心,我带你回家!'小白说。", image: "/images/demo-page-4.png" },
-    { text: "送完小松鼠后,小白继续前进。它穿过了彩虹桥,来到了花的所在地。", image: "/images/demo-page-5.png" },
-    { text: "七色花真的在那里!小白许下了愿望:'希望森林里的小动物们都能快乐!'", image: "/images/demo-page-6.png" },
-    { text: "从此以后,森林里充满了欢声笑语。小白成为了大家心中的小英雄。", image: "/images/demo-page-7.png" },
+    { text: "从前,在一片神奇的森林里,住着一只勇敢的小兔子,它的名字叫小白。", image: "/images/demo-page-1.webp" },
+    { text: "小白有一双明亮的眼睛和一颗善良的心。它最喜欢在森林里探险,寻找新朋友。", image: "/images/demo-page-2.webp" },
+    { text: "一天,小白听说森林深处有一朵神奇的七色花,能实现一个愿望。它决定去寻找这朵花。", image: "/images/demo-page-3.webp" },
+    { text: "在路上,小白遇到了迷路的小松鼠。'别担心,我带你回家!'小白说。", image: "/images/demo-page-4.webp" },
+    { text: "送完小松鼠后,小白继续前进。它穿过了彩虹桥,来到了花的所在地。", image: "/images/demo-page-5.webp" },
+    { text: "七色花真的在那里!小白许下了愿望:'希望森林里的小动物们都能快乐!'", image: "/images/demo-page-6.webp" },
+    { text: "从此以后,森林里充满了欢声笑语。小白成为了大家心中的小英雄。", image: "/images/demo-page-7.webp" },
   ], []);
 
   const handleNext = useCallback(() => {

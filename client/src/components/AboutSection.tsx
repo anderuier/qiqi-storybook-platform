@@ -87,7 +87,7 @@ export default function AboutSection() {
           <div className="relative">
             <div className="aspect-[4/3] rounded-3xl overflow-hidden bg-gradient-to-br from-coral/20 to-mint/20">
               <img
-                src="/images/about-story.png"
+                src="/images/about-story.webp"
                 alt="亲子阅读场景"
                 className="w-full h-full object-cover"
               />

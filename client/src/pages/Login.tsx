@@ -144,7 +144,7 @@ export default function Login() {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <img
-              src="/images/hero-illustration.png"
+              src="/images/hero-illustration.webp"
               alt="绘本插图"
               className="w-80 h-auto rounded-3xl shadow-2xl"
             />

@@ -131,7 +131,7 @@ export const ImagesStep = memo(function ImagesStep({
                   loading="lazy"
                   className="relative z-10 w-full h-full object-cover"
                   onError={(e) => {
-                    e.currentTarget.src = '/images/image-placeholder.png';
+                    e.currentTarget.src = '/images/image-placeholder.webp';
                     e.currentTarget.alt = '图片加载失败';
                   }}
                 />

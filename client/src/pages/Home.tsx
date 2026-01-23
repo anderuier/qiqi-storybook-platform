@@ -176,8 +176,8 @@ function HeroSection() {
             className="relative"
           >
             <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-coral/20">
-              <img 
-                src="/images/hero-illustration.png" 
+              <img
+                src="/images/hero-illustration.webp"
                 alt="亲子阅读绘本的温馨场景"
                 className="w-full h-auto"
               />
@@ -228,21 +228,21 @@ function FeaturesSection() {
       title: "智能故事创作",
       description: "输入主题或古诗词，AI自动生成适合3-6岁儿童的精彩故事，支持自定义编辑和润色。",
       color: "coral" as const,
-      image: "/images/feature-story.png"
+      image: "/images/feature-story.webp"
     },
     {
       icon: Palette,
       title: "多样艺术风格",
       description: "卡通动漫、水彩手绘、蜡笔涂鸦、3D渲染...20+种风格任您选择，每一页都是艺术品。",
       color: "mint" as const,
-      image: "/images/feature-art.png"
+      image: "/images/feature-art.webp"
     },
     {
       icon: Mic2,
       title: "声音克隆朗读",
       description: "只需30秒录音，AI即可克隆您的声音，用爸爸妈妈的声音为孩子讲述每一个故事。",
       color: "sunny" as const,
-      image: "/images/feature-voice.png"
+      image: "/images/feature-voice.webp"
     }
   ];
   

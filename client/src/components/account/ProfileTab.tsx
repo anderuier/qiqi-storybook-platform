@@ -51,7 +51,7 @@ export const ProfileTab = memo(function ProfileTab({
         <div className="relative">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-coral to-mint overflow-hidden">
             <img
-              src={user?.avatar || "/images/avatar-default.png"}
+              src={user?.avatar || "/images/avatar-default.webp"}
               alt="头像"
               className="w-full h-full object-cover"
             />

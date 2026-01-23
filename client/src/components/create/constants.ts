@@ -41,12 +41,12 @@ export const createModes = [
  * 艺术风格选项
  */
 export const artStyles = [
-  { id: "watercolor", name: "水彩手绘", image: "/images/demo-book.png" },
-  { id: "cartoon", name: "卡通动漫", image: "/images/demo-book.png" },
-  { id: "flat", name: "扁平插画", image: "/images/demo-book.png" },
-  { id: "3d", name: "3D渲染", image: "/images/demo-book.png" },
-  { id: "anime", name: "动漫风格", image: "/images/demo-book.png" },
-  { id: "oil", name: "油画风格", image: "/images/demo-book.png" },
+  { id: "watercolor", name: "水彩手绘", image: "/images/demo-book.webp" },
+  { id: "cartoon", name: "卡通动漫", image: "/images/demo-book.webp" },
+  { id: "flat", name: "扁平插画", image: "/images/demo-book.webp" },
+  { id: "3d", name: "3D渲染", image: "/images/demo-book.webp" },
+  { id: "anime", name: "动漫风格", image: "/images/demo-book.webp" },
+  { id: "oil", name: "油画风格", image: "/images/demo-book.webp" },
 ] as const;
 
 /**

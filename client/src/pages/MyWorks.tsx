@@ -378,7 +378,7 @@ function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, 
         />
         {/* 实际图片 */}
         <img
-          src={work.firstImageUrl || work.coverUrl || "/images/draft-default.png"}
+          src={work.firstImageUrl || work.coverUrl || "/images/draft-default.webp"}
           alt={work.title}
           loading="lazy"
           className="relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

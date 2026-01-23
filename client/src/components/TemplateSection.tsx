@@ -38,7 +38,7 @@ const templates = [
     title: "森林小精灵",
     category: "nature",
     description: "探索神秘森林，遇见可爱的小精灵",
-    image: "/images/template-forest.png",
+    image: "/images/template-forest.webp",
     color: "mint",
     tags: ["自然", "精灵", "探险"],
     popularity: 1280
@@ -48,7 +48,7 @@ const templates = [
     title: "海底奇遇记",
     category: "adventure",
     description: "潜入深蓝大海，发现海底的秘密",
-    image: "/images/template-ocean.png",
+    image: "/images/template-ocean.webp",
     color: "coral",
     tags: ["海洋", "冒险", "友谊"],
     popularity: 956
@@ -58,7 +58,7 @@ const templates = [
     title: "星空梦想家",
     category: "adventure",
     description: "乘坐火箭飞向星空，探索宇宙奥秘",
-    image: "/images/template-space.png",
+    image: "/images/template-space.webp",
     color: "sunny",
     tags: ["太空", "梦想", "科幻"],
     popularity: 1102
@@ -68,7 +68,7 @@ const templates = [
     title: "公主与小龙",
     category: "fairy",
     description: "勇敢的公主和善良的小龙成为好朋友",
-    image: "/images/template-princess.png",
+    image: "/images/template-princess.webp",
     color: "coral",
     tags: ["童话", "友谊", "勇气"],
     popularity: 1543
@@ -78,7 +78,7 @@ const templates = [
     title: "农场的一天",
     category: "animals",
     description: "和农场小动物们度过快乐的一天",
-    image: "/images/template-farm.png",
+    image: "/images/template-farm.webp",
     color: "sunny",
     tags: ["动物", "农场", "日常"],
     popularity: 876
@@ -88,7 +88,7 @@ const templates = [
     title: "四季变换",
     category: "nature",
     description: "感受春夏秋冬的美丽变化",
-    image: "/images/template-seasons.png",
+    image: "/images/template-seasons.webp",
     color: "mint",
     tags: ["自然", "四季", "教育"],
     popularity: 1021

@@ -268,7 +268,7 @@ function WorkCard({ work, index, onLike }: WorkCardProps) {
         />
         {/* 实际图片 */}
         <img
-          src={work.coverUrl || "/images/demo-book.png"}
+          src={work.coverUrl || "/images/demo-book.webp"}
           alt={work.title}
           loading="lazy"
           className="relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -295,7 +295,7 @@ function WorkCard({ work, index, onLike }: WorkCardProps) {
         <div className="flex items-center gap-3 mb-3">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral to-mint overflow-hidden">
             <img
-              src={work.author.avatar || "/images/default-avatar.png"}
+              src={work.author.avatar || "/images/default-avatar.webp"}
               alt={work.author.nickname}
               loading="lazy"
               className="w-full h-full object-cover"

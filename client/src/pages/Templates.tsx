@@ -260,7 +260,7 @@ function TemplateCard({ template, index }: TemplateCardProps) {
         />
         {/* 实际图片 */}
         <img
-          src={template.coverUrl || "/images/demo-book.png"}
+          src={template.coverUrl || "/images/demo-book.webp"}
           alt={template.name}
           loading="lazy"
           className="relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
