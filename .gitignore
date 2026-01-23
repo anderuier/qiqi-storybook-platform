@@ -120,6 +120,8 @@ docs/项目小结.txt
 DOCS/项目小结.txt
 docs/*.jpg
 DOCS/*.jpg
+docs/code-structure-report.md
+DOCS/code-structure-report.md
 
 # 常用命令备忘
 常用命令.txt
