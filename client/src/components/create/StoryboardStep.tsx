@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Palette, Loader2, Check } from "lucide-react";
 import { artStyles } from "./constants";
 
@@ -18,7 +19,7 @@ export interface StoryboardStepProps {
   setSelectedArtStyle: (value: string) => void;
 }
 
-export function StoryboardStep({
+export const StoryboardStep = memo(function StoryboardStep({
   storyboard,
   isLoading,
   selectedArtStyle,
@@ -89,4 +90,4 @@ export function StoryboardStep({
       ) : null}
     </div>
   );
-}
+});

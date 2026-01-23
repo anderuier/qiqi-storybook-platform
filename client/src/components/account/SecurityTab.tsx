@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Lock, Shield, Eye, EyeOff, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -24,7 +25,7 @@ interface SecurityTabProps {
   onChangePassword: () => void;
 }
 
-export function SecurityTab({
+export const SecurityTab = memo(function SecurityTab({
   showPassword,
   setShowPassword,
   passwordForm,
@@ -137,4 +138,4 @@ export function SecurityTab({
       </div>
     </div>
   );
-}
+});

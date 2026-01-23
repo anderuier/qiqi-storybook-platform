@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Camera, Save, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,7 +20,7 @@ interface ProfileTabProps {
   onSave: () => void;
 }
 
-export function ProfileTab({
+export const ProfileTab = memo(function ProfileTab({
   nickname,
   setNickname,
   user,
@@ -125,4 +126,4 @@ export function ProfileTab({
       </div>
     </div>
   );
-}
+});

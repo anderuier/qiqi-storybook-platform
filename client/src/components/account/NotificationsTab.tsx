@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 /**
  * 通知设置状态
  */
@@ -23,7 +25,7 @@ const notificationItems = [
   { key: "likes" as const, label: "点赞通知", desc: "当有人点赞我的作品时通知我" },
 ];
 
-export function NotificationsTab({ notifications, setNotifications }: NotificationsTabProps) {
+export const NotificationsTab = memo(function NotificationsTab({ notifications, setNotifications }: NotificationsTabProps) {
   return (
     <div>
       <h2 className="text-xl font-bold mb-6">通知设置</h2>
@@ -68,4 +70,4 @@ export function NotificationsTab({ notifications, setNotifications }: Notificati
       </p>
     </div>
   );
-}
+});

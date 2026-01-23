@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { FileText, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -15,7 +16,7 @@ export interface StoryStepProps {
   onRegenerate: () => void;
 }
 
-export function StoryStep({ story, isLoading, onRegenerate }: StoryStepProps) {
+export const StoryStep = memo(function StoryStep({ story, isLoading, onRegenerate }: StoryStepProps) {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
@@ -53,4 +54,4 @@ export function StoryStep({ story, isLoading, onRegenerate }: StoryStepProps) {
       ) : null}
     </div>
   );
-}
+});

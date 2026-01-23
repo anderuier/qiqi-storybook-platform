@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Check } from "lucide-react";
 import { stepLabels } from "./constants";
 
@@ -9,7 +10,7 @@ interface StepIndicatorProps {
   currentStep: number;
 }
 
-export function StepIndicator({ currentStep }: StepIndicatorProps) {
+export const StepIndicator = memo(function StepIndicator({ currentStep }: StepIndicatorProps) {
   const totalSteps = stepLabels.length;
 
   return (
@@ -44,4 +45,4 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
       })}
     </div>
   );
-}
+});

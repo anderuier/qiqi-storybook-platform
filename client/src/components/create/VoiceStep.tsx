@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Mic2, Upload, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { voiceOptions } from "./constants";
@@ -10,7 +11,7 @@ export interface VoiceStepProps {
   setSelectedVoice: (value: string) => void;
 }
 
-export function VoiceStep({ selectedVoice, setSelectedVoice }: VoiceStepProps) {
+export const VoiceStep = memo(function VoiceStep({ selectedVoice, setSelectedVoice }: VoiceStepProps) {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
@@ -58,4 +59,4 @@ export function VoiceStep({ selectedVoice, setSelectedVoice }: VoiceStepProps) {
       </p>
     </div>
   );
-}
+});

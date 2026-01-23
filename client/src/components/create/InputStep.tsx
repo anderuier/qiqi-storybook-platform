@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { BookOpen } from "lucide-react";
 import { createModes, storyStyles } from "./constants";
 
@@ -19,7 +20,7 @@ export interface InputStepProps {
   setStoryLength: (value: "short" | "medium" | "long") => void;
 }
 
-export function InputStep({
+export const InputStep = memo(function InputStep({
   childName,
   setChildName,
   childAge,
@@ -140,4 +141,4 @@ export function InputStep({
       </div>
     </div>
   );
-}
+});

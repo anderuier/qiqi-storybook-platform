@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Loader2, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -28,7 +29,7 @@ export interface ImagesStepProps {
   onPreviewImage: (url: string) => void;
 }
 
-export function ImagesStep({
+export const ImagesStep = memo(function ImagesStep({
   imageTask,
   pageImages,
   selectedArtStyle,
@@ -150,4 +151,4 @@ export function ImagesStep({
       )}
     </div>
   );
-}
+});

@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 /**
  * 偏好设置状态
  */
@@ -15,7 +17,7 @@ interface PreferencesTabProps {
   setPreferences: (state: PreferencesState | ((prev: PreferencesState) => PreferencesState)) => void;
 }
 
-export function PreferencesTab({ preferences, setPreferences }: PreferencesTabProps) {
+export const PreferencesTab = memo(function PreferencesTab({ preferences, setPreferences }: PreferencesTabProps) {
   return (
     <div>
       <h2 className="text-xl font-bold mb-6">偏好设置</h2>
@@ -74,4 +76,4 @@ export function PreferencesTab({ preferences, setPreferences }: PreferencesTabPr
       </p>
     </div>
   );
-}
+});

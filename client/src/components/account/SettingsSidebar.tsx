@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { User, Lock, Bell, Palette, LogOut } from "lucide-react";
 
 /**
@@ -21,7 +22,7 @@ interface SettingsSidebarProps {
   onLogout: () => void;
 }
 
-export function SettingsSidebar({ activeTab, onTabChange, onLogout }: SettingsSidebarProps) {
+export const SettingsSidebar = memo(function SettingsSidebar({ activeTab, onTabChange, onLogout }: SettingsSidebarProps) {
   return (
     <div className="bg-white rounded-2xl border border-border/50 p-2">
       {settingsTabs.map((tab) => {
@@ -55,4 +56,4 @@ export function SettingsSidebar({ activeTab, onTabChange, onLogout }: SettingsSi
       </div>
     </div>
   );
-}
+});
