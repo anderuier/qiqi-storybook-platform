@@ -385,9 +385,9 @@ const WorkCard = memo(function WorkCard({ work, index, showMenu, onToggleMenu, o
           className="relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
 
-        {/* 播放按钮 */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 z-20">
-          <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform">
+        {/* 播放按钮 - 提高层级确保不被图片遮挡 */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 z-30 pointer-events-none">
+          <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform pointer-events-auto">
             <Play className="w-6 h-6 text-coral fill-coral ml-1" />
           </div>
         </div>
@@ -408,8 +408,8 @@ const WorkCard = memo(function WorkCard({ work, index, showMenu, onToggleMenu, o
         </div>
       </div>
 
-      {/* 更多菜单按钮和下拉菜单 - 移到封面图容器外部 */}
-      <div className="absolute top-3 right-3 z-30">
+      {/* 更多菜单按钮和下拉菜单 - 移到封面图容器外部，提高层级 */}
+      <div className="absolute top-3 right-3 z-40">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -424,7 +424,7 @@ const WorkCard = memo(function WorkCard({ work, index, showMenu, onToggleMenu, o
         {showMenu && (
           <>
             <div
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-50"
               onClick={onCloseMenu}
             />
             <div className="absolute right-0 top-10 bg-white rounded-xl shadow-lg border border-border/50 py-2 min-w-[140px] z-50">
