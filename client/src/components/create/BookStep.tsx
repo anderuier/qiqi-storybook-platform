@@ -228,7 +228,7 @@ export const BookStep = memo(function BookStep({
             /* 竖屏移动端：上下堆叠模式，使用固定高度 */
             <div className="flex flex-col w-full" style={{ height: "500px" }}>
               {/* 上部图片区域 (60%) */}
-              <div className="h-[60%] bg-gradient-to-br from-[#FFF9F0] to-[#FFF3E0] relative border-b border-stone-200/60">
+              <div className="h-[60%] bg-gradient-to-br from-[#FFF9F0] to-[#FFF3E0] relative border-b border-stone-200/60 rounded-t-2xl overflow-hidden">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={`mobile-img-${currentPage}`}
@@ -236,19 +236,19 @@ export const BookStep = memo(function BookStep({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3 }}
-                    className="absolute inset-0 flex items-center justify-center p-6"
+                    className="absolute inset-0 flex items-center justify-center"
                   >
                     <img
                       src={pages[currentPage]?.imageUrl}
                       alt={`第 ${currentPage + 1} 页`}
-                      className="w-full h-full object-contain rounded-xl shadow-sm"
+                      className="w-full h-full object-cover"
                     />
                   </motion.div>
                 </AnimatePresence>
               </div>
 
               {/* 下部文字区域 (40%) */}
-              <div className="h-[40%] bg-white relative">
+              <div className="h-[40%] bg-white relative rounded-b-2xl">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={`mobile-text-${currentPage}`}
