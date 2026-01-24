@@ -20,7 +20,7 @@ export default function Footer() {
               <span className="text-xl font-bold">柒柒の魔法绘本屋</span>
             </Link>
             <p className="text-muted-foreground text-sm mb-4">
-              用AI和爱为3-6岁学龄前儿童创作独一无二的个性化绘本，让每个孩子都有属于自己的童话故事。
+              用爱与AI为3-6岁学龄前儿童创作独一无二的个性化绘本，让每个孩子都有属于自己的童话故事。
             </p>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Heart className="w-4 h-4 text-coral" />

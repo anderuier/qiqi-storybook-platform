@@ -132,7 +132,7 @@ export default function Login() {
               柒柒の魔法绘本屋
             </h1>
             <p className="text-lg text-muted-foreground max-w-md">
-              用AI和爱为3-6岁学龄前儿童创作独一无二的个性化绘本
+              用爱与AI为3-6岁学龄前儿童创作独一无二的个性化绘本
             </p>
           </motion.div>
 

@@ -45,7 +45,7 @@ const values = [
 
 // 里程碑数据
 const milestones = [
-  { number: "5,000+", label: "绘本已创作", icon: BookOpen },
+  { number: "1,000+", label: "绘本已创作", icon: BookOpen },
   { number: "1,000+", label: "幸福家庭", icon: Users },
   { number: "20+", label: "艺术风格", icon: Star },
   { number: "99%", label: "好评率", icon: Award }
@@ -68,7 +68,7 @@ export default function AboutSection() {
             <span className="text-sm font-medium">关于我们</span>
           </div>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            用<span className="text-coral">AI和爱</span>，为孩子创造美好童年
+            用<span className="text-coral">爱与AI</span>，为孩子创造美好童年
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             柒柒の魔法绘本屋致力于帮助父母创作专属自己宝贝的绘本故事，让您的亲子时光更加温馨美好
@@ -115,16 +115,13 @@ export default function AboutSection() {
             <h3 className="text-2xl font-bold mb-6">我们的故事</h3>
             <div className="space-y-4 text-muted-foreground">
               <p>
-                柒柒の魔法绘本屋诞生于一个简单的愿望：让每个孩子都能拥有属于自己的童话故事。
+                柒柒の魔法绘本屋诞生于柒柒爸爸的一个很小的愿望：让每个孩子都能拥有属于自己的童话故事。
               </p>
               <p>
-                我们相信，最好的故事来自于爱。当AI技术与父母的爱相结合，就能创造出独一无二的绘本作品。
-                无论是将古诗词改编成有趣的故事，还是用爸爸妈妈的声音讲述睡前故事，
-                我们都希望能让这份爱以最美好的方式传递给孩子。
+                我们相信，再先进的AI技术，也抵不过父母掌心的温度。我们只是递给您一支“魔法棒”，让您可以把对孩子的爱，变成独一无二的画卷；把爸爸妈妈的声音，变成守护孩子入梦的魔法。在这里，每一个绘本都不止是纸笔，更是陪伴孩子长大的勋章。
               </p>
               <p>
-                我们的使命是让绘本创作变得简单有趣，让每个家庭都能享受创作的乐趣，
-                让每个孩子都能在专属的故事中感受到父母的爱与陪伴。
+                我们的使命是帮每一对父母变身“童话魔法师”，让家变成最有趣的创作营。
               </p>
             </div>
 
@@ -132,16 +129,16 @@ export default function AboutSection() {
             <div className="grid grid-cols-2 gap-4 mt-8">
               <div className="bg-coral/5 rounded-2xl p-4">
                 <Target className="w-8 h-8 text-coral mb-2" />
-                <h4 className="font-semibold mb-1">我们的使命</h4>
+                <h4 className="font-semibold mb-1">我们的初心</h4>
                 <p className="text-sm text-muted-foreground">
-                  让每个家庭都能创作专属绘本
+                  让每一个家庭，都能亲手种下一颗专属于孩子的童话种子。
                 </p>
               </div>
               <div className="bg-mint/5 rounded-2xl p-4">
                 <Sparkles className="w-8 h-8 text-mint mb-2" />
                 <h4 className="font-semibold mb-1">我们的愿景</h4>
                 <p className="text-sm text-muted-foreground">
-                  成为家庭创意内容的首选平台
+                  希望在每个孩子的书架上，都有一本由爸爸妈妈亲手创作、写满爱的魔法书。
                 </p>
               </div>
             </div>

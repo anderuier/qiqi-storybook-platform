@@ -134,7 +134,7 @@ function HeroSection() {
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">
-              为3-6岁学龄前儿童打造专属故事绘本，支持古诗词、寓言改编，
+              为3-6岁学龄前儿童打造专属故事绘本，支持古诗词、寓言改编、自定义文本，
               还能用<strong className="text-coral">爸爸妈妈的声音</strong>讲述每一个温暖的故事。
             </p>
             
@@ -154,7 +154,7 @@ function HeroSection() {
             {/* 统计数据 */}
             <div className="grid grid-cols-3 gap-4 sm:flex sm:gap-8 mt-12">
               <div className="text-center sm:text-left">
-                <div className="text-2xl sm:text-3xl font-bold text-coral">10,000+</div>
+                <div className="text-2xl sm:text-3xl font-bold text-coral">10,00+</div>
                 <div className="text-xs sm:text-sm text-muted-foreground">绘本已创作</div>
               </div>
               <div className="text-center sm:text-left">
@@ -300,7 +300,7 @@ function HowItWorksSection() {
     },
     {
       number: 4,
-      title: "AI生成绘本",
+      title: "自动生成绘本",
       description: "AI自动生成故事文本和精美插图，支持单页重新生成",
       color: "coral" as const
     },
@@ -367,7 +367,7 @@ function CTASection() {
             <span className="text-coral">独一无二</span>的绘本了吗？
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            加入我们，用AI和爱为孩子打造专属的童话世界
+            加入我们，用爱与AI为孩子打造专属的童话世界
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/create">
