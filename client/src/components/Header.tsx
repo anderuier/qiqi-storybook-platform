@@ -93,7 +93,7 @@ export default function Header() {
                   className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-muted transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral to-mint overflow-hidden">
-                    <img src={user.avatar?.trim() || "/images/avatar-default.webp"} alt={user.nickname} className="w-full h-full object-cover" />
+                    <img src={user.avatar?.trim() || "/images/avatar-default.webp"} alt={user.nickname} className="w-full h-full object-cover" loading="lazy" />
                   </div>
                   <span className="text-sm font-medium">{user.nickname}</span>
                   <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isUserMenuOpen ? "rotate-180" : ""}`} />
