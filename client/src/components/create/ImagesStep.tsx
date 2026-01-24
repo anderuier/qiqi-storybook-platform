@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useState, useEffect, useRef } from "react";
 import { Loader2, Check, RefreshCw, Maximize, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -42,6 +42,12 @@ export const ImagesStep = memo(function ImagesStep({
   // 移动端：当前展开的图片索引
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
+  // 正在重新生成的图片编号
+  const [regeneratingPages, setRegeneratingPages] = useState<Set<string>>(new Set());
+
+  // 记录正在重新生成的图片的原始 URL，用于检测更新
+  const regeneratingUrlsRef = useRef<Map<string, string>>(new Map());
+
   // 处理移动端图片点击
   const handleImageClick = (pageNum: string) => {
     if (expandedImage === pageNum) {
@@ -50,6 +56,45 @@ export const ImagesStep = memo(function ImagesStep({
       setExpandedImage(pageNum); // 展开按钮
     }
   };
+
+  // 处理单张图片重新生成
+  const handleRegenerateOne = (pageNum: number) => {
+    const pageNumStr = String(pageNum);
+    // 记录当前 URL
+    regeneratingUrlsRef.current.set(pageNumStr, pageImages[pageNumStr] || '');
+    // 添加到正在生成的集合
+    setRegeneratingPages(prev => new Set(prev).add(pageNumStr));
+    // 调用重新生成
+    onRegenerateOne(pageNum);
+  };
+
+  // 监听 pageImages 变化，检测图片是否更新完成
+  useEffect(() => {
+    const currentUrls = regeneratingUrlsRef.current;
+    if (currentUrls.size === 0) return;
+
+    const updatedPages: string[] = [];
+    currentUrls.forEach((oldUrl, pageNum) => {
+      const newUrl = pageImages[pageNum];
+      // 如果 URL 变化了，说明图片已更新
+      if (newUrl && newUrl !== oldUrl) {
+        updatedPages.push(pageNum);
+      }
+    });
+
+    if (updatedPages.length > 0) {
+      // 移除已完成的
+      setRegeneratingPages(prev => {
+        const newSet = new Set(prev);
+        updatedPages.forEach(p => newSet.delete(p));
+        return newSet;
+      });
+      // 清理记录
+      const newMap = new Map(currentUrls);
+      updatedPages.forEach(p => newMap.delete(p));
+      regeneratingUrlsRef.current = newMap;
+    }
+  }, [pageImages]);
 
   return (
     <div className="space-y-6">
@@ -151,6 +196,14 @@ export const ImagesStep = memo(function ImagesStep({
                 {/* 图片操作按钮层 */}
                 {imageTask.status === "completed" && (
                   <>
+                    {/* 正在重新生成提示层 */}
+                    {regeneratingPages.has(pageNum) && (
+                      <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-30">
+                        <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
+                        <span className="text-white text-xs font-medium">正在重新生成</span>
+                      </div>
+                    )}
+
                     {/* 桌面端：悬停显示遮罩 */}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2 z-20 pointer-events-none">
                       {/* 查看大图按钮 */}
@@ -171,9 +224,10 @@ export const ImagesStep = memo(function ImagesStep({
                         variant="secondary"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onRegenerateOne(Number(pageNum));
+                          handleRegenerateOne(Number(pageNum));
                         }}
                         className="rounded-full bg-white hover:bg-white/90 pointer-events-auto"
+                        disabled={regeneratingPages.has(pageNum)}
                       >
                         <RefreshCw className="w-3 h-3" />
                       </Button>
@@ -181,9 +235,23 @@ export const ImagesStep = memo(function ImagesStep({
 
                     {/* 移动端：点击图片时显示操作栏 */}
                     {expandedImage === pageNum && (
-                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 p-2 md:hidden z-20">
-                        {/* 按钮容器 - 水平排列 */}
-                        <div className="flex items-center justify-center gap-1 w-full">
+                      <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-between p-2 md:hidden z-20">
+                        {/* 顶部：关闭按钮 */}
+                        <div className="w-full flex justify-end">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedImage(null);
+                            }}
+                            className="rounded-full bg-black/40 hover:bg-black/60 text-white w-7 h-7 flex items-center justify-center flex-shrink-0"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        {/* 中间：两个操作按钮 */}
+                        <div className="flex items-center gap-1">
                           {/* 查看大图按钮 */}
                           <Button
                             size="sm"
@@ -192,9 +260,9 @@ export const ImagesStep = memo(function ImagesStep({
                               e.stopPropagation();
                               onPreviewImage(url);
                             }}
-                            className="rounded-full bg-white hover:bg-white/90 w-10 h-10 flex items-center justify-center flex-shrink-0"
+                            className="rounded-full bg-white hover:bg-white/90 w-8 h-8 flex items-center justify-center flex-shrink-0 p-0"
                           >
-                            <Maximize className="w-4 h-4" />
+                            <Maximize className="w-3 h-3" />
                           </Button>
                           {/* 重新生成按钮 */}
                           <Button
@@ -202,25 +270,16 @@ export const ImagesStep = memo(function ImagesStep({
                             variant="secondary"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onRegenerateOne(Number(pageNum));
+                              handleRegenerateOne(Number(pageNum));
                             }}
-                            className="rounded-full bg-white hover:bg-white/90 w-10 h-10 flex items-center justify-center flex-shrink-0"
+                            className="rounded-full bg-white hover:bg-white/90 w-8 h-8 flex items-center justify-center flex-shrink-0 p-0"
+                            disabled={regeneratingPages.has(pageNum)}
                           >
-                            <RefreshCw className="w-4 h-4" />
-                          </Button>
-                          {/* 关闭按钮 */}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setExpandedImage(null);
-                            }}
-                            className="rounded-full bg-black/30 hover:bg-black/50 text-white w-10 h-10 flex items-center justify-center flex-shrink-0"
-                          >
-                            <X className="w-4 h-4" />
+                            <RefreshCw className="w-3 h-3" />
                           </Button>
                         </div>
+                        {/* 底部：占位，保持布局 */}
+                        <div className="w-7 h-7"></div>
                       </div>
                     )}
                   </>
