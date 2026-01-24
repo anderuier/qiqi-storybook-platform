@@ -13,8 +13,10 @@ import {
   Play,
   Pause,
   BookOpen,
+  Maximize,
+  Minimize,
 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState, useRef } from "react";
 
 // 绘本页面数据类型
 export interface BookPage {
@@ -50,6 +52,8 @@ export const BookStep = memo(function BookStep({
   const [isFlipping, setIsFlipping] = useState(false);
   const [direction, setDirection] = useState<"next" | "prev" | null>(null);
   const [isLandscape, setIsLandscape] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // 检测屏幕方向和尺寸
   useEffect(() => {
@@ -149,6 +153,39 @@ export const BookStep = memo(function BookStep({
     return () => clearInterval(timer);
   }, [isPlaying, handleNext, currentPage, pages.length]);
 
+  // 全屏切换
+  const toggleFullscreen = useCallback(async () => {
+    if (!containerRef.current) return;
+
+    try {
+      if (!isFullscreen) {
+        // 进入全屏
+        if (containerRef.current.requestFullscreen) {
+          await containerRef.current.requestFullscreen();
+        }
+      } else {
+        // 退出全屏
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.error("全屏切换失败:", err);
+    }
+  }, [isFullscreen]);
+
+  // 监听全屏状态变化
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
   // 可爱文字样式
   const cuteTextStyle =
     "text-base md:text-xl leading-relaxed text-center font-bold bg-gradient-to-br from-coral via-orange-400 to-amber-400 bg-clip-text text-transparent drop-shadow-sm tracking-wide";
@@ -168,34 +205,40 @@ export const BookStep = memo(function BookStep({
   }
 
   return (
-    <div className="w-full">
-      {/* 标题区域 */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-mint/10 text-mint mb-4">
-          <BookOpen className="w-4 h-4" />
-          <span className="text-sm font-medium">绘本预览</span>
+    <div className={`w-full ${isFullscreen ? 'bg-black p-4 md:p-8' : ''}`} ref={containerRef}>
+      {/* 标题区域 - 全屏时隐藏 */}
+      {!isFullscreen && (
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-mint/10 text-mint mb-4">
+            <BookOpen className="w-4 h-4" />
+            <span className="text-sm font-medium">绘本预览</span>
+          </div>
+          <h3 className="text-xl md:text-2xl font-bold text-stone-800">
+            查看您的<span className="text-coral">专属绘本</span>
+          </h3>
+          <p className="text-sm text-muted-foreground mt-2">
+            使用键盘方向键或点击按钮翻页，体验绘本的翻页动画效果
+          </p>
         </div>
-        <h3 className="text-xl md:text-2xl font-bold text-stone-800">
-          查看您的<span className="text-coral">专属绘本</span>
-        </h3>
-        <p className="text-sm text-muted-foreground mt-2">
-          使用键盘方向键或点击按钮翻页，体验绘本的翻页动画效果
-        </p>
-      </div>
+      )}
 
-      <div className="flex flex-col gap-4 md:gap-6">
+      <div className={`flex flex-col gap-4 md:gap-6 ${isFullscreen ? 'h-full justify-center' : ''}`}>
         {/* 绘本主体 - 响应式布局 */}
         <div
           className="relative bg-white rounded-2xl md:rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden border border-stone-200 mx-auto"
           style={{
             width: "100%",
-            maxWidth: isLandscape ? "900px" : "500px",
+            maxWidth: isFullscreen ? "100%" : (isLandscape ? "900px" : "500px"),
+            maxHeight: isFullscreen && isLandscape ? "90vh" : undefined,
             perspective: isLandscape ? "2500px" : undefined,
           }}
         >
           {/* 横屏/桌面：双页模式 (2:1) */}
           {isLandscape ? (
-            <div className="flex w-full" style={{ aspectRatio: "2 / 1" }}>
+            <div className="flex w-full" style={{
+              aspectRatio: isFullscreen ? undefined : "2 / 1",
+              height: isFullscreen ? "90vh" : undefined,
+            }}>
               {/* 左侧图片 */}
               <div className="w-1/2 bg-gradient-to-br from-[#FFF9F0] to-[#FFF3E0] relative border-r border-stone-200/60">
                 <div className="absolute inset-0 flex items-center justify-center p-4 md:p-8">
@@ -206,14 +249,14 @@ export const BookStep = memo(function BookStep({
                         : pages[currentPage]?.imageUrl
                     }
                     alt={`第 ${currentPage + 1} 页`}
-                    className="w-full h-full object-contain rounded-xl shadow-sm"
+                    className={`w-full h-full rounded-xl shadow-sm ${isFullscreen ? 'object-cover' : 'object-contain'}`}
                   />
                 </div>
               </div>
 
               {/* 右侧文字 */}
               <div className="w-1/2 bg-white relative">
-                <div className="absolute inset-0 flex items-center justify-center p-4 md:p-10">
+                <div className={`absolute inset-0 flex items-center justify-center p-4 md:p-10 ${isFullscreen ? 'pb-24' : ''}`}>
                   <div className="bg-[#F8F9FA]/80 backdrop-blur-sm rounded-xl md:rounded-[1.5rem] p-4 md:p-8 w-full border border-stone-100/50 shadow-sm">
                     <p className={cuteTextStyle}>
                       {direction === "next"
@@ -222,6 +265,74 @@ export const BookStep = memo(function BookStep({
                     </p>
                   </div>
                 </div>
+
+                {/* 全屏横屏模式：控制条悬浮在右侧文字区域底部 */}
+                {isFullscreen && (
+                  <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between bg-white/95 backdrop-blur-sm px-4 py-3 rounded-xl shadow-xl border border-stone-100 z-50">
+                    {/* 左侧：翻页导航和页码 */}
+                    <div className="flex items-center gap-3">
+                      {/* 翻页按钮 */}
+                      <div className="flex bg-stone-50 rounded-full p-1 border border-stone-200/50">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full hover:bg-white hover:shadow-sm h-8 w-8"
+                          disabled={currentPage === 0 || isFlipping}
+                          onClick={handlePrev}
+                        >
+                          <ChevronLeft className="w-4 h-4 text-stone-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full hover:bg-white hover:shadow-sm h-8 w-8"
+                          disabled={currentPage === pages.length - 1 || isFlipping}
+                          onClick={handleNext}
+                        >
+                          <ChevronRight className="w-4 h-4 text-stone-600" />
+                        </Button>
+                      </div>
+
+                      {/* 页码 */}
+                      <div className="text-sm font-bold text-stone-400 tabular-nums">
+                        <span className="text-stone-800">{currentPage + 1}</span> /{" "}
+                        {pages.length}
+                      </div>
+                    </div>
+
+                    {/* 右侧：播放控制和全屏按钮 */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        className="bg-coral hover:bg-coral/90 text-white rounded-full px-4 font-semibold shadow-lg shadow-coral/20 transition-all active:scale-95"
+                        onClick={() => setIsPlaying(!isPlaying)}
+                        disabled={isFlipping}
+                      >
+                        {isPlaying ? (
+                          <>
+                            <Pause className="w-4 h-4 mr-1 fill-current" />
+                            <span className="hidden sm:inline">暂停</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 mr-1 fill-current" />
+                            <span className="hidden sm:inline">播放</span>
+                          </>
+                        )}
+                      </Button>
+
+                      {/* 全屏按钮 */}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="rounded-full h-8 w-8"
+                        onClick={toggleFullscreen}
+                        title="退出全屏"
+                      >
+                        <Minimize className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -312,7 +423,7 @@ export const BookStep = memo(function BookStep({
                         >
                           <img
                             src={pages[currentPage + 1]?.imageUrl}
-                            className="w-full h-full object-contain rounded-xl shadow-sm"
+                            className={`w-full h-full rounded-xl shadow-sm ${isFullscreen ? 'object-cover' : 'object-contain'}`}
                             alt=""
                           />
                         </div>
@@ -338,7 +449,7 @@ export const BookStep = memo(function BookStep({
                         >
                           <img
                             src={pages[currentPage].imageUrl}
-                            className="w-full h-full object-contain rounded-xl shadow-sm"
+                            className={`w-full h-full rounded-xl shadow-sm ${isFullscreen ? 'object-cover' : 'object-contain'}`}
                             alt=""
                           />
                         </div>
@@ -368,8 +479,9 @@ export const BookStep = memo(function BookStep({
           )}
         </div>
 
-        {/* 控制栏 - 响应式布局 */}
-        <div className="flex items-center justify-between bg-white px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-[1.5rem] shadow-xl border border-stone-100">
+        {/* 控制栏 - 非全屏横屏模式或竖屏模式显示 */}
+        {!(isFullscreen && isLandscape) && (
+          <div className="flex items-center justify-between bg-white px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-[1.5rem] shadow-xl border border-stone-100">
           {/* 左侧：翻页导航和页码 */}
           <div className="flex items-center gap-3 md:gap-4">
             {/* 翻页按钮 */}
@@ -409,8 +521,8 @@ export const BookStep = memo(function BookStep({
             </div>
           </div>
 
-          {/* 右侧：播放控制 */}
-          <div className="flex items-center gap-3">
+          {/* 右侧：播放控制和全屏按钮 */}
+          <div className="flex items-center gap-2 md:gap-3">
             <Button
               className="bg-coral hover:bg-coral/90 text-white rounded-full px-4 md:px-8 font-semibold shadow-lg shadow-coral/20 transition-all active:scale-95"
               onClick={() => setIsPlaying(!isPlaying)}
@@ -430,14 +542,32 @@ export const BookStep = memo(function BookStep({
                 </>
               )}
             </Button>
+
+            {/* 全屏按钮 */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full h-8 w-8 md:h-10 md:w-10"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "退出全屏" : "全屏播放"}
+            >
+              {isFullscreen ? (
+                <Minimize className="w-4 h-4 md:w-5 md:h-5" />
+              ) : (
+                <Maximize className="w-4 h-4 md:w-5 md:h-5" />
+              )}
+            </Button>
           </div>
         </div>
+        )}
 
-        {/* 键盘提示 - 仅桌面显示 */}
-        <p className="hidden md:block text-center text-xs font-medium text-stone-400 tracking-wide">
-          提示：使用键盘 <kbd className="px-1.5 py-0.5 bg-stone-100 rounded border border-stone-200">←</kbd>{" "}
-          <kbd className="px-1.5 py-0.5 bg-stone-100 rounded border border-stone-200">→</kbd> 方向键翻页
-        </p>
+        {/* 键盘提示 - 仅桌面显示且非全屏 */}
+        {!isFullscreen && (
+          <p className="hidden md:block text-center text-xs font-medium text-stone-400 tracking-wide">
+            提示：使用键盘 <kbd className="px-1.5 py-0.5 bg-stone-100 rounded border border-stone-200">←</kbd>{" "}
+            <kbd className="px-1.5 py-0.5 bg-stone-100 rounded border border-stone-200">→</kbd> 方向键翻页
+          </p>
+        )}
       </div>
     </div>
   );
