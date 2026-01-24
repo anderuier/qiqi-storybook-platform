@@ -19,18 +19,22 @@ import {
   Loader2,
   RefreshCw
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { galleryApi, GalleryWork } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
-// 排序选项
-const sortOptions = [
+// 排序选项 - 使用 Readonly 防止意外修改
+const SORT_OPTIONS: ReadonlyArray<{
+  id: string;
+  label: string;
+  icon: typeof Flame;
+}> = [
   { id: "hot", label: "最热", icon: Flame },
   { id: "newest", label: "最新", icon: Clock },
   { id: "featured", label: "精选", icon: Crown },
-];
+] as const;
 
 export default function Gallery() {
   const { isAuthenticated } = useAuth();
@@ -70,13 +74,13 @@ export default function Gallery() {
     loadWorks();
   }, [loadWorks]);
 
-  // 搜索处理
-  const handleSearch = () => {
+  // 搜索处理 - 使用 useCallback 避免每次渲染创建新函数
+  const handleSearch = useCallback(() => {
     setSearchQuery(searchInput);
-  };
+  }, [searchInput]);
 
-  // 点赞处理
-  const handleLike = async (workId: string, isLiked: boolean) => {
+  // 点赞处理 - 使用 useCallback + 函数式 setState 避免依赖 works
+  const handleLike = useCallback(async (workId: string, isLiked: boolean) => {
     if (!isAuthenticated) {
       // 未登录提示
       setError("请先登录后再点赞");
@@ -86,14 +90,16 @@ export default function Gallery() {
     try {
       if (isLiked) {
         const result = await galleryApi.unlikeWork(workId);
-        setWorks(works.map(w =>
+        // 使用函数式 setState 避免依赖 works
+        setWorks(prevWorks => prevWorks.map(w =>
           w.workId === workId
             ? { ...w, stats: { ...w.stats, likes: result.likes }, isLiked: false }
             : w
         ));
       } else {
         const result = await galleryApi.likeWork(workId);
-        setWorks(works.map(w =>
+        // 使用函数式 setState 避免依赖 works
+        setWorks(prevWorks => prevWorks.map(w =>
           w.workId === workId
             ? { ...w, stats: { ...w.stats, likes: result.likes }, isLiked: true }
             : w
@@ -102,7 +108,7 @@ export default function Gallery() {
     } catch (err: any) {
       setError(err.message || "操作失败");
     }
-  };
+  }, [isAuthenticated]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -174,7 +180,7 @@ export default function Gallery() {
 
             {/* 排序选项 */}
             <div className="flex gap-2">
-              {sortOptions.map((option) => {
+              {SORT_OPTIONS.map((option) => {
                 const Icon = option.icon;
                 const isActive = activeSort === option.id;
                 return (
@@ -223,7 +229,7 @@ export default function Gallery() {
                   key={work.workId}
                   work={work}
                   index={index}
-                  onLike={() => handleLike(work.workId, work.isLiked)}
+                  onLike={handleLike}
                 />
               ))}
             </div>
@@ -248,10 +254,11 @@ export default function Gallery() {
 interface WorkCardProps {
   work: GalleryWork;
   index: number;
-  onLike: () => void;
+  onLike: (workId: string, isLiked: boolean) => void;
 }
 
-function WorkCard({ work, index, onLike }: WorkCardProps) {
+// 使用 React.memo 避免不必要的重渲染
+const WorkCard = memo(function WorkCard({ work, index, onLike }: WorkCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -315,7 +322,7 @@ function WorkCard({ work, index, onLike }: WorkCardProps) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onLike();
+                onLike(work.workId, work.isLiked);
               }}
               className={`flex items-center gap-1 transition-colors ${
                 work.isLiked ? "text-coral" : "hover:text-coral"
@@ -336,4 +343,4 @@ function WorkCard({ work, index, onLike }: WorkCardProps) {
       </div>
     </motion.div>
   );
-}
+});

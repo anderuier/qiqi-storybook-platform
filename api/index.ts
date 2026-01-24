@@ -976,7 +976,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             id: userId,
             email,
             nickname,
-            avatar: '/images/avatar-default.png',
+            avatar: '/images/avatar-default.webp',
           },
         },
       });
@@ -1043,7 +1043,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             id: user.id,
             email: user.email,
             nickname: user.nickname,
-            avatar: user.avatar,
+            // 如果 avatar 为空或 null，返回默认头像
+            avatar: user.avatar?.trim() || '/images/avatar-default.webp',
           },
         },
       });
@@ -1088,7 +1089,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           id: user.id,
           email: user.email,
           nickname: user.nickname,
-          avatar: user.avatar,
+          // 如果 avatar 为空或 null，返回默认头像
+          avatar: user.avatar?.trim() || '/images/avatar-default.webp',
           createdAt: user.created_at,
         },
       });
@@ -1923,7 +1925,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           email VARCHAR(255) UNIQUE NOT NULL,
           password_hash VARCHAR(255) NOT NULL,
           nickname VARCHAR(50) NOT NULL,
-          avatar VARCHAR(500) DEFAULT '/images/avatar-default.png',
+          avatar VARCHAR(500) DEFAULT '/images/avatar-default.webp',
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )

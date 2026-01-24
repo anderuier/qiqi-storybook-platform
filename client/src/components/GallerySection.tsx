@@ -17,18 +17,36 @@ import {
   ChevronRight,
   Play
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, memo } from "react";
 import { Link } from "wouter";
 
-// 排序选项
-const sortOptions = [
+// 作品数据类型
+interface Work {
+  id: number;
+  title: string;
+  author: string;
+  avatar: string;
+  cover: string;
+  likes: number;
+  views: number;
+  comments: number;
+  featured: boolean;
+  isNew: boolean;
+}
+
+// 排序选项 - 使用 Readonly 防止意外修改
+const SORT_OPTIONS: ReadonlyArray<{
+  id: string;
+  label: string;
+  icon: typeof Flame;
+}> = [
   { id: "hot", label: "最热", icon: Flame },
   { id: "new", label: "最新", icon: Clock },
   { id: "featured", label: "精选", icon: Crown },
-];
+] as const;
 
-// 作品数据
-const works = [
+// 作品数据 - 移到组件外部，只创建一次
+const WORKS: Readonly<Work[]> = [
   {
     id: 1,
     title: "小熊的生日派对",
@@ -101,18 +119,20 @@ const works = [
     featured: false,
     isNew: false
   }
-];
+] as const;
 
 export default function GallerySection() {
   const [activeSort, setActiveSort] = useState("hot");
 
-  // 根据排序选项排序作品
-  const sortedWorks = [...works].sort((a, b) => {
-    if (activeSort === "hot") return b.likes - a.likes;
-    if (activeSort === "new") return b.isNew ? 1 : -1;
-    if (activeSort === "featured") return b.featured ? 1 : -1;
-    return 0;
-  });
+  // 使用 useMemo 缓存排序后的作品列表
+  const sortedWorks = useMemo(() => {
+    return [...WORKS].sort((a, b) => {
+      if (activeSort === "hot") return b.likes - a.likes;
+      if (activeSort === "new") return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
+      if (activeSort === "featured") return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+      return 0;
+    });
+  }, [activeSort]);
 
   return (
     <section id="gallery" className="py-20 bg-coral/5">
@@ -144,7 +164,7 @@ export default function GallerySection() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
-          {sortOptions.map((option) => {
+          {SORT_OPTIONS.map((option) => {
             const Icon = option.icon;
             const isActive = activeSort === option.id;
             return (
@@ -195,11 +215,12 @@ export default function GallerySection() {
 }
 
 interface WorkCardProps {
-  work: typeof works[0];
+  work: Work;
   index: number;
 }
 
-function WorkCard({ work, index }: WorkCardProps) {
+// 使用 React.memo 避免不必要的重渲染
+const WorkCard = memo(function WorkCard({ work, index }: WorkCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -281,4 +302,4 @@ function WorkCard({ work, index }: WorkCardProps) {
       </div>
     </motion.div>
   );
-}
+});

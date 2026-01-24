@@ -25,7 +25,7 @@ import {
   Globe,
   Lock
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { Link, useLocation } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -351,17 +351,18 @@ interface WorkCardProps {
   onEdit: () => void;
 }
 
-function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, onTogglePublish, onEdit }: WorkCardProps) {
-  // 格式化日期
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-  };
+// 格式化日期函数 - 移到组件外部，只创建一次
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
 
+// 使用 React.memo 避免不必要的重渲染
+const WorkCard = memo(function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, onTogglePublish, onEdit }: WorkCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -512,4 +513,4 @@ function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, 
       </div>
     </motion.div>
   );
-}
+});

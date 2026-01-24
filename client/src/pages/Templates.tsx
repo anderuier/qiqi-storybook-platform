@@ -14,20 +14,36 @@ import {
   Loader2,
   RefreshCw
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { Link } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { templatesApi, Template } from "@/lib/api";
 
-// 分类图标映射
-const categoryIcons: Record<string, string> = {
+// 分类图标映射 - 移到组件外部，只创建一次
+const CATEGORY_ICONS: Readonly<Record<string, string>> = {
   nature: "🌲",
   fairy: "🏰",
   adventure: "🚀",
   animals: "🐦",
   education: "📚",
-};
+} as const;
+
+// 颜色映射 - 移到组件外部，只创建一次
+const COLOR_MAP: Readonly<Record<string, { bg: string; text: string; border: string }>> = {
+  nature: { bg: "bg-mint/10", text: "text-mint", border: "hover:border-mint/30" },
+  fairy: { bg: "bg-coral/10", text: "text-coral", border: "hover:border-coral/30" },
+  adventure: { bg: "bg-sunny/10", text: "text-sunny", border: "hover:border-sunny/30" },
+  animals: { bg: "bg-mint/10", text: "text-mint", border: "hover:border-mint/30" },
+  education: { bg: "bg-coral/10", text: "text-coral", border: "hover:border-coral/30" },
+} as const;
+
+const DEFAULT_COLORS = { bg: "bg-muted", text: "text-muted-foreground", border: "hover:border-border" };
+
+// 获取颜色类 - 移到组件外部，只创建一次
+function getColorClass(category: string): { bg: string; text: string; border: string } {
+  return COLOR_MAP[category] || DEFAULT_COLORS;
+}
 
 export default function Templates() {
   // 模板列表状态
@@ -171,7 +187,7 @@ export default function Templates() {
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
                     }`}
                   >
-                    <span>{cat.icon || categoryIcons[cat.id] || "📁"}</span>
+                    <span>{cat.icon || CATEGORY_ICONS[cat.id] || "📁"}</span>
                     {cat.name}
                   </button>
                 );
@@ -229,19 +245,9 @@ interface TemplateCardProps {
   index: number;
 }
 
-function TemplateCard({ template, index }: TemplateCardProps) {
-  // 根据分类选择颜色
-  const getColorClass = (category: string) => {
-    const colorMap: Record<string, { bg: string; text: string; border: string }> = {
-      nature: { bg: "bg-mint/10", text: "text-mint", border: "hover:border-mint/30" },
-      fairy: { bg: "bg-coral/10", text: "text-coral", border: "hover:border-coral/30" },
-      adventure: { bg: "bg-sunny/10", text: "text-sunny", border: "hover:border-sunny/30" },
-      animals: { bg: "bg-mint/10", text: "text-mint", border: "hover:border-mint/30" },
-      education: { bg: "bg-coral/10", text: "text-coral", border: "hover:border-coral/30" },
-    };
-    return colorMap[category] || { bg: "bg-muted", text: "text-muted-foreground", border: "hover:border-border" };
-  };
-
+// 使用 React.memo 避免不必要的重渲染
+const TemplateCard = memo(function TemplateCard({ template, index }: TemplateCardProps) {
+  // 使用外部函数获取颜色，避免每次渲染重新创建
   const colors = getColorClass(template.category);
 
   return (
@@ -299,4 +305,4 @@ function TemplateCard({ template, index }: TemplateCardProps) {
       </div>
     </motion.div>
   );
-}
+});
