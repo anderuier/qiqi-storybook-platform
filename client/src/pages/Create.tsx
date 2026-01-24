@@ -169,25 +169,55 @@ export default function Create() {
     }
   };
 
-  // 轮询生成图片
+  // 轮询生成图片 - 使用指数退避算法优化
   useEffect(() => {
     if (create.imageTask.status === "processing" && create.imageTask.taskId) {
       let consecutiveFailures = 0; // 连续失败次数
       const maxRetries = 10; // 最大重试次数
       let syncCheckCount = 0;
 
-      const interval = setInterval(async () => {
+      // 指数退避配置
+      let delay = 1000;        // 初始 1 秒
+      const minDelay = 1000;   // 最小 1 秒
+      const maxDelay = 10000;  // 最大 10 秒
+      const backoffFactor = 1.5; // 失败退避因子
+      const successFactor = 0.8; // 成功加速因子
+
+      let timeoutId: NodeJS.Timeout | null = null;
+      let isPolling = true;
+
+      // 轮询函数（递归 setTimeout）
+      const poll = async () => {
+        if (!isPolling) return;
+
         try {
           const result = await create.continueImageGeneration();
           consecutiveFailures = 0; // 成功后重置连续失败计数
           syncCheckCount = 0; // 重置同步检查计数
 
+          // 成功后调整延迟：略微减少（最小不低于 minDelay）
+          delay = Math.max(minDelay, Math.floor(delay * successFactor));
+
+          console.log(`[图片轮询] 成功，下次延迟 ${delay}ms`);
+
           if (result.status === "completed") {
-            clearInterval(interval);
+            console.log('[图片轮询] 全部完成');
+            isPolling = false;
+            return;
           }
+
+          // 继续轮询
+          if (isPolling) {
+            timeoutId = setTimeout(poll, delay);
+          }
+
         } catch (err) {
           consecutiveFailures++;
           syncCheckCount++;
+
+          // 失败后增加延迟（指数退避）
+          delay = Math.min(maxDelay, Math.floor(delay * backoffFactor));
+          console.log(`[图片轮询] 失败 ${consecutiveFailures} 次，下次延迟 ${delay}ms`);
 
           // 每 3 次失败后，尝试同步任务状态
           if (syncCheckCount >= 3) {
@@ -202,14 +232,30 @@ export default function Create() {
           // 连续失败超过 maxRetries 次才停止
           if (consecutiveFailures >= maxRetries) {
             console.error('图片生成失败次数过多，停止轮询');
-            clearInterval(interval);
+            isPolling = false;
             // 最后尝试一次同步状态
             create.checkTaskStatus().catch(console.error);
+            return;
+          }
+
+          // 继续轮询
+          if (isPolling) {
+            timeoutId = setTimeout(poll, delay);
           }
         }
-      }, 5000); // 改为每 5 秒生成一张，给后端更多时间
+      };
 
-      return () => clearInterval(interval);
+      // 开始轮询（初始延迟 1 秒）
+      console.log(`[图片轮询] 开始，初始延迟 ${delay}ms`);
+      timeoutId = setTimeout(poll, delay);
+
+      // 清理函数
+      return () => {
+        isPolling = false;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      };
     }
   }, [create.imageTask.status, create.imageTask.taskId]);
 
