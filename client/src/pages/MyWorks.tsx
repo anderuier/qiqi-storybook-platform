@@ -386,7 +386,7 @@ const WorkCard = memo(function WorkCard({ work, index, showMenu, onToggleMenu, o
         />
 
         {/* 播放按钮 */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 z-20">
           <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform">
             <Play className="w-6 h-6 text-coral fill-coral ml-1" />
           </div>
