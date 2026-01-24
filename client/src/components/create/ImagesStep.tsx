@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Loader2, Check, RefreshCw } from "lucide-react";
+import { Loader2, Check, RefreshCw, Maximize, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { artStyles } from "./constants";
@@ -116,8 +116,7 @@ export const ImagesStep = memo(function ImagesStep({
               .map(([pageNum, url]) => (
               <div
                 key={pageNum}
-                className="relative aspect-square rounded-xl overflow-hidden group cursor-pointer"
-                onClick={() => onPreviewImage(url)}
+                className="relative aspect-square rounded-xl overflow-hidden group"
               >
                 {/* 占位背景图 */}
                 <div
@@ -135,21 +134,66 @@ export const ImagesStep = memo(function ImagesStep({
                     e.currentTarget.alt = '图片加载失败';
                   }}
                 />
+
+                {/* 图片操作按钮层 - 桌面端悬停显示，移动端始终显示 */}
                 {imageTask.status === "completed" && (
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRegenerateOne(Number(pageNum));
-                      }}
-                      className="rounded-full"
-                    >
-                      <RefreshCw className="w-3 h-3 mr-1" />
-                      重新生成
-                    </Button>
-                  </div>
+                  <>
+                    {/* 桌面端：悬停显示遮罩 */}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity md:flex hidden items-center justify-center gap-2">
+                      {/* 查看大图按钮 */}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPreviewImage(url);
+                        }}
+                        className="rounded-full bg-white hover:bg-white/90"
+                      >
+                        <Maximize className="w-3 h-3" />
+                      </Button>
+                      {/* 重新生成按钮 */}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRegenerateOne(Number(pageNum));
+                        }}
+                        className="rounded-full bg-white hover:bg-white/90"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                      </Button>
+                    </div>
+
+                    {/* 移动端：始终显示的操作栏 */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 flex justify-center gap-2 md:hidden">
+                      {/* 查看大图按钮 */}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPreviewImage(url);
+                        }}
+                        className="rounded-full bg-white/90 hover:bg-white"
+                      >
+                        <Maximize className="w-3 h-3" />
+                      </Button>
+                      {/* 重新生成按钮 */}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRegenerateOne(Number(pageNum));
+                        }}
+                        className="rounded-full bg-white/90 hover:bg-white"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </>
                 )}
               </div>
             ))}
