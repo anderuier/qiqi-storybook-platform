@@ -1,5 +1,5 @@
-import { memo } from "react";
-import { Loader2, Check, RefreshCw, Maximize, Smartphone } from "lucide-react";
+import { memo, useState } from "react";
+import { Loader2, Check, RefreshCw, Maximize, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { artStyles } from "./constants";
@@ -39,6 +39,18 @@ export const ImagesStep = memo(function ImagesStep({
   onRegenerateOne,
   onPreviewImage,
 }: ImagesStepProps) {
+  // 移动端：当前展开的图片索引
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
+
+  // 处理移动端图片点击
+  const handleImageClick = (pageNum: string) => {
+    if (expandedImage === pageNum) {
+      setExpandedImage(null); // 再次点击关闭
+    } else {
+      setExpandedImage(pageNum); // 展开按钮
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
@@ -123,23 +135,24 @@ export const ImagesStep = memo(function ImagesStep({
                   className="absolute inset-0 bg-cover bg-center"
                   style={{ backgroundImage: 'url(/images/placeholder-bg.webp)' }}
                 />
-                {/* 实际图片 */}
+                {/* 实际图片 - 移动端可点击 */}
                 <img
                   src={url}
                   alt={`第${pageNum}页`}
                   loading="lazy"
-                  className="relative z-10 w-full h-full object-cover"
+                  className="relative z-10 w-full h-full object-cover md:group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                  onClick={() => handleImageClick(pageNum)}
                   onError={(e) => {
                     e.currentTarget.src = '/images/image-placeholder.webp';
                     e.currentTarget.alt = '图片加载失败';
                   }}
                 />
 
-                {/* 图片操作按钮层 - 桌面端悬停显示，移动端始终显示 */}
+                {/* 图片操作按钮层 */}
                 {imageTask.status === "completed" && (
                   <>
                     {/* 桌面端：悬停显示遮罩 */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2 z-20">
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2 z-20 pointer-events-none">
                       {/* 查看大图按钮 */}
                       <Button
                         size="sm"
@@ -148,7 +161,7 @@ export const ImagesStep = memo(function ImagesStep({
                           e.stopPropagation();
                           onPreviewImage(url);
                         }}
-                        className="rounded-full bg-white hover:bg-white/90"
+                        className="rounded-full bg-white hover:bg-white/90 pointer-events-auto"
                       >
                         <Maximize className="w-3 h-3" />
                       </Button>
@@ -160,39 +173,53 @@ export const ImagesStep = memo(function ImagesStep({
                           e.stopPropagation();
                           onRegenerateOne(Number(pageNum));
                         }}
-                        className="rounded-full bg-white hover:bg-white/90"
+                        className="rounded-full bg-white hover:bg-white/90 pointer-events-auto"
                       >
                         <RefreshCw className="w-3 h-3" />
                       </Button>
                     </div>
 
-                    {/* 移动端：始终显示的操作栏 */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 flex justify-center gap-2 md:hidden z-20">
-                      {/* 查看大图按钮 */}
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onPreviewImage(url);
-                        }}
-                        className="rounded-full bg-white/90 hover:bg-white"
-                      >
-                        <Maximize className="w-3 h-3" />
-                      </Button>
-                      {/* 重新生成按钮 */}
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRegenerateOne(Number(pageNum));
-                        }}
-                        className="rounded-full bg-white/90 hover:bg-white"
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                      </Button>
-                    </div>
+                    {/* 移动端：点击图片时显示操作栏 */}
+                    {expandedImage === pageNum && (
+                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 p-3 md:hidden z-20">
+                        {/* 查看大图按钮 */}
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPreviewImage(url);
+                          }}
+                          className="rounded-full bg-white hover:bg-white/90 w-12 h-12 flex items-center justify-center"
+                        >
+                          <Maximize className="w-5 h-5" />
+                        </Button>
+                        {/* 重新生成按钮 */}
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRegenerateOne(Number(pageNum));
+                          }}
+                          className="rounded-full bg-white hover:bg-white/90 w-12 h-12 flex items-center justify-center"
+                        >
+                          <RefreshCw className="w-5 h-5" />
+                        </Button>
+                        {/* 关闭按钮 */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedImage(null);
+                          }}
+                          className="rounded-full bg-black/30 hover:bg-black/50 text-white w-12 h-12 flex items-center justify-center"
+                        >
+                          <X className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
