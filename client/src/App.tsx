@@ -19,6 +19,7 @@ const Help = lazy(() => import("./pages/Help"));
 const Contact = lazy(() => import("./pages/Contact"));
 const MyWorks = lazy(() => import("./pages/MyWorks"));
 const AccountSettings = lazy(() => import("./pages/AccountSettings"));
+const BookPreview = lazy(() => import("./pages/BookPreview"));
 
 
 function Router() {
@@ -34,6 +35,7 @@ function Router() {
         <Route path={"/contact"} component={Contact} />
         <Route path={"/my-works"} component={MyWorks} />
         <Route path={"/settings"} component={AccountSettings} />
+        <Route path={"/book/:workId"} component={BookPreview} />
         <Route path={"/404"} component={NotFound} />
         {/* Final fallback route */}
         <Route component={NotFound} />

@@ -264,6 +264,9 @@ export default function MyWorks() {
                     setShowMenu(null);
                     window.location.href = `/create?draft=${work.workId}`;
                   }}
+                  onPlay={() => {
+                    setLocation(`/book/${work.workId}`);
+                  }}
                 />
               ))}
             </div>
@@ -349,6 +352,7 @@ interface WorkCardProps {
   onDelete: () => void;
   onTogglePublish: () => void;
   onEdit: () => void;
+  onPlay: () => void;
 }
 
 // 格式化日期函数 - 移到组件外部，只创建一次
@@ -362,7 +366,10 @@ function formatDate(dateStr: string): string {
 }
 
 // 使用 React.memo 避免不必要的重渲染
-const WorkCard = memo(function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, onTogglePublish, onEdit }: WorkCardProps) {
+const WorkCard = memo(function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, onTogglePublish, onEdit, onPlay }: WorkCardProps) {
+  // 检查是否有图片
+  const hasImages = work.firstImageUrl !== null && work.firstImageUrl !== undefined;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -385,11 +392,21 @@ const WorkCard = memo(function WorkCard({ work, index, showMenu, onToggleMenu, o
           className="relative z-10 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
 
-        {/* 播放按钮 - 提高层级确保不被图片遮挡 */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 z-30 pointer-events-none">
-          <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform pointer-events-auto">
+        {/* 播放按钮 - 桌面端悬停显示，移动端始终显示 */}
+        <div className="absolute inset-0 flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity bg-black/20 z-30 pointer-events-none">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!hasImages) {
+                alert("该作品还没有生成图片，无法预览");
+                return;
+              }
+              onPlay();
+            }}
+            className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg hover:scale-110 transition-transform pointer-events-auto"
+          >
             <Play className="w-6 h-6 text-coral fill-coral ml-1" />
-          </div>
+          </button>
         </div>
 
         {/* 状态标签 */}

@@ -369,9 +369,9 @@ export const BookStep = memo(function BookStep({
         </div>
 
         {/* 控制栏 - 响应式布局 */}
-        <div className="flex flex-col md:flex-row gap-3 md:gap-0 items-stretch md:items-center justify-between bg-white px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-[1.5rem] shadow-xl border border-stone-100">
+        <div className="flex items-center justify-between bg-white px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-[1.5rem] shadow-xl border border-stone-100">
           {/* 左侧：翻页导航和页码 */}
-          <div className="flex items-center justify-between md:justify-start gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             {/* 翻页按钮 */}
             <div className="flex bg-stone-50 rounded-full p-1 border border-stone-200/50">
               <Button
@@ -409,39 +409,24 @@ export const BookStep = memo(function BookStep({
             </div>
           </div>
 
-          {/* 中间：播放控制（桌面端） */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* 右侧：播放控制 */}
+          <div className="flex items-center gap-3">
             <Button
-              className="bg-coral hover:bg-coral/90 text-white rounded-full px-8 font-semibold shadow-lg shadow-coral/20 transition-all active:scale-95"
+              className="bg-coral hover:bg-coral/90 text-white rounded-full px-4 md:px-8 font-semibold shadow-lg shadow-coral/20 transition-all active:scale-95"
               onClick={() => setIsPlaying(!isPlaying)}
               disabled={isFlipping}
             >
               {isPlaying ? (
                 <>
-                  <Pause className="w-4 h-4 mr-2 fill-current" /> 暂停播放
+                  <Pause className="w-4 h-4 mr-1 md:mr-2 fill-current" />
+                  <span className="hidden md:inline">暂停播放</span>
+                  <span className="md:hidden">暂停</span>
                 </>
               ) : (
                 <>
-                  <Play className="w-4 h-4 mr-2 fill-current" /> 自动播放
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* 移动端：播放按钮 */}
-          <div className="flex md:hidden items-center gap-2">
-            <Button
-              className="bg-coral hover:bg-coral/90 text-white rounded-full px-6 font-semibold shadow-lg shadow-coral/20 transition-all active:scale-95 flex-1"
-              onClick={() => setIsPlaying(!isPlaying)}
-              disabled={isFlipping}
-            >
-              {isPlaying ? (
-                <>
-                  <Pause className="w-4 h-4 mr-2 fill-current" /> 暂停
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 mr-2 fill-current" /> 播放
+                  <Play className="w-4 h-4 mr-1 md:mr-2 fill-current" />
+                  <span className="hidden md:inline">自动播放</span>
+                  <span className="md:hidden">播放</span>
                 </>
               )}
             </Button>
