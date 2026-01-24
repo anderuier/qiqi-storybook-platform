@@ -3176,40 +3176,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // ==================== 临时修复：更新用户头像路径 ====================
-    if (fullPath === '/api/fix/avatar' && req.method === 'POST') {
-      try {
-        // 更新所有旧的头像路径
-        const result = await sql`
-          UPDATE users
-          SET avatar = '/images/avatar-default.webp'
-          WHERE avatar IS NULL
-             OR avatar = ''
-             OR avatar = '/images/avatar-default.png'
-          RETURNING id, email, avatar
-        `;
-
-        return res.status(200).json({
-          success: true,
-          message: `成功更新 ${result.rowCount} 个用户的头像路径`,
-          data: {
-            updatedCount: result.rowCount,
-            updatedUsers: result.rows,
-          },
-        });
-      } catch (error: any) {
-        console.error('更新头像路径失败:', error);
-        return res.status(500).json({
-          success: false,
-          error: {
-            code: 'UPDATE_FAILED',
-            message: '更新头像路径失败',
-            details: error.message,
-          },
-        });
-      }
-    }
-
     // 404
     return res.status(404).json({
       success: false,
