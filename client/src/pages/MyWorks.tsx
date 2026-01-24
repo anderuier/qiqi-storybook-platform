@@ -367,10 +367,10 @@ function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, 
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.05 }}
-      className="group bg-white rounded-2xl overflow-hidden border border-border/50 hover:border-coral/30 transition-all card-shadow-hover"
+      className="group bg-white rounded-2xl border border-border/50 hover:border-coral/30 transition-all card-shadow-hover relative"
     >
-      {/* 封面图 */}
-      <div className="relative aspect-[4/3] overflow-hidden">
+      {/* 封面图区域 */}
+      <div className="relative aspect-[4/3] rounded-t-2xl overflow-hidden">
         {/* 占位背景图 */}
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -392,7 +392,7 @@ function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, 
         </div>
 
         {/* 状态标签 */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 z-10">
           {work.status === "draft" ? (
             <span className="bg-muted text-muted-foreground text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
               <Lock className="w-3 h-3" />
@@ -405,83 +405,83 @@ function WorkCard({ work, index, showMenu, onToggleMenu, onCloseMenu, onDelete, 
             </span>
           )}
         </div>
+      </div>
 
-        {/* 更多菜单按钮 */}
-        <div className="absolute top-3 right-3">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleMenu();
-            }}
-            className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
-          >
-            <MoreVertical className="w-4 h-4 text-muted-foreground" />
-          </button>
+      {/* 更多菜单按钮和下拉菜单 - 移到封面图容器外部 */}
+      <div className="absolute top-3 right-3 z-30">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleMenu();
+          }}
+          className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+        >
+          <MoreVertical className="w-4 h-4 text-muted-foreground" />
+        </button>
 
-          {/* 下拉菜单 */}
-          {showMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={onCloseMenu}
-              />
-              <div className="absolute right-0 top-10 bg-white rounded-xl shadow-lg border border-border/50 py-2 min-w-[140px] z-20">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit();
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  编辑
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onTogglePublish();
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
-                >
-                  {work.status === "draft" ? (
-                    <>
-                      <Globe className="w-4 h-4" />
-                      发布
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-4 h-4" />
-                      取消发布
-                    </>
-                  )}
-                </button>
-                <button className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2">
-                  <Share2 className="w-4 h-4" />
-                  分享
-                </button>
-                <button className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2">
-                  <Download className="w-4 h-4" />
-                  下载
-                </button>
-                <div className="border-t border-border my-1" />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete();
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-red-500"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  删除
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        {/* 下拉菜单 */}
+        {showMenu && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={onCloseMenu}
+            />
+            <div className="absolute right-0 top-10 bg-white rounded-xl shadow-lg border border-border/50 py-2 min-w-[140px] z-50">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                编辑
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePublish();
+                }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                {work.status === "draft" ? (
+                  <>
+                    <Globe className="w-4 h-4" />
+                    发布
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    取消发布
+                  </>
+                )}
+              </button>
+              <button className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2">
+                <Share2 className="w-4 h-4" />
+                分享
+              </button>
+              <button className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                下载
+              </button>
+              <div className="border-t border-border my-1" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-red-500"
+              >
+                <Trash2 className="w-4 h-4" />
+                删除
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* 内容 */}
-      <div className="p-4">
+      <div className="p-4 rounded-b-2xl">
         {/* 标题 */}
         <h3 className="font-bold mb-2 group-hover:text-coral transition-colors line-clamp-1">
           {work.title}
