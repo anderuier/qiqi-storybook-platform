@@ -181,43 +181,46 @@ export const ImagesStep = memo(function ImagesStep({
 
                     {/* 移动端：点击图片时显示操作栏 */}
                     {expandedImage === pageNum && (
-                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 p-3 md:hidden z-20">
-                        {/* 查看大图按钮 */}
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onPreviewImage(url);
-                          }}
-                          className="rounded-full bg-white hover:bg-white/90 w-12 h-12 flex items-center justify-center"
-                        >
-                          <Maximize className="w-5 h-5" />
-                        </Button>
-                        {/* 重新生成按钮 */}
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRegenerateOne(Number(pageNum));
-                          }}
-                          className="rounded-full bg-white hover:bg-white/90 w-12 h-12 flex items-center justify-center"
-                        >
-                          <RefreshCw className="w-5 h-5" />
-                        </Button>
-                        {/* 关闭按钮 */}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedImage(null);
-                          }}
-                          className="rounded-full bg-black/30 hover:bg-black/50 text-white w-12 h-12 flex items-center justify-center"
-                        >
-                          <X className="w-5 h-5" />
-                        </Button>
+                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 p-2 md:hidden z-20">
+                        {/* 按钮容器 - 水平排列 */}
+                        <div className="flex items-center justify-center gap-1 w-full">
+                          {/* 查看大图按钮 */}
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onPreviewImage(url);
+                            }}
+                            className="rounded-full bg-white hover:bg-white/90 w-10 h-10 flex items-center justify-center flex-shrink-0"
+                          >
+                            <Maximize className="w-4 h-4" />
+                          </Button>
+                          {/* 重新生成按钮 */}
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRegenerateOne(Number(pageNum));
+                            }}
+                            className="rounded-full bg-white hover:bg-white/90 w-10 h-10 flex items-center justify-center flex-shrink-0"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </Button>
+                          {/* 关闭按钮 */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedImage(null);
+                            }}
+                            className="rounded-full bg-black/30 hover:bg-black/50 text-white w-10 h-10 flex items-center justify-center flex-shrink-0"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </>
