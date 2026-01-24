@@ -1043,7 +1043,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             id: user.id,
             email: user.email,
             nickname: user.nickname,
-            // 如果 avatar 为空或 null，返回默认头像
+            // 如果 avatar 为空或 null，返回默认头像 (webp)
             avatar: user.avatar?.trim() || '/images/avatar-default.webp',
           },
         },
