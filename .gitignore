@@ -122,6 +122,8 @@ docs/*.jpg
 DOCS/*.jpg
 docs/code-structure-report.md
 DOCS/code-structure-report.md
+docs/web-development-best-practices.md
+DOCS/web-development-best-practices.md
 
 # 常用命令备忘
 常用命令.txt
