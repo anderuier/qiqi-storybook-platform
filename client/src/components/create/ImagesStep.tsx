@@ -139,7 +139,7 @@ export const ImagesStep = memo(function ImagesStep({
                 {imageTask.status === "completed" && (
                   <>
                     {/* 桌面端：悬停显示遮罩 */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity md:flex hidden items-center justify-center gap-2">
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
                       {/* 查看大图按钮 */}
                       <Button
                         size="sm"
