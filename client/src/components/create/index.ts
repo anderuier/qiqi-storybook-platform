@@ -16,6 +16,9 @@ export type { StoryboardStepProps } from "./StoryboardStep";
 export { ImagesStep } from "./ImagesStep";
 export type { ImagesStepProps, ImageTask } from "./ImagesStep";
 
+export { BookStep } from "./BookStep";
+export type { BookStepProps } from "./BookStep";
+
 export { VoiceStep } from "./VoiceStep";
 export type { VoiceStepProps } from "./VoiceStep";
 

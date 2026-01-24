@@ -32,6 +32,7 @@ import {
   StoryStep,
   StoryboardStep,
   ImagesStep,
+  BookStep,
   VoiceStep,
   totalSteps,
 } from "@/components/create";
@@ -98,7 +99,7 @@ export default function Create() {
           'storyboard': 3,
           'images': 4,
           'preview': 5,
-          'completed': 5,
+          'completed': 6,
         };
         setCurrentStep(stepMap[draft.work.currentStep] || 1);
         setIsRestoringDraft(false);
@@ -120,6 +121,10 @@ export default function Create() {
       case 4:
         return create.imageTask.status === "completed";
       case 5:
+        // 绘本预览步骤：只要有分镜数据就可以继续
+        return create.storyboard !== null;
+      case 6:
+        // 配音步骤：必须选择一个配音选项（包括"无配音"）
         return selectedVoice !== null;
       default:
         return false;
@@ -278,6 +283,8 @@ export default function Create() {
       handleStartImageGeneration();
     } else if (currentStep === 4 && create.imageTask.status === "completed") {
       setCurrentStep(5);
+    } else if (currentStep === 5) {
+      setCurrentStep(6);
     }
   };
 
@@ -411,8 +418,16 @@ export default function Create() {
               />
             )}
 
-            {/* 步骤5：选择语音并完成 */}
-            {currentStep === 5 && (
+            {/* 步骤5：绘本预览 */}
+            {currentStep === 5 && create.storyboard?.pages && create.storyboard.pages.length > 0 && (
+              <BookStep
+                storyboardPages={create.storyboard.pages}
+                pageImages={create.pageImages}
+              />
+            )}
+
+            {/* 步骤6：选择语音并完成 */}
+            {currentStep === 6 && (
               <VoiceStep
                 selectedVoice={selectedVoice}
                 setSelectedVoice={setSelectedVoice}
@@ -448,7 +463,8 @@ export default function Create() {
                     {currentStep === 1 && "生成故事"}
                     {currentStep === 2 && "生成分镜"}
                     {currentStep === 3 && "生成图片"}
-                    {currentStep === 4 && "下一步"}
+                    {currentStep === 4 && "预览绘本"}
+                    {currentStep === 5 && "下一步"}
                     <ChevronRight className="w-5 h-5 ml-1" />
                   </>
                 )}
@@ -457,7 +473,7 @@ export default function Create() {
               <Button
                 onClick={handleComplete}
                 disabled={!selectedVoice}
-                className="bg-mint hover:bg-mint/90 text-white rounded-full px-8"
+                className="bg-mint hover:bg-mint/90 text-white rounded-full px-8 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-5 h-5 mr-2" />
                 完成创作

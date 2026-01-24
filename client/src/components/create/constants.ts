@@ -92,9 +92,9 @@ export const imageProviders: Array<{
 /**
  * 步骤标签
  */
-export const stepLabels = ["输入", "故事", "分镜", "图片", "完成"] as const;
+export const stepLabels = ["输入", "故事", "分镜", "图片", "绘本", "配音"] as const;
 
 /**
  * 总步骤数
  */
-export const totalSteps = 5;
+export const totalSteps = 6;
