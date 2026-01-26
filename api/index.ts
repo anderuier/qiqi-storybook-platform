@@ -275,13 +275,13 @@ async function uploadImageToBlob(imageUrl: string, filename: string): Promise<st
   }
 }
 
-// OpenAI 兼容客户端（支持第三方 Claude API）
+// OpenAI 兼容客户端（支持智谱 GLM-4 API）
 let aiClient: OpenAI | null = null;
 function getAIClient(): OpenAI {
   if (!aiClient) {
     aiClient = new OpenAI({
-      apiKey: process.env.ANTHROPIC_API_KEY || '',
-      baseURL: process.env.ANTHROPIC_BASE_URL || 'https://api.openai.com/v1',
+      apiKey: process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY || '',
+      baseURL: process.env.AI_BASE_URL || process.env.ANTHROPIC_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4/',
       defaultHeaders: {
         'User-Agent': 'StoryBook/1.0',
       },
@@ -1610,7 +1610,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         const response = await client.chat.completions.create({
-          model: process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022',
+          model: process.env.AI_MODEL || process.env.CLAUDE_MODEL || 'glm-4-flash',
           max_tokens: 2000,
           temperature: 0.8,
           messages: [
@@ -1785,7 +1785,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const userPrompt = buildStoryboardUserPrompt(storyContent, validPageCount);
 
         const response = await client.chat.completions.create({
-          model: process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022',
+          model: process.env.AI_MODEL || process.env.CLAUDE_MODEL || 'glm-4-flash',
           max_tokens: 4000,
           temperature: 0.7,
           messages: [
@@ -1869,7 +1869,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const client = getAIClient();
         const response = await client.chat.completions.create({
-          model: process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022',
+          model: process.env.AI_MODEL || process.env.CLAUDE_MODEL || 'glm-4-flash',
           max_tokens: 100,
           messages: [
             {
@@ -1898,8 +1898,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           status: error?.status,
           code: error?.code,
           type: error?.type,
-          baseURL: process.env.ANTHROPIC_BASE_URL,
-          model: process.env.CLAUDE_MODEL,
+          baseURL: process.env.AI_BASE_URL || process.env.ANTHROPIC_BASE_URL,
+          model: process.env.AI_MODEL || process.env.CLAUDE_MODEL,
         };
 
         return res.status(500).json({
