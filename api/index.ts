@@ -1786,7 +1786,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const response = await client.chat.completions.create({
           model: process.env.AI_MODEL || process.env.CLAUDE_MODEL || 'glm-4-flash',
-          max_tokens: 4000,
+          max_tokens: 2048,
           temperature: 0.7,
           messages: [
             {
