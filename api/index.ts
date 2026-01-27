@@ -145,16 +145,35 @@ ${storyContent}
 请按照格式输出${pageCount}页分镜，每页包含"文字"和"画面"两部分。`;
 }
 
+// 分镜解析正则表达式（提升到模块作用域，避免重复创建）
+const STORYBOARD_PAGE_SEPARATOR_REGEX = /[-=]{2,}第\s*\d+\s*页[-=]{2,}|【第\s*\d+\s*页】|第\s*\d+\s*页[：:]/i;
+const STORYBOARD_LOOSE_SEPARATOR_REGEX = /第\s*(\d+)\s*页/;
+// 使用 [\s\S] 替代 . 配合 /s 标志，以兼容旧版 JavaScript 引擎
+const STORYBOARD_TEXT_REGEX = /(?:故事)?文字[：:]\s*([\s\S]+?)(?=(?:画面|场景|图片)[：:]|$)/;
+const STORYBOARD_IMAGE_REGEX = /(?:画面|场景|图片)(?:描述)?[：:]\s*([\s\S]+?)$/;
+
 // 解析分镜文本为结构化数据
 function parseStoryboardText(text: string): Array<{pageNumber: number; text: string; imagePrompt: string}> {
   const pages: Array<{pageNumber: number; text: string; imagePrompt: string}> = [];
 
-  // 按分隔线分割
-  const sections = text.split(/---第\d+页---/).filter(s => s.trim());
+  // 更健壮的分隔符匹配：支持各种变体格式
+  // 匹配: ---第1页---, ---第 1 页---, ===第1页===, 【第1页】, 第1页：, 等
+  const sections = text.split(STORYBOARD_PAGE_SEPARATOR_REGEX).filter(s => s.trim());
+
+  // 如果上面的分割没有结果，尝试更宽松的匹配
+  if (sections.length === 0) {
+    // 尝试按"第X页"分割
+    const looseSections = text.split(STORYBOARD_LOOSE_SEPARATOR_REGEX).filter(s => s.trim() && isNaN(Number(s)));
+    if (looseSections.length > 0) {
+      sections.push(...looseSections);
+    }
+  }
 
   sections.forEach((section, index) => {
-    const textMatch = section.match(/文字[：:]\s*(.+?)(?=画面[：:]|$)/s);
-    const imageMatch = section.match(/画面[：:]\s*(.+?)$/s);
+    // 更健壮的文字匹配：支持"文字："、"文字:"、"故事文字："等
+    const textMatch = section.match(STORYBOARD_TEXT_REGEX);
+    // 更健壮的画面匹配：支持"画面："、"画面描述："、"场景："等
+    const imageMatch = section.match(STORYBOARD_IMAGE_REGEX);
 
     if (textMatch || imageMatch) {
       pages.push({
@@ -1784,9 +1803,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const userPrompt = buildStoryboardUserPrompt(storyContent, validPageCount);
 
+        console.log('[分镜生成] 开始调用 AI API, 页数:', validPageCount);
+
         const response = await client.chat.completions.create({
           model: process.env.AI_MODEL || process.env.CLAUDE_MODEL || 'glm-4-flash',
-          max_tokens: 2048,
+          max_tokens: 4000,  // GLM-4-flash 支持最大 4096，设置 4000 留有余量
           temperature: 0.7,
           messages: [
             {
@@ -1800,21 +1821,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ],
         });
 
+        console.log('[分镜生成] AI API 调用成功');
+
         const content = response.choices[0]?.message?.content || '';
+
+        console.log('[分镜生成] AI 返回内容长度:', content.length, '字符');
 
         // 解析分镜文本
         const pages = parseStoryboardText(content);
 
+        console.log('[分镜生成] 解析结果:', pages.length, '页');
+
         if (pages.length === 0) {
-          console.error('Parse failed, raw content:', content);
+          console.error('[分镜生成] 解析失败，原始内容:', content.substring(0, 500));
           return res.status(500).json({
             success: false,
             error: {
               code: 'PARSE_ERROR',
               message: '分镜数据解析失败，请重试',
-              rawContent: content.substring(0, 800),
+              rawContent: content.substring(0, 1000),
             },
           });
+        }
+
+        // 检查是否内容被截断（页数不足）
+        if (pages.length < validPageCount) {
+          console.warn('[分镜生成] 页数不足，期望:', validPageCount, '实际:', pages.length);
         }
 
         // 生成分镜 ID
@@ -1852,13 +1884,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             aiModel: response.model || 'claude-haiku',
           },
         });
-      } catch (error) {
-        console.error('Storyboard AI Error:', error);
+      } catch (error: any) {
+        console.error('[分镜生成] 错误:', error?.message || error);
+        console.error('[分镜生成] 错误详情:', JSON.stringify({
+          name: error?.name,
+          status: error?.status,
+          code: error?.code,
+          type: error?.type,
+        }));
+
+        // 判断错误类型
+        let errorMessage = 'AI 服务暂时不可用';
+        let errorCode = 'AI_ERROR';
+
+        if (error?.status === 429) {
+          errorMessage = 'AI 服务请求过于频繁，请稍后再试';
+          errorCode = 'RATE_LIMIT';
+        } else if (error?.status === 401 || error?.status === 403) {
+          errorMessage = 'AI 服务认证失败';
+          errorCode = 'AUTH_ERROR';
+        } else if (error?.code === 'ECONNREFUSED' || error?.code === 'ETIMEDOUT') {
+          errorMessage = 'AI 服务连接超时，请稍后再试';
+          errorCode = 'TIMEOUT';
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
         return res.status(500).json({
           success: false,
           error: {
-            code: 'AI_ERROR',
-            message: error instanceof Error ? error.message : 'AI 服务暂时不可用',
+            code: errorCode,
+            message: errorMessage,
           },
         });
       }
