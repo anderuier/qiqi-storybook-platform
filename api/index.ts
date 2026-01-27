@@ -1195,9 +1195,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
       const story = storyResult.rows[0] || null;
 
-      // 获取分镜信息
+      // 获取分镜信息（获取最新的）
       const storyboardResult = await sql`
-        SELECT id FROM storyboards WHERE work_id = ${draftId} LIMIT 1
+        SELECT id FROM storyboards WHERE work_id = ${draftId} ORDER BY created_at DESC LIMIT 1
       `;
       const storyboard = storyboardResult.rows[0] || null;
 
@@ -1336,11 +1336,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             sp.image_url as first_image_url
           FROM works w
           LEFT JOIN LATERAL (
-            SELECT sp.image_url, sb.work_id
+            SELECT sp.image_url
             FROM storyboard_pages sp
             JOIN storyboards sb ON sp.storyboard_id = sb.id
             WHERE sb.work_id = w.id AND sp.image_url IS NOT NULL
-            ORDER BY sp.page_number ASC
+            ORDER BY sb.created_at DESC, sp.page_number ASC
             LIMIT 1
           ) sp ON true
           WHERE w.user_id = ${userPayload.userId}
@@ -1354,11 +1354,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             sp.image_url as first_image_url
           FROM works w
           LEFT JOIN LATERAL (
-            SELECT sp.image_url, sb.work_id
+            SELECT sp.image_url
             FROM storyboard_pages sp
             JOIN storyboards sb ON sp.storyboard_id = sb.id
             WHERE sb.work_id = w.id AND sp.image_url IS NOT NULL
-            ORDER BY sp.page_number ASC
+            ORDER BY sb.created_at DESC, sp.page_number ASC
             LIMIT 1
           ) sp ON true
           WHERE w.user_id = ${userPayload.userId} AND w.status = ${status}
@@ -1492,9 +1492,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
       const story = storyResult.rows[0] || null;
 
-      // 获取分镜信息
+      // 获取分镜信息（获取最新的）
       const storyboardResult = await sql`
-        SELECT id FROM storyboards WHERE work_id = ${workId} LIMIT 1
+        SELECT id FROM storyboards WHERE work_id = ${workId} ORDER BY created_at DESC LIMIT 1
       `;
       const storyboard = storyboardResult.rows[0] || null;
 
