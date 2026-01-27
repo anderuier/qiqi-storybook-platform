@@ -14,7 +14,7 @@
    - 当用户说 **"总结并保存此次会话的内容，以及当前项目进度"** 时，执行以下操作：
      - 将本次对话内容整理分析归档
      - 保存为 `docs/SESSION_SUMMARY_YYYYMMDD_HHMMSS.md`（当前时间戳）
-     - 更新 `docs/CHANGELOG.md` 项目进展记录文件
+     - 更新 `docs/CHANGELOG.md` 项目进展记录文件，然后提交`docs/CHANGELOG.md` 到github
    - 每次打开项目时，从 `docs/` 文件夹中读取**最新的** `SESSION_SUMMARY_*.md` 文件，以便无缝衔接上次对话
 5. **项目进展记录**：
    - 维护唯一的 `docs/CHANGELOG.md` 文件
