@@ -154,6 +154,27 @@ export const InputStep = memo(function InputStep({
         <div className="grid md:grid-cols-3 gap-3">
           {storyStyles.map((style) => {
             const isSelected = selectedStoryStyle === style.id;
+
+            // 根据选中状态和风格颜色返回对应的类名
+            const getSelectedClass = () => {
+              switch (style.id) {
+                case "warm":
+                  return "border-coral bg-coral/10 text-coral";
+                case "adventure":
+                  return "border-sunny bg-sunny/10 text-sunny";
+                case "funny":
+                  return "border-mint bg-mint/10 text-mint";
+                case "educational":
+                  return "border-blue bg-blue/10 text-blue";
+                case "fantasy":
+                  return "border-purple bg-purple/10 text-purple";
+                case "friendship":
+                  return "border-pink bg-pink/10 text-pink";
+                default:
+                  return "";
+              }
+            };
+
             return (
               <button
                 key={style.id}
@@ -161,7 +182,7 @@ export const InputStep = memo(function InputStep({
                 onClick={() => setSelectedStoryStyle(style.id)}
                 className={`p-3 rounded-xl border-2 font-medium transition-all text-sm ${
                   isSelected
-                    ? `border-${style.color} bg-${style.color}/10`
+                    ? getSelectedClass()
                     : "border-border hover:border-muted-foreground/30 text-muted-foreground"
                 }`}
               >
