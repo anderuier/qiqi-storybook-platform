@@ -29,6 +29,9 @@ export interface CreateState {
   // 当前作品 ID（草稿 ID）
   workId: string | null;
 
+  // 用户选择的生成页数（6-12）
+  desiredPageCount: number;
+
   // 输入数据
   input: CreateStoryRequest['input'] | null;
 
@@ -56,6 +59,7 @@ const initialState: CreateState = {
   error: null,
   retryCount: 0,
   workId: null,
+  desiredPageCount: 6, // 默认 6 页
   input: null,
   story: null,
   storyboard: null,
@@ -209,9 +213,14 @@ export function useCreate() {
 
   // 步骤2：生成分镜剧本
   const generateStoryboard = useCallback(
-    async (pageCount?: number) => {
+    async () => {
       if (!state.story || !state.workId) {
         throw new Error('请先生成故事');
+      }
+
+      // 验证页数范围
+      if (state.desiredPageCount < 6 || state.desiredPageCount > 12) {
+        throw new Error('页数必须在 6-12 页之间');
       }
 
       updateState({
@@ -222,7 +231,7 @@ export function useCreate() {
       try {
         const storyboard = await createApi.generateStoryboard({
           storyContent: state.story.content,
-          pageCount,
+          pageCount: state.desiredPageCount,
           workId: state.workId,
         });
 
@@ -241,7 +250,7 @@ export function useCreate() {
         throw err;
       }
     },
-    [state.story, state.workId, updateState]
+    [state.story, state.workId, state.desiredPageCount, updateState]
   );
 
   // 步骤3：生成单张图片
@@ -484,6 +493,11 @@ export function useCreate() {
     }
   }, [state.imageTask, state.workId, updateState]);
 
+  // 设置用户选择的页数
+  const setDesiredPageCount = useCallback((count: number) => {
+    updateState({ desiredPageCount: count });
+  }, [updateState]);
+
   // 跳转到指定步骤
   const goToStep = useCallback(
     (step: CreateStep) => {
@@ -505,6 +519,7 @@ export function useCreate() {
     clearError,
     reset,
     restoreFromDraft,
+    setDesiredPageCount,
   }), [
     state,
     generateStory,
@@ -517,5 +532,6 @@ export function useCreate() {
     clearError,
     reset,
     restoreFromDraft,
+    setDesiredPageCount,
   ]);
 }

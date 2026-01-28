@@ -383,6 +383,8 @@ export default function Create() {
                   create.reset();
                   setCurrentStep(1);
                 }}
+                desiredPageCount={create.desiredPageCount}
+                onDesiredPageCountChange={create.setDesiredPageCount}
               />
             )}
 

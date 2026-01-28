@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { RouteLoading } from "./components/RouteLoading";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { Agentation } from "agentation";
 
 // 路由懒加载：将页面组件拆分为独立 chunk，按需加载
 // 这样可以减少首屏 JS 体积，提升首屏加载速度
@@ -60,6 +61,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            {process.env.NODE_ENV === "development" && <Agentation />}
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>

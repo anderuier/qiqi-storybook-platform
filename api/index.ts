@@ -136,7 +136,7 @@ const STORYBOARD_SYSTEM_PROMPT = `你是一位专业的绘本分镜师，擅长�
 
 以此类推...`;
 
-function buildStoryboardUserPrompt(storyContent: string, pageCount: number = 8): string {
+function buildStoryboardUserPrompt(storyContent: string, pageCount: number = 6): string {
   return `请将以下故事转化为${pageCount}页的绘本分镜。
 
 故事内容：
@@ -1750,7 +1750,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const body = req.body || {};
-      const { storyContent, pageCount = 8, workId } = body;
+      const { storyContent, pageCount = 6, workId } = body;
 
       if (!storyContent) {
         return res.status(400).json({
@@ -1768,6 +1768,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           error: {
             code: 'INVALID_PARAMS',
             message: '请提供作品ID',
+          },
+        });
+      }
+
+      // 验证页数范围（6-12页）
+      const validPageCount = Math.min(Math.max(parseInt(pageCount) || 6, 6), 12);
+
+      if (validPageCount !== parseInt(pageCount)) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_PAGE_COUNT',
+            message: '页数必须在 6-12 页之间',
           },
         });
       }
@@ -1792,18 +1805,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
       const storyId = storyResult.rows[0]?.id || null;
 
-      // 验证页数范围
-      const validPageCount = Math.min(Math.max(parseInt(pageCount) || 8, 4), 16);
-
       // 记录请求
       await recordRequest(userPayload.userId);
+
+      // ========== 分镜生成日志开始 ==========
+      const startTime = Date.now();
+      console.log('[分镜生成] ========== 开始 ==========');
+      console.log('[分镜生成] workId:', workId);
+      console.log('[分镜生成] 页数:', validPageCount);
+      console.log('[分镜生成] 故事内容长度:', storyContent.length, '字符');
+      console.log('[分镜生成] 故事内容预览:', storyContent.substring(0, 100) + '...');
 
       try {
         const client = getAIClient();
 
         const userPrompt = buildStoryboardUserPrompt(storyContent, validPageCount);
 
-        console.log('[分镜生成] 开始调用 AI API, 页数:', validPageCount);
+        console.log('[分镜生成] userPrompt 长度:', userPrompt.length, '字符');
+        console.log('[分镜生成] 准备调用 AI API, 时间:', new Date().toISOString());
+
+        const aiStartTime = Date.now();
 
         const response = await client.chat.completions.create({
           model: process.env.AI_MODEL || process.env.CLAUDE_MODEL || 'glm-4-flash',
@@ -1821,11 +1842,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ],
         });
 
-        console.log('[分镜生成] AI API 调用成功');
+        const aiEndTime = Date.now();
+        console.log('[分镜生成] AI API 调用成功! 耗时:', (aiEndTime - aiStartTime) / 1000, '秒');
 
         const content = response.choices[0]?.message?.content || '';
 
         console.log('[分镜生成] AI 返回内容长度:', content.length, '字符');
+        console.log('[分镜生成] AI 返回内容预览:', content.substring(0, 200));
 
         // 解析分镜文本
         const pages = parseStoryboardText(content);
@@ -1852,6 +1875,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 生成分镜 ID
         const storyboardId = generateId('sb');
 
+        console.log('[分镜生成] 开始保存到数据库...');
+
+        const dbStartTime = Date.now();
+
         // 保存到数据库：创建 storyboard 记录
         await sql`
           INSERT INTO storyboards (id, work_id, story_id)
@@ -1874,6 +1901,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE id = ${workId}
         `;
 
+        const dbEndTime = Date.now();
+        console.log('[分镜生成] 数据库保存完成! 耗时:', (dbEndTime - dbStartTime) / 1000, '秒');
+
+        const totalEndTime = Date.now();
+        console.log('[分镜生成] ========== 完成! 总耗时:', (totalEndTime - startTime) / 1000, '秒 ==========');
+
         return res.status(200).json({
           success: true,
           data: {
@@ -1885,6 +1918,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
         });
       } catch (error: any) {
+        const errorTime = Date.now();
+        console.error('[分镜生成] ========== 错误! 已耗时:', (errorTime - startTime) / 1000, '秒 ==========');
         console.error('[分镜生成] 错误:', error?.message || error);
         console.error('[分镜生成] 错误详情:', JSON.stringify({
           name: error?.name,

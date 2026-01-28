@@ -232,7 +232,7 @@ export function buildImagePrompt(
  */
 export function buildStoryboardUserPrompt(
   storyContent: string,
-  pageCount: number = 8
+  pageCount: number = 6
 ): string {
   return STORYBOARD_USER_PROMPT_TEMPLATE
     .replace(/{pageCount}/g, String(pageCount))
