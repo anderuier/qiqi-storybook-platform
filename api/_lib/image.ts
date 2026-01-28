@@ -7,7 +7,7 @@ import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // 图片生成提供商类型
-export type ImageProvider = 'dalle' | 'stability' | 'imagen' | 'jimeng' | 'siliconflow' | 'custom';
+export type ImageProvider = 'dalle' | 'stability' | 'imagen' | 'jimeng' | 'siliconflow' | 'glm' | 'custom';
 
 // 获取当前使用的图片生成提供商
 export function getImageProvider(): ImageProvider {
@@ -39,6 +39,20 @@ function getSiliconflowClient(): OpenAI {
     });
   }
   return siliconflowClient;
+}
+
+// ============================================
+// 智谱 GLM 客户端（使用 OpenAI SDK，兼容格式）
+// ============================================
+let glmClient: OpenAI | null = null;
+function getGlmClient(): OpenAI {
+  if (!glmClient) {
+    glmClient = new OpenAI({
+      apiKey: process.env.GLM_API_KEY,
+      baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+    });
+  }
+  return glmClient;
 }
 
 // ============================================
@@ -111,6 +125,8 @@ export async function generateImage(
       return generateWithJimeng(options);
     case 'siliconflow':
       return generateWithSiliconflow(options);
+    case 'glm':
+      return generateWithGlm(options);
     case 'custom':
       return generateWithCustomImage(options);
     default:
@@ -617,6 +633,54 @@ async function generateWithSiliconflow(
 }
 
 /**
+ * 使用智谱 GLM 生成图片
+ * 国内服务，使用 OpenAI 兼容格式
+ * 文档：https://open.bigmodel.cn/dev/api#aigc_images
+ */
+async function generateWithGlm(
+  options: ImageGenerateOptions
+): Promise<ImageGenerateResult> {
+  const apiKey = process.env.GLM_API_KEY;
+  if (!apiKey) {
+    throw new Error('智谱 GLM API Key 未配置，请设置 GLM_API_KEY 环境变量');
+  }
+
+  const model = options.model || process.env.GLM_IMAGE_MODEL || 'glm-image';
+
+  const response = await fetch('https://open.bigmodel.cn/api/paas/v4/images/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      prompt: options.prompt,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`智谱 GLM API 错误 (${response.status}): ${errorText}`);
+  }
+
+  const result = await response.json();
+
+  // GLM 返回格式兼容 OpenAI: result.data[0].url
+  const imageUrl = result.data?.[0]?.url || '';
+
+  if (!imageUrl) {
+    throw new Error(`智谱 GLM 未返回图片数据: ${JSON.stringify(result)}`);
+  }
+
+  return {
+    imageUrl,
+    provider: 'glm',
+    model,
+  };
+}
+
+/**
  * 使用自定义图片生成接口
  * 支持兼容 OpenAI 图片生成 API 格式的服务
  */
@@ -688,6 +752,14 @@ export const PRESET_IMAGE_SERVICES = {
     baseURL: 'https://api.siliconflow.cn/v1',
     models: ['black-forest-labs/FLUX.1-schnell', 'stabilityai/stable-diffusion-3-medium'],
     website: 'https://siliconflow.cn/',
+  },
+  // 智谱 GLM
+  glm: {
+    name: '智谱 GLM',
+    baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+    models: ['glm-image', 'cogview-3'],
+    website: 'https://open.bigmodel.cn/',
+    docs: 'https://open.bigmodel.cn/dev/api#aigc_images',
   },
   // 通义万相
   wanx: {

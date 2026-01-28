@@ -87,7 +87,8 @@ export const imageProviders: Array<{
   description: string;
   recommended?: boolean;
 }> = [
-  { id: "siliconflow", name: "硅基流动", description: "国内服务，免费额度，FLUX 模型", recommended: true },
+  { id: "glm", name: "智谱 GLM", description: "国内服务，glm-image 模型，效果好", recommended: true },
+  { id: "siliconflow", name: "硅基流动", description: "国内服务，免费额度，FLUX 模型" },
   { id: "imagen", name: "Google Imagen", description: "Google AI 图片生成" },
   { id: "dalle", name: "DALL-E", description: "OpenAI 出品" },
   { id: "stability", name: "Stability AI", description: "Stable Diffusion 官方" },

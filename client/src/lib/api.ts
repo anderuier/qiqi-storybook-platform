@@ -265,7 +265,7 @@ export interface TaskResponse {
 }
 
 // 图片生成提供商类型
-export type ImageProvider = 'dalle' | 'stability' | 'imagen' | 'jimeng' | 'siliconflow' | 'custom';
+export type ImageProvider = 'dalle' | 'stability' | 'imagen' | 'jimeng' | 'siliconflow' | 'glm' | 'custom';
 
 export const createApi = {
   // 生成故事

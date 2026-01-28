@@ -53,7 +53,7 @@ export default function Create() {
   const [storyInput, setStoryInput] = useState("");
   const [selectedStoryStyle, setSelectedStoryStyle] = useState<string>("warm");
   const [selectedArtStyle, setSelectedArtStyle] = useState<string | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<ImageProvider>("siliconflow");
+  const [selectedProvider, setSelectedProvider] = useState<ImageProvider>("glm");
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
   const [isRestoringDraft, setIsRestoringDraft] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null); // 图片预览

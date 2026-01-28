@@ -2304,10 +2304,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
         }
 
-        // 使用硅基流动生成图片
-        const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
-        if (!siliconflowApiKey) {
-          throw new Error('硅基流动 API Key 未配置');
+        // 使用智谱 GLM 生成图片
+        const glmApiKey = process.env.GLM_API_KEY;
+        if (!glmApiKey) {
+          throw new Error('智谱 GLM API Key 未配置');
         }
 
         // 增强 prompt
@@ -2324,25 +2324,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         console.log(`[单张图片生成] 第 ${pageNumber} 页 prompt:`, enhancedPrompt.substring(0, 200));
 
-        // 调用硅基流动 API（添加超时控制）
+        // 调用智谱 GLM API（添加超时控制）
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 50000); // 50秒超时
 
+        const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
         const requestBody = {
-          model: 'Kwai-Kolors/Kolors',
+          model,
           prompt: enhancedPrompt,
-          image_size: '1024x1024',
-          num_inference_steps: 20,
         };
 
         console.log('[单张图片生成] 请求体:', JSON.stringify(requestBody, null, 2));
 
         try {
-          const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
+          const imgResponse = await fetch('https://open.bigmodel.cn/api/paas/v4/images/generations', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${siliconflowApiKey}`,
+              'Authorization': `Bearer ${glmApiKey}`,
             },
             body: JSON.stringify(requestBody),
             signal: controller.signal,
@@ -2355,17 +2354,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (!imgResponse.ok) {
             const errText = await imgResponse.text();
             console.error('[单张图片生成] API 错误详情:', errText);
-            throw new Error(`硅基流动 API 错误 (${imgResponse.status}): ${errText}`);
+            throw new Error(`智谱 GLM API 错误 (${imgResponse.status}): ${errText}`);
           }
 
           const imgResult = await imgResponse.json();
           console.log('[图片生成] API 返回响应:', JSON.stringify(imgResult).substring(0, 500));
 
-          const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url || imgResult.image_url;
+          const originalImageUrl = imgResult.data?.[0]?.url || '';
 
           if (!originalImageUrl) {
             console.error('[图片生成] 无法提取图片 URL，响应键:', Object.keys(imgResult));
-            throw new Error('硅基流动未返回图片');
+            throw new Error('智谱 GLM 未返回图片');
           }
 
           console.log('[图片生成] 获取图片 URL 成功:', originalImageUrl.substring(0, 80) + '...');
@@ -2407,8 +2406,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             data: {
               pageNumber: pageNumber,
               imageUrl: finalImageUrl,
-              provider: 'siliconflow',
-              model: 'Kwai-Kolors/Kolors',
+              provider: 'glm',
+              model,
             },
           });
         } catch (fetchError: any) {
@@ -2569,10 +2568,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const oldImageUrl = firstPage.image_url;
 
           try {
-            // 内联实现硅基流动图片生成
-            const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
-            if (!siliconflowApiKey) {
-              throw new Error('硅基流动 API Key 未配置');
+            // 内联实现智谱 GLM 图片生成
+            const glmApiKey = process.env.GLM_API_KEY;
+            if (!glmApiKey) {
+              throw new Error('智谱 GLM API Key 未配置');
             }
 
             // 检查 image_prompt 是否存在
@@ -2594,30 +2593,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             console.log('生成图片 prompt:', enhancedPrompt.substring(0, 200));
 
-            const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
+            const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
+            const imgResponse = await fetch('https://open.bigmodel.cn/api/paas/v4/images/generations', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${siliconflowApiKey}`,
+                'Authorization': `Bearer ${glmApiKey}`,
               },
               body: JSON.stringify({
-                model: 'Kwai-Kolors/Kolors',
+                model,
                 prompt: enhancedPrompt,
-                image_size: '1024x1024',
-                num_inference_steps: 20,
               }),
             });
 
             if (!imgResponse.ok) {
               const errText = await imgResponse.text();
-              throw new Error(`硅基流动 API 错误: ${errText}`);
+              throw new Error(`智谱 GLM API 错误: ${errText}`);
             }
 
             const imgResult = await imgResponse.json();
-            const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url;
+            const originalImageUrl = imgResult.data?.[0]?.url || '';
 
             if (!originalImageUrl) {
-              throw new Error('硅基流动未返回图片');
+              throw new Error('智谱 GLM 未返回图片');
             }
 
             // 上传图片到 Vercel Blob
@@ -2640,7 +2638,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     storyboardId,
                     workId: storyboard.work_id,
                     style,
-                    provider,
+                    provider: 'glm',
                     pages: [{ pageNumber: 1, imageUrl }],
                     generatedPages: [{ pageNumber: 1, imageUrl }], // 新增：记录本次新生成的图片
                     forceRegenerate, // 保留强制重新生成标志
@@ -2686,7 +2684,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             taskId,
             status: 'processing',
             totalPages,
-            provider: provider || 'siliconflow',
+            provider: provider || 'glm',
             message: '图片生成任务已创建，请使用任务 ID 查询进度',
           },
         });
@@ -3066,9 +3064,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const oldImageUrl = page.image_url;
 
         // 内联实现图片生成（避免静态导入导致的问题）
-        const siliconflowApiKey = process.env.SILICONFLOW_API_KEY;
-        if (!siliconflowApiKey) {
-          throw new Error('硅基流动 API Key 未配置');
+        const glmApiKey = process.env.GLM_API_KEY;
+        if (!glmApiKey) {
+          throw new Error('智谱 GLM API Key 未配置');
         }
 
         // 检查 image_prompt 是否存在
@@ -3090,25 +3088,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         console.log(`[Continue 图片生成] 生成第 ${nextPageNumber} 页图片 prompt:`, enhancedPrompt.substring(0, 200));
 
-        // 调用硅基流动 API（添加超时控制）
+        // 调用智谱 GLM API（添加超时控制）
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 50000); // 50秒超时
 
         try {
+          const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
           const requestBody = {
-            model: 'Kwai-Kolors/Kolors',
+            model,
             prompt: enhancedPrompt,
-            image_size: '1024x1024',
-            num_inference_steps: 20,
           };
 
           console.log('[Continue 图片生成] 请求体:', JSON.stringify(requestBody, null, 2));
 
-          const imgResponse = await fetch('https://api.siliconflow.cn/v1/images/generations', {
+          const imgResponse = await fetch('https://open.bigmodel.cn/api/paas/v4/images/generations', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${siliconflowApiKey}`,
+              'Authorization': `Bearer ${glmApiKey}`,
             },
             body: JSON.stringify(requestBody),
             signal: controller.signal,
@@ -3118,17 +3115,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           if (!imgResponse.ok) {
             const errText = await imgResponse.text();
-            throw new Error(`硅基流动 API 错误: ${errText}`);
+            throw new Error(`智谱 GLM API 错误: ${errText}`);
           }
 
           const imgResult = await imgResponse.json();
           console.log('[图片生成] API 返回响应:', JSON.stringify(imgResult).substring(0, 500));
 
-          const originalImageUrl = imgResult.images?.[0]?.url || imgResult.data?.[0]?.url || imgResult.image_url;
+          const originalImageUrl = imgResult.data?.[0]?.url || '';
 
           if (!originalImageUrl) {
             console.error('[图片生成] 无法提取图片 URL，响应键:', Object.keys(imgResult));
-            throw new Error('硅基流动未返回图片');
+            throw new Error('智谱 GLM 未返回图片');
           }
 
           console.log('[图片生成] 获取图片 URL 成功:', originalImageUrl.substring(0, 80) + '...');
@@ -3141,8 +3138,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           const result = {
             imageUrl: finalImageUrl,
-            provider: 'siliconflow',
-            model: 'Kwai-Kolors/Kolors',
+            provider: 'glm',
+            model,
           };
 
           // 更新页面图片
