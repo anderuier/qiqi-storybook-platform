@@ -4,6 +4,137 @@
 
 ---
 
+## [2026-01-28] 图片生成 API 切换与 Bug 修复
+
+### 本次更新摘要
+将图片生成 API 从硅基流动切换到智谱 GLM，修复故事风格按钮高亮、length 字段未定义等多个 Bug，添加防止重复点击机制解决并发限流问题。
+
+### 详细内容
+
+#### 1. 图片生成 API 切换为智谱 GLM
+
+**需求背景**：
+- 从硅基流动切换到智谱 GLM 图片生成服务
+- 使用用户提供的 GLM API Key
+
+**实现内容**：
+
+| 文件 | 修改内容 |
+|------|----------|
+| `api/_lib/image.ts` | 添加 GLM 客户端、generateWithGlm 函数、服务配置 |
+| `api/index.ts` | 替换 3 处内联图片生成调用（单张、批量、继续） |
+| `client/src/lib/api.ts` | ImageProvider 类型添加 'glm' |
+| `client/src/components/create/constants.ts` | 添加 GLM 选项并设为推荐 |
+| `client/src/pages/Create.tsx` | 默认提供商改为 glm |
+| `.env` | 添加 GLM 环境变量配置 |
+
+**GLM API 配置**：
+```bash
+GLM_API_KEY=***
+GLM_IMAGE_MODEL=glm-image
+IMAGE_PROVIDER=glm
+```
+
+**API 端点**：`https://open.bigmodel.cn/api/paas/v4/images/generations`
+
+**相关提交**：`088023f`
+
+#### 2. 修复：故事风格按钮点击后高亮显示
+
+**问题描述**：
+- 故事风格按钮点击后没有高亮效果
+
+**根本原因**：
+- 使用动态模板字符串 `border-${style.color}` 生成类名
+- Tailwind CSS 无法识别运行时拼接的类名
+- 缺少 blue、purple、pink 颜色定义
+
+**修复方案**：
+- 使用 `switch` 语句返回静态类名字符串
+- 在 `index.css` 中添加缺失的颜色定义
+
+**相关提交**：`223d86f`
+
+#### 3. 修复：移除废弃的 length 字段
+
+**错误信息**：
+```
+DB save attempt 1 failed: ReferenceError: length is not defined
+```
+
+**根本原因**：
+- 上次删除"故事长度"选项时移除了 `length` 变量
+- 但数据库 INSERT 语句中仍在引用
+
+**修复方案**：
+- INSERT 语句中移除 `length`，添加 `child_gender`
+- 更新所有 SELECT 查询和返回结果映射
+- 更新前端 Draft 类型定义
+
+**相关提交**：`a08e1c2`
+
+#### 4. 修复：TypeScript 编译错误
+
+**错误信息**：
+```
+error TS2769: 'thinking' does not exist in type 'ChatCompletionCreateParamsNonStreaming'
+```
+
+**根本原因**：
+- `thinking` 参数不是 OpenAI SDK 标准参数
+
+**解决方案**：
+移除两处 `thinking: { type: "disabled" }` 配置
+
+**相关提交**：`ce8d366`
+
+#### 5. 修复：防止重复点击导致 429 并发错误
+
+**问题描述**：
+- 第一次生成超时
+- 第二次报错：429 您当前使用该 API 的并发数过高
+
+**修复方案**：
+- 增加前端超时时间：120秒 → 180秒
+- 添加本地 `isGenerating` 状态锁
+- 按钮添加 `isGenerating` 禁用条件
+- 添加 `finally` 块确保状态正确重置
+
+**相关提交**：`65bafd4`
+
+### Git 提交记录
+
+| Commit | 说明 |
+|--------|------|
+| 65bafd4 | 修复：防止故事生成重复点击导致 429 并发错误 |
+| ce8d366 | 修复：移除 OpenAI SDK 不支持的 thinking 参数 |
+| 088023f | 功能：图片生成 API 替换为智谱 GLM |
+| a08e1c2 | 修复：移除废弃的 length 字段，添加 child_gender 字段 |
+| 223d86f | 修复：故事风格按钮点击后高亮显示 |
+
+### 当前项目状态
+
+| 模块 | 状态 |
+|------|------|
+| 用户认证 | ✅ 完成 |
+| AI 故事生成 | ✅ 完成（智谱 GLM） |
+| AI 分镜生成 | ✅ 完成（GLM-4.7-FlashX） |
+| AI 图片生成 | ✅ 完成（智谱 GLM） |
+| 图片永久存储 | ✅ 完成（Vercel Blob） |
+| 草稿保存/恢复 | ✅ 完成 |
+| 绘本预览/播放 | ✅ 完成 |
+| 性能优化 | ✅ 完成 |
+| 语音生成 | ⏳ 待开发 |
+| 作品发布 | ⏳ 待开发 |
+
+### 下一步计划
+
+1. **语音生成功能** - 添加 TTS 服务
+2. **作品发布功能** - 社区分享
+3. **作品下载功能** - PDF/视频导出
+
+---
+
 ## [2026-01-28] 性能优化：模型升级与用户体验提升
 
 ### 本次更新摘要
