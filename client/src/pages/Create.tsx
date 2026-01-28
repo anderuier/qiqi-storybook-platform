@@ -57,6 +57,7 @@ export default function Create() {
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
   const [isRestoringDraft, setIsRestoringDraft] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null); // 图片预览
+  const [isGenerating, setIsGenerating] = useState(false); // 本地 loading 状态，防止重复点击
 
   // 检查登录状态
   useEffect(() => {
@@ -132,6 +133,8 @@ export default function Create() {
 
   // 生成故事
   const handleGenerateStory = async () => {
+    if (isGenerating) return; // 防止重复点击
+    setIsGenerating(true);
     try {
       await create.generateStory({
         childName,
@@ -142,22 +145,28 @@ export default function Create() {
       setCurrentStep(2);
     } catch (err) {
       // 错误已在 hook 中处理
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   // 生成分镜
   const handleGenerateStoryboard = async () => {
+    if (isGenerating) return; // 防止重复点击
+    setIsGenerating(true);
     try {
       await create.generateStoryboard();
       setCurrentStep(3);
     } catch (err) {
       // 错误已在 hook 中处理
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   // 开始生成图片
   const handleStartImageGeneration = async () => {
-    if (!selectedArtStyle) return;
+    if (!selectedArtStyle || isGenerating) return;
     // 立即跳转到第 4 步，让用户看到加载状态
     setCurrentStep(4);
     try {
@@ -450,10 +459,10 @@ export default function Create() {
             {currentStep < totalSteps ? (
               <Button
                 onClick={handleNext}
-                disabled={!canProceed() || create.isLoading}
+                disabled={!canProceed() || create.isLoading || isGenerating}
                 className="bg-coral hover:bg-coral/90 text-white rounded-full px-6"
               >
-                {create.isLoading ? (
+                {create.isLoading || isGenerating ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                     生成中...

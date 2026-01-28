@@ -14,7 +14,7 @@ const API_BASE_URL = import.meta.env.DEV
 // 创建 axios 实例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 120000, // 2分钟超时，AI 生成需要较长时间
+  timeout: 180000, // 3分钟超时，智谱 API 有时需要较长时间响应
   headers: {
     'Content-Type': 'application/json',
   },
