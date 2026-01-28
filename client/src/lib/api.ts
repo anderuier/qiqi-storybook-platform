@@ -198,10 +198,10 @@ export interface CreateStoryRequest {
   input: {
     childName: string;
     childAge: number;
+    childGender?: 'male' | 'female';
     theme?: string;
     keywords?: string[];
     style: 'warm' | 'adventure' | 'funny' | 'educational' | 'fantasy' | 'friendship';
-    length: 'short' | 'medium' | 'long';
   };
 }
 

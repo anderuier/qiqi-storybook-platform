@@ -5,6 +5,12 @@ import {
   FileText,
   Volume2,
   Mic2,
+  Heart,
+  Sparkles,
+  Laugh,
+  BookOpen,
+  Wand2 as Magic,
+  Users,
 } from "lucide-react";
 
 /**
@@ -53,12 +59,12 @@ export const artStyles = [
  * 故事风格选项
  */
 export const storyStyles = [
-  { id: "warm", name: "温馨感人" },
-  { id: "adventure", name: "冒险刺激" },
-  { id: "funny", name: "幽默搞笑" },
-  { id: "educational", name: "寓教于乐" },
-  { id: "fantasy", name: "奇幻梦幻" },
-  { id: "friendship", name: "友情故事" },
+  { id: "warm", name: "温馨感人", icon: "❤️", color: "coral" },
+  { id: "adventure", name: "冒险刺激", icon: "⚔️", color: "sunny" },
+  { id: "funny", name: "幽默搞笑", icon: "😄", color: "mint" },
+  { id: "educational", name: "寓教于乐", icon: "📚", color: "blue" },
+  { id: "fantasy", name: "奇幻梦幻", icon: "✨", color: "purple" },
+  { id: "friendship", name: "友情故事", icon: "🤝", color: "pink" },
 ] as const;
 
 /**

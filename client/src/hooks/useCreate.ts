@@ -108,7 +108,6 @@ export function useCreate() {
           childName: draft.work.childName || '',
           childAge: draft.work.childAge || 4,
           style: (draft.work.style as any) || 'warm',
-          length: (draft.work.length as any) || 'medium',
         },
       };
 

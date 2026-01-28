@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { BookOpen } from "lucide-react";
+import { BookOpen, User } from "lucide-react";
 import { createModes, storyStyles } from "./constants";
 
 /**
@@ -10,14 +10,14 @@ export interface InputStepProps {
   setChildName: (value: string) => void;
   childAge: number;
   setChildAge: (value: number) => void;
+  childGender: "male" | "female";
+  setChildGender: (value: "male" | "female") => void;
   selectedMode: string | null;
   setSelectedMode: (value: string) => void;
   storyInput: string;
   setStoryInput: (value: string) => void;
   selectedStoryStyle: string;
   setSelectedStoryStyle: (value: string) => void;
-  storyLength: "short" | "medium" | "long";
-  setStoryLength: (value: "short" | "medium" | "long") => void;
 }
 
 export const InputStep = memo(function InputStep({
@@ -25,45 +25,81 @@ export const InputStep = memo(function InputStep({
   setChildName,
   childAge,
   setChildAge,
+  childGender,
+  setChildGender,
   selectedMode,
   setSelectedMode,
   storyInput,
   setStoryInput,
   selectedStoryStyle,
   setSelectedStoryStyle,
-  storyLength,
-  setStoryLength,
 }: InputStepProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <BookOpen className="w-6 h-6 text-coral" />
         创作信息
       </h2>
 
-      {/* 孩子信息 */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">孩子的名字</label>
-          <input
-            type="text"
-            value={childName}
-            onChange={(e) => setChildName(e.target.value)}
-            placeholder="输入孩子的名字"
-            className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
-          />
+      {/* 宝贝信息 */}
+      <div className="bg-gradient-to-r from-coral/5 to-mint/5 rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <User className="w-5 h-5 text-coral" />
+          <h3 className="font-semibold">宝贝信息</h3>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">孩子的年龄</label>
-          <select
-            value={childAge}
-            onChange={(e) => setChildAge(Number(e.target.value))}
-            className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
-          >
-            {[3, 4, 5, 6].map((age) => (
-              <option key={age} value={age}>{age}岁</option>
-            ))}
-          </select>
+        <div className="grid md:grid-cols-3 gap-4">
+          {/* 名字 */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-muted-foreground">名字</label>
+            <input
+              type="text"
+              value={childName}
+              onChange={(e) => setChildName(e.target.value)}
+              placeholder="宝贝的名字"
+              className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none transition-colors"
+            />
+          </div>
+          {/* 年龄 */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-muted-foreground">年龄</label>
+            <select
+              value={childAge}
+              onChange={(e) => setChildAge(Number(e.target.value))}
+              className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none transition-colors bg-white"
+            >
+              {[3, 4, 5, 6].map((age) => (
+                <option key={age} value={age}>{age}岁</option>
+              ))}
+            </select>
+          </div>
+          {/* 性别 */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-muted-foreground">性别</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setChildGender("male")}
+                className={`flex-1 py-3 px-4 rounded-xl border-2 font-medium transition-all ${
+                  childGender === "male"
+                    ? "border-blue-400 bg-blue-50 text-blue-600"
+                    : "border-border hover:border-blue-200 text-muted-foreground"
+                }`}
+              >
+                👦 男孩
+              </button>
+              <button
+                type="button"
+                onClick={() => setChildGender("female")}
+                className={`flex-1 py-3 px-4 rounded-xl border-2 font-medium transition-all ${
+                  childGender === "female"
+                    ? "border-pink-400 bg-pink-50 text-pink-600"
+                    : "border-border hover:border-pink-200 text-muted-foreground"
+                }`}
+              >
+                👧 女孩
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -103,40 +139,36 @@ export const InputStep = memo(function InputStep({
           onChange={(e) => setStoryInput(e.target.value)}
           placeholder={
             selectedMode === "theme"
-              ? "请输入故事主题，例如：小兔子的森林冒险..."
+              ? "请输入故事主题，例如：小兔子的森林冒险、勇敢的小火车..."
               : selectedMode === "poem"
-              ? "请输入古诗词标题，例如：静夜思..."
-              : "请输入您的故事内容..."
+              ? "请输入古诗词标题，例如：静夜思、咏鹅..."
+              : "请输入您想要的故事内容..."
           }
-          className="w-full h-32 p-4 rounded-2xl border-2 border-border focus:border-coral focus:outline-none resize-none"
+          className="w-full h-32 p-4 rounded-2xl border-2 border-border focus:border-coral focus:outline-none resize-none transition-colors"
         />
       </div>
 
-      {/* 故事风格和长度 */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">故事风格</label>
-          <select
-            value={selectedStoryStyle}
-            onChange={(e) => setSelectedStoryStyle(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
-          >
-            {storyStyles.map((style) => (
-              <option key={style.id} value={style.id}>{style.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">故事长度</label>
-          <select
-            value={storyLength}
-            onChange={(e) => setStoryLength(e.target.value as any)}
-            className="w-full px-4 py-3 rounded-xl border-2 border-border focus:border-coral focus:outline-none"
-          >
-            <option value="short">短篇 (4-6页)</option>
-            <option value="medium">中篇 (6-10页)</option>
-            <option value="long">长篇 (10-15页)</option>
-          </select>
+      {/* 故事风格 */}
+      <div>
+        <label className="block text-sm font-medium mb-2">故事风格</label>
+        <div className="grid md:grid-cols-3 gap-3">
+          {storyStyles.map((style) => {
+            const isSelected = selectedStoryStyle === style.id;
+            return (
+              <button
+                key={style.id}
+                type="button"
+                onClick={() => setSelectedStoryStyle(style.id)}
+                className={`p-3 rounded-xl border-2 font-medium transition-all text-sm ${
+                  isSelected
+                    ? `border-${style.color} bg-${style.color}/10`
+                    : "border-border hover:border-muted-foreground/30 text-muted-foreground"
+                }`}
+              >
+                {style.icon} {style.name}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -49,9 +49,9 @@ export default function Create() {
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const [childName, setChildName] = useState("");
   const [childAge, setChildAge] = useState(4);
+  const [childGender, setChildGender] = useState<"male" | "female">("male");
   const [storyInput, setStoryInput] = useState("");
   const [selectedStoryStyle, setSelectedStoryStyle] = useState<string>("warm");
-  const [storyLength, setStoryLength] = useState<"short" | "medium" | "long">("medium");
   const [selectedArtStyle, setSelectedArtStyle] = useState<string | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<ImageProvider>("siliconflow");
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
@@ -81,7 +81,6 @@ export default function Create() {
         if (draft.work.childName) setChildName(draft.work.childName);
         if (draft.work.childAge) setChildAge(draft.work.childAge);
         if (draft.work.style) setSelectedStoryStyle(draft.work.style);
-        if (draft.work.length) setStoryLength(draft.work.length as any);
 
         // 恢复艺术风格选择
         if (draft.work.artStyle) {
@@ -139,7 +138,6 @@ export default function Create() {
         childAge,
         theme: storyInput,
         style: selectedStoryStyle as any,
-        length: storyLength,
       });
       setCurrentStep(2);
     } catch (err) {
@@ -363,14 +361,14 @@ export default function Create() {
                 setChildName={setChildName}
                 childAge={childAge}
                 setChildAge={setChildAge}
+                childGender={childGender}
+                setChildGender={setChildGender}
                 selectedMode={selectedMode}
                 setSelectedMode={setSelectedMode}
                 storyInput={storyInput}
                 setStoryInput={setStoryInput}
                 selectedStoryStyle={selectedStoryStyle}
                 setSelectedStoryStyle={setSelectedStoryStyle}
-                storyLength={storyLength}
-                setStoryLength={setStoryLength}
               />
             )}
 

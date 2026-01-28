@@ -87,10 +87,10 @@ function buildStoryUserPrompt(params: {
   theme: string;
   childName?: string;
   childAge?: number;
+  childGender?: string;
   style?: string;
-  length?: string;
 }): string {
-  const { theme, childName, childAge, style, length } = params;
+  const { theme, childName, childAge, childGender, style } = params;
 
   let prompt = `请为我创作一个关于"${theme}"的童话故事。`;
 
@@ -98,16 +98,13 @@ function buildStoryUserPrompt(params: {
     prompt += `\n主角名字叫"${childName}"。`;
   }
 
-  if (childAge) {
-    prompt += `\n故事适合${childAge}岁的孩子阅读。`;
+  if (childGender) {
+    const genderText = childGender === "male" ? "男孩" : "女孩";
+    prompt += `\n主角是一个${childAge}岁的${genderText}。`;
   }
 
   if (style && STORY_STYLE_MAP[style]) {
     prompt += `\n故事风格要求：${STORY_STYLE_MAP[style]}。`;
-  }
-
-  if (length && STORY_LENGTH_MAP[length]) {
-    prompt += `\n故事长度要求：${STORY_LENGTH_MAP[length]}。`;
   }
 
   return prompt;
@@ -1601,7 +1598,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // 支持两种请求格式
       const body = req.body || {};
       const input = body.input || body;
-      const { theme, childName, childAge, style, length } = input;
+      const { theme, childName, childAge, childGender, style } = input;
 
       if (!theme) {
         return res.status(400).json({
@@ -1624,8 +1621,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           theme,
           childName,
           childAge,
+          childGender,
           style,
-          length,
         });
 
         const response = await client.chat.completions.create({
