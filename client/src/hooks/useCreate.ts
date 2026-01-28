@@ -29,7 +29,7 @@ export interface CreateState {
   // 当前作品 ID（草稿 ID）
   workId: string | null;
 
-  // 用户选择的生成页数（6-12）
+  // 用户选择的生成页数（4-12）
   desiredPageCount: number;
 
   // 输入数据
@@ -219,8 +219,8 @@ export function useCreate() {
       }
 
       // 验证页数范围
-      if (state.desiredPageCount < 6 || state.desiredPageCount > 12) {
-        throw new Error('页数必须在 6-12 页之间');
+      if (state.desiredPageCount < 4 || state.desiredPageCount > 12) {
+        throw new Error('页数必须在 4-12 页之间');
       }
 
       updateState({

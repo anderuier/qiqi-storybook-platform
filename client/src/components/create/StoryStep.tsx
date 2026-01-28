@@ -45,8 +45,8 @@ export const StoryStep = memo(function StoryStep({
       return;
     }
 
-    if (count < 6 || count > 12) {
-      setError("页数必须在 6-12 页之间");
+    if (count < 4 || count > 12) {
+      setError("页数必须在 4-12 页之间");
       return;
     }
 
@@ -84,7 +84,7 @@ export const StoryStep = memo(function StoryStep({
               <Input
                 id="pageCount"
                 type="number"
-                min={6}
+                min={4}
                 max={12}
                 value={inputValue}
                 onChange={(e) => handlePageCountChange(e.target.value)}

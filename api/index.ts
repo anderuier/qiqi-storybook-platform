@@ -1772,15 +1772,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // 验证页数范围（6-12页）
-      const validPageCount = Math.min(Math.max(parseInt(pageCount) || 6, 6), 12);
+      // 验证页数范围（4-12页）
+      const validPageCount = Math.min(Math.max(parseInt(pageCount) || 6, 4), 12);
 
       if (validPageCount !== parseInt(pageCount)) {
         return res.status(400).json({
           success: false,
           error: {
             code: 'INVALID_PAGE_COUNT',
-            message: '页数必须在 6-12 页之间',
+            message: '页数必须在 4-12 页之间',
           },
         });
       }
