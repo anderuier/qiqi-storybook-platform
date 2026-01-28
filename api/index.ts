@@ -1842,8 +1842,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           model: storyboardModel,
           max_tokens: 4000,
           temperature: 0.7,
-          // 关闭 thinking 模式以加快响应速度
-          reasoning_mode: null,
+          // 关闭 thinking 模式以加快响应速度（9秒 vs 50秒）
+          thinking: { type: "disabled" },
           messages: [
             {
               role: 'system',
@@ -1854,9 +1854,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               content: userPrompt,
             },
           ],
-        }, {
-          // 禁用 thinking 模式的额外选项
-          reasoning_mode: null,
         });
 
         const aiEndTime = Date.now();
