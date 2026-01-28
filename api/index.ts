@@ -1826,9 +1826,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const aiStartTime = Date.now();
 
+        // 使用 FlashX 模型加速分镜生成（避免 Vercel 60秒超时）
+        const storyboardModel = process.env.STORYBOARD_MODEL || 'glm-4-flashx';
+
+        console.log('[分镜生成] 使用模型:', storyboardModel);
+
         const response = await client.chat.completions.create({
-          model: process.env.AI_MODEL || process.env.CLAUDE_MODEL || 'glm-4-flash',
-          max_tokens: 4000,  // GLM-4-flash 支持最大 4096，设置 4000 留有余量
+          model: storyboardModel,
+          max_tokens: 4000,
           temperature: 0.7,
           messages: [
             {
