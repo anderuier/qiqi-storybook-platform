@@ -1827,7 +1827,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const aiStartTime = Date.now();
 
         // 使用 FlashX 模型加速分镜生成（避免 Vercel 60秒超时）
-        const storyboardModel = process.env.STORYBOARD_MODEL || 'glm-4-flashx';
+        const storyboardModel = process.env.STORYBOARD_MODEL || 'GLM-4.7-FlashX';
 
         console.log('[分镜生成] 使用模型:', storyboardModel);
 
