@@ -1629,6 +1629,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           model: process.env.AI_MODEL || process.env.CLAUDE_MODEL || 'glm-4-flash',
           max_tokens: 2000,
           temperature: 0.8,
+          // 关闭 thinking 模式以加快响应速度
+          thinking: { type: "disabled" },
           messages: [
             {
               role: 'system',
