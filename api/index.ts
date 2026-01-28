@@ -1129,7 +1129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const result = await sql`
-        SELECT id, title, status, current_step, theme, child_name, child_age, style, length, page_count, cover_url, created_at, updated_at
+        SELECT id, title, status, current_step, theme, child_name, child_age, child_gender, style, page_count, cover_url, created_at, updated_at
         FROM works
         WHERE user_id = ${userPayload.userId} AND status = 'draft'
         ORDER BY updated_at DESC
@@ -1147,8 +1147,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             theme: row.theme,
             childName: row.child_name,
             childAge: row.child_age,
+            childGender: row.child_gender,
             style: row.style,
-            length: row.length,
             pageCount: row.page_count,
             coverUrl: row.cover_url,
             createdAt: row.created_at,
@@ -1176,7 +1176,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // 获取 work 基本信息
       const workResult = await sql`
-        SELECT id, title, status, current_step, theme, child_name, child_age, style, length, page_count, cover_url, created_at, updated_at
+        SELECT id, title, status, current_step, theme, child_name, child_age, child_gender, style, page_count, cover_url, created_at, updated_at
         FROM works
         WHERE id = ${draftId} AND user_id = ${userPayload.userId}
       `;
@@ -1246,8 +1246,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             theme: work.theme,
             childName: work.child_name,
             childAge: work.child_age,
+            childGender: work.child_gender,
             style: work.style,
-            length: work.length,
             artStyle: artStyle,
             pageCount: work.page_count,
             coverUrl: work.cover_url,
@@ -1485,7 +1485,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // 获取 work 基本信息
       const workResult = await sql`
-        SELECT id, title, status, current_step, theme, child_name, child_age, style, length, page_count, cover_url, created_at, updated_at
+        SELECT id, title, status, current_step, theme, child_name, child_age, child_gender, style, page_count, cover_url, created_at, updated_at
         FROM works
         WHERE id = ${workId} AND user_id = ${userPayload.userId}
       `;
@@ -1543,8 +1543,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             theme: work.theme,
             childName: work.child_name,
             childAge: work.child_age,
+            childGender: work.child_gender,
             style: work.style,
-            length: work.length,
             artStyle: work.art_style,
             pageCount: work.page_count,
             coverUrl: work.cover_url,
@@ -1661,8 +1661,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           try {
             // 创建 work 记录
             await sql`
-              INSERT INTO works (id, user_id, title, status, current_step, theme, child_name, child_age, style, length)
-              VALUES (${workId}, ${userPayload.userId}, ${title}, 'draft', 'story', ${theme}, ${childName || null}, ${childAge || null}, ${style || null}, ${length || null})
+              INSERT INTO works (id, user_id, title, status, current_step, theme, child_name, child_age, child_gender, style)
+              VALUES (${workId}, ${userPayload.userId}, ${title}, 'draft', 'story', ${theme}, ${childName || null}, ${childAge || null}, ${childGender || null}, ${style || null})
             `;
 
             // 创建 story 记录
@@ -2051,8 +2051,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           theme VARCHAR(200),
           child_name VARCHAR(50),
           child_age INTEGER,
+          child_gender VARCHAR(10),
           style VARCHAR(50),
-          length VARCHAR(20),
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
@@ -2175,8 +2175,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS theme VARCHAR(200)`;
         await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS child_name VARCHAR(50)`;
         await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS child_age INTEGER`;
+        await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS child_gender VARCHAR(10)`;
         await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS style VARCHAR(50)`;
-        await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS length VARCHAR(20)`;
         await sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS art_style VARCHAR(50)`;
       } catch (migrationError) {
         console.log('Migration note:', migrationError);

@@ -322,8 +322,8 @@ export interface Draft {
   theme: string;
   childName?: string;
   childAge?: number;
+  childGender?: 'male' | 'female';
   style?: string;
-  length?: string;
   artStyle?: string; // 保存的艺术风格
   pageCount: number;
   coverUrl?: string;
