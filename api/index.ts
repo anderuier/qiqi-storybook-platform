@@ -1824,6 +1824,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log('[分镜生成] userPrompt 长度:', userPrompt.length, '字符');
         console.log('[分镜生成] 准备调用 AI API, 时间:', new Date().toISOString());
 
+        // ========== 打印完整 Prompt 用于手动测试 ==========
+        console.log('[分镜生成] ========== 完整 System Prompt ==========');
+        console.log(STORYBOARD_SYSTEM_PROMPT);
+        console.log('[分镜生成] ========== 完整 User Prompt ==========');
+        console.log(userPrompt);
+        console.log('[分镜生成] ========== Prompt 结束 ==========');
+
         const aiStartTime = Date.now();
 
         // 使用 FlashX 模型加速分镜生成（避免 Vercel 60秒超时）
