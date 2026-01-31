@@ -49,7 +49,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 const JWT_EXPIRES_IN = 7 * 24 * 60 * 60 * 1000; // 7 天
 
 // ==================== AI Prompt 配置 ====================
-// 配置文件：api/prompts.config.ts（完整版本和文档）
+// 配置文件：api/_lib/prompts.config.ts（完整版本和文档）
 // 这里是内联版本，修改后需同步更新配置文件
 
 const STORY_SYSTEM_PROMPT = `你是一位专业的儿童故事作家，擅长为3-6岁学龄前儿童创作温馨、有趣、富有教育意义的童话故事。
