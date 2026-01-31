@@ -134,3 +134,7 @@ DOCS/web-development-best-practices.md
 **/截图_*
 
 .vercel
+
+# Backup files
+*.bak
+**/*.bak
