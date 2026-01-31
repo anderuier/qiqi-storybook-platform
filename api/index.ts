@@ -546,7 +546,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       try {
         // 动态导入 image 模块
-        const { generateImage, enhancePromptForChildrenBook } = await import('./routes/../_lib/image.js');
+        const { generateImage, enhancePromptForChildrenBook } = await import('./_lib/image.js');
 
         const prompt = 'A cute cartoon rabbit in a forest';
         const enhancedPrompt = enhancePromptForChildrenBook(prompt, 'watercolor');
