@@ -491,6 +491,84 @@ router.get('/api/user/me', async (req: VercelRequest, res: VercelResponse) => {
   });
 });
 
+// 获取我的作品列表（包括草稿和已发布）
+router.get('/api/works', async (req: VercelRequest, res: VercelResponse) => {
+  const userPayload = await getUserFromRequest(req);
+
+  if (!userPayload) {
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: '请先登录',
+      },
+    });
+  }
+
+  const status = req.query.status as string || 'all';
+
+  let result;
+  if (status === 'all') {
+    result = await sql`
+      SELECT
+        w.id, w.title, w.status, w.current_step, w.cover_url, w.page_count, w.views, w.likes, w.created_at, w.updated_at,
+        sp.image_url as first_image_url
+      FROM works w
+      LEFT JOIN LATERAL (
+        SELECT sp.image_url
+        FROM storyboard_pages sp
+        JOIN storyboards sb ON sp.storyboard_id = sb.id
+        WHERE sb.work_id = w.id AND sp.image_url IS NOT NULL
+        ORDER BY sb.created_at DESC, sp.page_number ASC
+        LIMIT 1
+      ) sp ON true
+      WHERE w.user_id = ${userPayload.userId}
+      ORDER BY w.updated_at DESC
+      LIMIT 50
+    `;
+  } else {
+    result = await sql`
+      SELECT
+        w.id, w.title, w.status, w.current_step, w.cover_url, w.page_count, w.views, w.likes, w.created_at, w.updated_at,
+        sp.image_url as first_image_url
+      FROM works w
+      LEFT JOIN LATERAL (
+        SELECT sp.image_url
+        FROM storyboard_pages sp
+        JOIN storyboards sb ON sp.storyboard_id = sb.id
+        WHERE sb.work_id = w.id AND sp.image_url IS NOT NULL
+        ORDER BY sb.created_at DESC, sp.page_number ASC
+        LIMIT 1
+      ) sp ON true
+      WHERE w.user_id = ${userPayload.userId} AND w.status = ${status}
+      ORDER BY w.updated_at DESC
+      LIMIT 50
+    `;
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      total: result.rows.length,
+      page: 1,
+      pageSize: 50,
+      works: result.rows.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        status: row.status,
+        currentStep: row.current_step,
+        coverUrl: row.cover_url,
+        pageCount: row.page_count,
+        views: row.views,
+        likes: row.likes,
+        firstImageUrl: row.first_image_url,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      })),
+    },
+  });
+});
+
 // 草稿列表
 router.get('/api/drafts', async (req: VercelRequest, res: VercelResponse) => {
   const userPayload = await getUserFromRequest(req);
@@ -673,6 +751,150 @@ router.delete(/^\/api\/drafts\/([^/]+)$/, async (req: VercelRequest, res: Vercel
   return res.status(200).json({
     success: true,
     message: '草稿已删除',
+  });
+});
+
+// 获取作品详情
+router.get(/^\/api\/works\/([^/]+)$/, async (req: VercelRequest, res: VercelResponse, matches) => {
+  const userPayload = await getUserFromRequest(req);
+
+  if (!userPayload) {
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: '请先登录',
+      },
+    });
+  }
+
+  const workId = matches?.[1];
+
+  const workResult = await sql`
+    SELECT id, title, status, current_step, theme, child_name, child_age, child_gender, style, art_style, page_count, cover_url, created_at, updated_at
+    FROM works
+    WHERE id = ${workId} AND user_id = ${userPayload.userId}
+  `;
+
+  if (workResult.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        code: 'WORK_NOT_FOUND',
+        message: '作品不存在',
+      },
+    });
+  }
+
+  const work = workResult.rows[0];
+
+  // 获取故事内容
+  const storyResult = await sql`
+    SELECT id, content, word_count FROM stories WHERE work_id = ${workId} LIMIT 1
+  `;
+  const story = storyResult.rows[0] || null;
+
+  // 获取分镜信息
+  const storyboardResult = await sql`
+    SELECT id FROM storyboards WHERE work_id = ${workId} ORDER BY created_at DESC LIMIT 1
+  `;
+  const storyboard = storyboardResult.rows[0] || null;
+
+  let pages: any[] = [];
+  if (storyboard) {
+    const pagesResult = await sql`
+      SELECT id, page_number, text, image_prompt, image_url, audio_url
+      FROM storyboard_pages
+      WHERE storyboard_id = ${storyboard.id}
+      ORDER BY page_number ASC
+    `;
+    pages = pagesResult.rows.map((row: any) => ({
+      pageNumber: row.page_number,
+      text: row.text,
+      imagePrompt: row.image_prompt,
+      imageUrl: row.image_url,
+      audioUrl: row.audio_url,
+    }));
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      work: {
+        id: work.id,
+        title: work.title,
+        status: work.status,
+        currentStep: work.current_step,
+        theme: work.theme,
+        childName: work.child_name,
+        childAge: work.child_age,
+        childGender: work.child_gender,
+        style: work.style,
+        artStyle: work.art_style,
+        pageCount: work.page_count,
+        coverUrl: work.cover_url,
+        createdAt: work.created_at,
+        updatedAt: work.updated_at,
+      },
+      story: story ? {
+        id: story.id,
+        content: story.content,
+        wordCount: story.word_count,
+      } : null,
+      storyboard: storyboard ? {
+        id: storyboard.id,
+        pages,
+      } : null,
+    },
+  });
+});
+
+// 删除作品
+router.delete(/^\/api\/works\/([^/]+)$/, async (req: VercelRequest, res: VercelResponse, matches) => {
+  const userPayload = await getUserFromRequest(req);
+
+  if (!userPayload) {
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: '请先登录',
+      },
+    });
+  }
+
+  const workId = matches?.[1];
+
+  // 验证权限
+  const workResult = await sql`
+    SELECT user_id FROM works WHERE id = ${workId}
+  `;
+
+  if (workResult.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        code: 'WORK_NOT_FOUND',
+        message: '作品不存在',
+      },
+    });
+  }
+
+  if (workResult.rows[0].user_id !== userPayload.userId) {
+    return res.status(403).json({
+      success: false,
+      error: {
+        code: 'PERMISSION_DENIED',
+        message: '无权删除此作品',
+      },
+    });
+  }
+
+  await sql`DELETE FROM works WHERE id = ${workId}`;
+
+  return res.status(200).json({
+    success: true,
+    message: '作品已删除',
   });
 });
 
