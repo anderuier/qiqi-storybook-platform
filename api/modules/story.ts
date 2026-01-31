@@ -110,6 +110,10 @@ export function registerStoryRoutes(
     // 记录请求（在实际调用 AI 之前记录）
     await recordRequest(userPayload.userId);
 
+    // 故事生成日志
+    const startTime = Date.now();
+    console.log('[故事生成] 开始, userId:', userPayload.userId, '主题:', theme);
+
     try {
       const client = getAIClient();
 
@@ -122,8 +126,15 @@ export function registerStoryRoutes(
         style,
       });
 
+      const model = process.env.AI_MODEL || process.env.CLAUDE_MODEL || 'glm-4-flash';
+
+      console.log('[故事生成] 准备调用 AI API, 时间:', new Date().toISOString());
+      console.log('[故事生成] 使用模型:', model);
+      console.log('[故事生成] 发送 Prompt (System):', STORY_SYSTEM_PROMPT);
+      console.log('[故事生成] 发送 Prompt (User):', userPrompt);
+
       const response = await client.chat.completions.create({
-        model: process.env.AI_MODEL || process.env.CLAUDE_MODEL || 'glm-4-flash',
+        model: model,
         max_tokens: 2000,
         temperature: 0.8,
         messages: [
@@ -138,7 +149,13 @@ export function registerStoryRoutes(
         ],
       });
 
+      const aiEndTime = Date.now();
+      console.log('[故事生成] AI API 调用成功! 耗时:', (aiEndTime - startTime) / 1000, '秒');
+
       const story = response.choices[0]?.message?.content || '';
+
+      console.log('[故事生成] AI 返回内容长度:', story.length, '字符');
+      console.log('[故事生成] AI 返回全文:', story);
 
       // 生成故事 ID 和作品 ID
       const storyId = generateId('story');
@@ -179,7 +196,7 @@ export function registerStoryRoutes(
       }
 
       if (!dbSaveSuccess) {
-        console.error('All DB save attempts failed:', dbError);
+        console.error('[故事生成] 数据库保存失败:', dbError);
         // 数据库保存完全失败，返回错误让用户重试
         return res.status(500).json({
           success: false,
@@ -190,6 +207,9 @@ export function registerStoryRoutes(
           },
         });
       }
+
+      const totalEndTime = Date.now();
+      console.log('[故事生成] 完成! storyId:', storyId, 'workId:', workId, '总耗时:', (totalEndTime - startTime) / 1000, '秒');
 
       return res.status(200).json({
         success: true,
@@ -205,7 +225,9 @@ export function registerStoryRoutes(
         },
       });
     } catch (error) {
-      console.error('AI Error:', error);
+      const errorTime = Date.now();
+      console.error('[故事生成] 错误! 已耗时:', (errorTime - startTime) / 1000, '秒');
+      console.error('[故事生成] 错误:', error instanceof Error ? error.message : error);
       return res.status(500).json({
         success: false,
         error: {

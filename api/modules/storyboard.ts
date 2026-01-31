@@ -179,6 +179,8 @@ export function registerStoryboardRoutes(
       const storyboardModel = process.env.STORYBOARD_MODEL || 'GLM-4.7-FlashX';
 
       console.log('[分镜生成] 使用模型:', storyboardModel);
+      console.log('[分镜生成] 发送 Prompt (System):', STORYBOARD_SYSTEM_PROMPT);
+      console.log('[分镜生成] 发送 Prompt (User):', userPrompt);
 
       const response = await client.chat.completions.create({
         model: storyboardModel,
@@ -202,6 +204,7 @@ export function registerStoryboardRoutes(
       const content = response.choices[0]?.message?.content || '';
 
       console.log('[分镜生成] AI 返回内容长度:', content.length, '字符');
+      console.log('[分镜生成] AI 返回全文:', content);
 
       // 解析分镜文本
       const pages = parseStoryboardText(content);
