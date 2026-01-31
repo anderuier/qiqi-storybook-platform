@@ -74,7 +74,10 @@ async function sign(payload: string): Promise<string> {
   const data = `${encodedHeader}.${encodedPayload}`;
   const signature = crypto.createHmac('sha256', JWT_SECRET)
     .update(data)
-    .digest('base64url');
+    .digest('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
   return `${data}.${signature}`;
 }
 
@@ -97,7 +100,10 @@ async function verifyToken(token: string): Promise<UserPayload | null> {
 
     const expectedSignature = crypto.createHmac('sha256', JWT_SECRET)
       .update(data)
-      .digest('base64url');
+      .digest('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
 
     if (signature !== expectedSignature) return null;
 
