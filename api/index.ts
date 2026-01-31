@@ -760,9 +760,10 @@ router.delete(/^\/api\/drafts\/([^/]+)$/, async (req: VercelRequest, res: Vercel
 
   // 删除 Vercel Blob 中的图片
   for (const page of pagesResult.rows) {
-    if (page.image_url && page.image_url.includes('vercel-storage.com')) {
+    if (page.image_url && (page.image_url.includes('blob.vercel-storage.com') || page.image_url.includes('public.blob.vercel-storage.com'))) {
       try {
         await del(page.image_url);
+        console.log(`[删除图片] ${page.image_url.substring(0, 80)}...`);
       } catch (error) {
         console.error('删除图片失败:', page.image_url, error);
       }
@@ -924,9 +925,10 @@ router.delete(/^\/api\/works\/([^/]+)$/, async (req: VercelRequest, res: VercelR
 
   // 删除 Vercel Blob 中的图片
   for (const page of pagesResult.rows) {
-    if (page.image_url && page.image_url.includes('vercel-storage.com')) {
+    if (page.image_url && (page.image_url.includes('blob.vercel-storage.com') || page.image_url.includes('public.blob.vercel-storage.com'))) {
       try {
         await del(page.image_url);
+        console.log(`[删除图片] ${page.image_url.substring(0, 80)}...`);
       } catch (error) {
         console.error('删除图片失败:', page.image_url, error);
       }
