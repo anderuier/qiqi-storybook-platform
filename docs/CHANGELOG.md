@@ -4,6 +4,120 @@
 
 ---
 
+## [2026-01-31] API 模块化重构与系统性 Bug 修复
+
+### 本次更新摘要
+完成 API 架构模块化重构，将 2794 行单文件拆分为多个模块文件。修复登录失效、作品列表加载、菜单显示、图片删除等 11 个 Bug，清理冗余文件，优化代码组织结构。
+
+### 详细内容
+
+#### 1. API 模块化重构
+
+**重构目标**：提升代码可维护性，将单一巨型文件按功能拆分
+
+| 模块 | 文件 | 行数 | 功能 |
+|------|------|------|------|
+| 故事生成 | `api/modules/story.ts` | ~200 | POST /api/create/story |
+| 分镜生成 | `api/modules/storyboard.ts` | ~300 | POST /api/create/storyboard |
+| 图片生成 | `api/modules/images.ts` | ~900 | 5 个图片相关端点 |
+
+**入口文件优化**：
+- `api/index.ts` 从 2794 行精简到 ~650 行
+- 新增 Router 类实现模式匹配路由分发
+- 导入各模块并注册路由
+
+**Commit**: 模块化拆分（准备中）
+
+#### 2. 冗余文件清理
+
+**删除文件**：
+| 文件 | 原因 |
+|------|------|
+| `api/[...route].ts` | 未使用 |
+| `api/index-simple.ts` | 冗余备份 |
+| `api/index-full.ts.bak` | 冗余备份 |
+| `api/routes/` | 整个文件夹未被使用 |
+
+**备份文件**：
+| 文件 | 说明 |
+|------|------|
+| `api/index.test-apis.bak` | 7 个测试 API 备份 |
+| `api/index.monolithic.bak` | 原始单文件版本 |
+
+**文件迁移**：
+- `api/prompts.config.ts` → `api/_lib/prompts.config.ts`
+
+#### 3. Bug 修复汇总
+
+| 序号 | Bug | 原因 | 解决方案 |
+|------|-----|------|----------|
+| 1 | 空故事生成响应 | 错误导入路径 `./routes/../` | 修正为 `./_lib/` |
+| 2 | TypeScript 隐式 any | `matches` 参数无类型 | 添加 `?: RegExpMatchArray` |
+| 3 | crypto.subtle 不存在 | Vercel 不支持 webcrypto 同步方法 | 改用 `crypto.createHmac()` |
+| 4 | base64url 不支持 | 老版本 Node.js 不支持 | 手动 URL-safe 转换 |
+| 5 | 登录"邮箱或密码错误" | JWT 签名格式不兼容 | 同 Bug 4 |
+| 6 | 我的作品加载失败 | 模块化后端点丢失 | 重新添加 3 个端点 |
+| 7 | 菜单全部显示 | 返回 `id` 而非 `workId` | 修改返回字段 |
+| 8 | 菜单项不可点击 | 缺少 onClick | 添加事件处理 |
+| 9 | 限流时间溢出 | `TO_TIMESTAMP` 参数过大 | 使用 ISO 时间戳 |
+| 10 | 图片未删除 | 删除逻辑丢失 + 域名错误 | 重新添加 + 修复域名 |
+| 11 | `del` 未定义 | 模块化后导入丢失 | 添加到 import |
+
+#### 4. 技术要点
+
+**Vercel Blob 域名**：
+```typescript
+// 正确的域名检查
+page.image_url.includes('blob.vercel-storage.com') ||
+page.image_url.includes('public.blob.vercel-storage.com')
+```
+
+**JWT 签名（Node.js crypto）**：
+```typescript
+import * as crypto from 'crypto';
+
+const signature = crypto.createHmac('sha256', secret)
+  .update(payload)
+  .digest('base64')
+  .replace(/\+/g, '-')
+  .replace(/\//g, '_')
+  .replace(/=/g, '');
+```
+
+### Git 提交记录
+
+| Commit | 说明 |
+|--------|------|
+| （准备中） | API 模块化重构 |
+| （准备中） | 修复图片删除功能 |
+| （准备中） | 修复菜单显示问题 |
+| （准备中） | 修复登录和作品列表 |
+
+### 当前项目状态
+
+| 模块 | 状态 |
+|------|------|
+| API 模块化 | ✅ 完成 |
+| 用户认证 | ✅ 完成 |
+| AI 故事生成 | ✅ 完成 |
+| AI 分镜生成 | ✅ 完成 |
+| AI 图片生成 | ✅ 完成 |
+| 图片永久存储 | ✅ 完成 |
+| 图片删除 | ✅ 完成 |
+| 草稿保存/恢复 | ✅ 完成 |
+| 绘本预览/播放 | ✅ 完成 |
+| 语音生成 | ⏳ 待开发 |
+| 作品发布 | ⏳ 待开发 |
+
+### 下一步计划
+
+1. **验证部署** - 确认图片删除功能正常工作
+2. **语音生成** - 添加 TTS 服务
+3. **作品发布** - 社区分享功能
+4. **作品下载** - PDF/视频导出
+
+---
+
 ## [2026-01-28] 图片生成 API 切换与 Bug 修复
 
 ### 本次更新摘要
