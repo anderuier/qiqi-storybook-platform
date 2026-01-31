@@ -4,6 +4,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
+import { put, del } from '@vercel/blob';
 import * as crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
