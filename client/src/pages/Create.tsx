@@ -24,6 +24,8 @@ import { ImageProvider } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 // 创作流程子组件
 import {
@@ -497,6 +499,11 @@ export default function Create() {
       {/* 图片大图预览 Dialog */}
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
         <DialogContent className="max-w-4xl p-2 bg-transparent border-none">
+          {/* 屏幕阅读器专用标题（视觉上隐藏） */}
+          <DialogTitle className="sr-only">图片预览</DialogTitle>
+          <DialogDescription className="sr-only">
+            查看绘本插图的放大版本
+          </DialogDescription>
           {previewImage && (
             <img
               src={previewImage}
