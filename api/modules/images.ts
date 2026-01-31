@@ -441,7 +441,7 @@ export function registerImageRoutes(
           }
 
           const enhancedPrompt = enhancePrompt(firstPage.image_prompt, style);
-          console.log('生成图片 prompt:', enhancedPrompt.substring(0, 200));
+          console.log('生成图片 prompt:', enhancedPrompt);
 
           const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
           const imgResponse = await fetch('https://open.bigmodel.cn/api/paas/v4/images/generations', {
@@ -883,7 +883,7 @@ export function registerImageRoutes(
       }
 
       const enhancedPrompt = enhancePrompt(page.image_prompt, taskData.style);
-      console.log(`[Continue 图片生成] 生成第 ${nextPageNumber} 页图片 prompt:`, enhancedPrompt.substring(0, 200));
+      console.log(`[Continue 图片生成] 生成第 ${nextPageNumber} 页图片`);
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 50000);
