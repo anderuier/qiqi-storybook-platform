@@ -474,11 +474,21 @@ const WorkCard = memo(function WorkCard({ work, index, showMenu, onToggleMenu, o
                   </>
                 )}
               </button>
-              <button className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
                 <Share2 className="w-4 h-4" />
                 分享
               </button>
-              <button className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
                 <Download className="w-4 h-4" />
                 下载
               </button>

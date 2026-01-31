@@ -48,8 +48,12 @@ export default function BookPreview() {
     setError(null);
 
     try {
+      console.log("[BookPreview] 加载绘本，workId:", workId);
+
       // 先尝试从草稿API获取
       const draft = await draftsApi.getDraft(workId);
+
+      console.log("[BookPreview] 草稿数据:", draft);
 
       if (!draft.storyboard || draft.storyboard.pages.length === 0) {
         setError("该作品还没有生成分镜");
