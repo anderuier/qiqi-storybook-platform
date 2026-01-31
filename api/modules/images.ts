@@ -49,6 +49,27 @@ const STYLE_PROMPTS: Record<string, string> = {
   '3d': '3D rendered style, realistic lighting, depth',
 };
 
+/**
+ * 清理 3 天前的已完成任务记录
+ * 遵循 async-parallel 规则：在后台执行，不阻塞主流程
+ */
+async function cleanOldTasks(): Promise<void> {
+  try {
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const result = await sql`
+      DELETE FROM tasks
+      WHERE created_at < ${threeDaysAgo.toISOString()}
+      RETURNING id
+    `;
+    if (result.rows.length > 0) {
+      console.log(`[清理任务] 删除了 ${result.rows.length} 条 3 天前的旧任务记录`);
+    }
+  } catch (error) {
+    // 清理失败不影响主流程，仅记录日志
+    console.error('[清理任务] 失败:', (error as Error).message);
+  }
+}
+
 function enhancePrompt(imagePrompt: string, style: string): string {
   const styleDesc = STYLE_PROMPTS[style] || STYLE_PROMPTS.watercolor;
   return `Children's book illustration, ${imagePrompt}, ${styleDesc}, safe for children, no text, high quality`;
@@ -309,6 +330,9 @@ export function registerImageRoutes(
     }
 
     try {
+      // 后台清理 7 天前的旧任务记录（不等待完成，遵循 async-parallel 规则）
+      cleanOldTasks().catch(() => {});
+
       // 获取分镜信息
       const storyboardResult = await sql`
         SELECT sb.id, sb.work_id, w.user_id
