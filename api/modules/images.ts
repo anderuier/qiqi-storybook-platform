@@ -11,6 +11,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
 import { put, del } from '@vercel/blob';
+import { buildImagePrompt } from '../_lib/prompts.config.js';
 
 // 类型定义
 interface UserPayload {
@@ -39,16 +40,6 @@ async function uploadImageToBlob(imageUrl: string, filename: string): Promise<st
   return result.url;
 }
 
-// 图片生成风格配置
-const STYLE_PROMPTS: Record<string, string> = {
-  watercolor: 'watercolor painting style, soft colors, gentle brushstrokes',
-  cartoon: 'cartoon style, bright colors, simple shapes',
-  oil: 'oil painting style, rich textures, vibrant colors',
-  anime: 'anime style, Japanese animation, detailed characters',
-  flat: 'flat illustration style, minimalist, clean lines',
-  '3d': '3D rendered style, realistic lighting, depth',
-};
-
 /**
  * 清理 3 天前的已完成任务记录
  * 遵循 async-parallel 规则：在后台执行，不阻塞主流程
@@ -68,11 +59,6 @@ async function cleanOldTasks(): Promise<void> {
     // 清理失败不影响主流程，仅记录日志
     console.error('[清理任务] 失败:', (error as Error).message);
   }
-}
-
-function enhancePrompt(imagePrompt: string, style: string): string {
-  const styleDesc = STYLE_PROMPTS[style] || STYLE_PROMPTS.watercolor;
-  return `Children's book illustration, ${imagePrompt}, ${styleDesc}, safe for children, no text, high quality`;
 }
 
 /**
@@ -184,7 +170,7 @@ export function registerImageRoutes(
         throw new Error('智谱 GLM API Key 未配置');
       }
 
-      const enhancedPrompt = enhancePrompt(page.image_prompt, style);
+      const enhancedPrompt = buildImagePrompt(page.image_prompt, style);
       console.log(`[单张图片生成] 第 ${pageNumber} 页:`);
 
       // 调用智谱 GLM API（添加超时控制）
@@ -440,7 +426,7 @@ export function registerImageRoutes(
             throw new Error('分镜页面缺少画面描述 (image_prompt)');
           }
 
-          const enhancedPrompt = enhancePrompt(firstPage.image_prompt, style);
+          const enhancedPrompt = buildImagePrompt(firstPage.image_prompt, style);
           console.log('生成图片 prompt:', enhancedPrompt);
 
           const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
@@ -882,7 +868,7 @@ export function registerImageRoutes(
         throw new Error(`第 ${nextPageNumber} 页缺少画面描述 (image_prompt)`);
       }
 
-      const enhancedPrompt = enhancePrompt(page.image_prompt, taskData.style);
+      const enhancedPrompt = buildImagePrompt(page.image_prompt, taskData.style);
       console.log(`[Continue 图片生成] 生成第 ${nextPageNumber} 页图片`);
 
       const controller = new AbortController();
