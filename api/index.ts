@@ -4,7 +4,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
-import { webcrypto } from 'node:crypto';
+import * as crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import OpenAI from 'openai';
 import { registerStoryRoutes } from './modules/story.js';
@@ -40,8 +40,6 @@ async function migrateDatabase() {
 
 // ==================== 工具函数 ====================
 
-const crypto = webcrypto;
-
 // JWT 配置
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = 7 * 24 * 60 * 60 * 1000;
@@ -74,19 +72,9 @@ async function sign(payload: string): Promise<string> {
   const encodedHeader = base64UrlEncode(JSON.stringify(header));
   const encodedPayload = base64UrlEncode(payload);
   const data = `${encodedHeader}.${encodedPayload}`;
-  const signature = base64UrlEncode(
-    crypto.subtle.signSync(
-      'HMAC',
-      crypto.subtle.importKeySync(
-        'raw',
-        Buffer.from(JWT_SECRET),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['sign']
-      ),
-      Buffer.from(data)
-    )
-  );
+  const signature = crypto.createHmac('sha256', JWT_SECRET)
+    .update(data)
+    .digest('base64url');
   return `${data}.${signature}`;
 }
 
@@ -107,20 +95,11 @@ async function verifyToken(token: string): Promise<UserPayload | null> {
     const [encodedHeader, encodedPayload, signature] = token.split('.');
     const data = `${encodedHeader}.${encodedPayload}`;
 
-    const isValid = crypto.subtle.verifySync(
-      'HMAC',
-      crypto.subtle.importKeySync(
-        'raw',
-        Buffer.from(JWT_SECRET),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['verify']
-      ),
-      Buffer.from(signature),
-      Buffer.from(data)
-    );
+    const expectedSignature = crypto.createHmac('sha256', JWT_SECRET)
+      .update(data)
+      .digest('base64url');
 
-    if (!isValid) return null;
+    if (signature !== expectedSignature) return null;
 
     const payload = JSON.parse(base64UrlDecode(encodedPayload));
 

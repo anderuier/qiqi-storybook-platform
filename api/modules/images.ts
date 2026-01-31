@@ -527,7 +527,7 @@ export function registerImageRoutes(
   });
 
   // ==================== 查询任务状态 ====================
-  app.get(/^\/api\/create\/task\/([^/]+)$/, async (req: VercelRequest, res: VercelResponse, matches) => {
+  app.get(/^\/api\/create\/task\/([^/]+)$/, async (req: VercelRequest, res: VercelResponse, matches?: RegExpMatchArray) => {
     const userPayload = await getUserFromRequest(req);
 
     if (!userPayload) {
@@ -597,7 +597,7 @@ export function registerImageRoutes(
   });
 
   // ==================== 继续生成下一张图片 ====================
-  app.post(/^\/api\/create\/task\/([^/]+)\/continue$/, async (req: VercelRequest, res: VercelResponse, matches) => {
+  app.post(/^\/api\/create\/task\/([^/]+)\/continue$/, async (req: VercelRequest, res: VercelResponse, matches?: RegExpMatchArray) => {
     const userPayload = await getUserFromRequest(req);
 
     if (!userPayload) {
