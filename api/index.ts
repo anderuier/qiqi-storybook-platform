@@ -553,7 +553,7 @@ router.get('/api/works', async (req: VercelRequest, res: VercelResponse) => {
       page: 1,
       pageSize: 50,
       works: result.rows.map((row: any) => ({
-        id: row.id,
+        workId: row.id,
         title: row.title,
         status: row.status,
         currentStep: row.current_step,
@@ -564,6 +564,10 @@ router.get('/api/works', async (req: VercelRequest, res: VercelResponse) => {
         firstImageUrl: row.first_image_url,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
+        stats: {
+          views: row.views,
+          likes: row.likes,
+        },
       })),
     },
   });
