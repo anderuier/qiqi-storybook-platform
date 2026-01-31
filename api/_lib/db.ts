@@ -135,33 +135,6 @@ export async function initDatabase() {
   console.log('数据库表初始化完成');
 }
 
-// 迁移数据库（添加缺失的字段）
-export async function migrateDatabase() {
-  try {
-    // 检查字段是否已存在
-    const checkResult = await sql`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = 'storyboard_pages'
-      AND column_name = 'updated_at'
-    `;
-
-    // 如果字段不存在，添加它
-    if (checkResult.rows.length === 0) {
-      await sql`
-        ALTER TABLE storyboard_pages
-        ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      `;
-      console.log('数据库迁移完成：storyboard_pages.updated_at 字段已添加');
-    } else {
-      console.log('数据库迁移：storyboard_pages.updated_at 字段已存在');
-    }
-  } catch (error: any) {
-    // 静默忽略所有错误，避免影响正常请求
-    console.log('数据库迁移跳过:', error.message);
-  }
-}
-
 // 生成唯一 ID
 export function generateId(prefix: string = ''): string {
   const timestamp = Date.now().toString(36);

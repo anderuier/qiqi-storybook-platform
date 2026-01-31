@@ -12,33 +12,6 @@ import { registerStoryRoutes } from './modules/story.js';
 import { registerStoryboardRoutes } from './modules/storyboard.js';
 import { registerImageRoutes } from './modules/images.js';
 
-// 数据库迁移标记
-let hasMigrated = false;
-
-// 迁移数据库
-async function migrateDatabase() {
-  try {
-    const checkResult = await sql`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = 'storyboard_pages'
-      AND column_name = 'updated_at'
-    `;
-
-    if (checkResult.rows.length === 0) {
-      await sql`
-        ALTER TABLE storyboard_pages
-        ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      `;
-      console.log('数据库迁移完成：storyboard_pages.updated_at 字段已添加');
-    } else {
-      console.log('数据库迁移：storyboard_pages.updated_at 字段已存在');
-    }
-  } catch (error: any) {
-    console.log('数据库迁移跳过:', error.message);
-  }
-}
-
 // ==================== 工具函数 ====================
 
 // JWT 配置
@@ -1049,12 +1022,6 @@ router.get('/api/db/init', async (_req: VercelRequest, res: VercelResponse) => {
 // ==================== 导出主处理函数 ====================
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // 首次请求时执行数据库迁移
-  if (!hasMigrated) {
-    migrateDatabase().catch(err => console.log('[迁移] 跳过:', err.message));
-    hasMigrated = true;
-  }
-
   // 设置 CORS 头
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
