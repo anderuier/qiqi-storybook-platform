@@ -4,6 +4,85 @@
 
 ---
 
+## [2026-01-31] 代码清理与优化（二）
+
+### 本次更新摘要
+修复 Dialog 无障碍警告，添加 Favicon，统一 Prompt 管理，添加详细 AI 调用日志，清理 1,117 行死代码。
+
+### 详细内容
+
+#### 1. UI/UX 改进
+
+| 改进项 | 说明 | Commit |
+|--------|------|--------|
+| Dialog 无障碍 | 添加隐藏的 DialogTitle 和 DialogDescription | d02f975 |
+| Favicon 图标 | 添加魔法棒🪄图标，消除 404 日志 | cfcce9c |
+
+#### 2. Prompt 管理统一
+
+**问题**: Prompt 配置分散在多个文件，部分重复定义
+
+**解决方案**: 统一到 `api/_lib/prompts.config.ts` 管理
+
+| 功能 | 之前 | 之后 | Commit |
+|------|------|------|--------|
+| 故事生成 | 分散定义 | 统一导入 | 079bbc6 |
+| 分镜生成 | 分散定义 | 统一导入 | 079bbc6 |
+| 图片生成 | 英文 prompts.ts | 中文 prompts.config.ts | 5f625bf |
+
+**图片生成 Prompt 结构（统一中文）**:
+```
+前缀：儿童绘本插画风格，温馨可爱，色彩明亮柔和，适合幼儿，
+      + 风格：水彩画风格，柔和的色彩过渡，梦幻感
+      + 场景：一只小兔子在花园里玩耍
+      + 后缀：，高质量，细节丰富，无文字，安全适合儿童
+```
+
+#### 3. 日志增强
+
+为故事生成和分镜生成添加详细的后台日志：
+
+| 日志内容 | 位置 |
+|----------|------|
+| 发送 Prompt (System) 全文 | api/modules/story.ts, storyboard.ts |
+| 发送 Prompt (User) 全文 | api/modules/story.ts, storyboard.ts |
+| AI 返回内容全文 | api/modules/story.ts, storyboard.ts |
+| 各阶段耗时统计 | api/modules/story.ts, storyboard.ts |
+
+**Commit**: `9ab65c9` 日志：为故事生成和分镜生成添加详细的 AI 调用日志
+
+#### 4. 死代码清理
+
+**删除文件汇总**:
+
+| 文件 | 行数 | 原因 |
+|------|------|------|
+| `api/_lib/image.ts` | 799 | 通用图片生成库，实际使用 GLM 专用实现 |
+| `api/_lib/prompts.ts` | 124 | 旧版本 prompt（JSON 格式） |
+| `api/_lib/response.ts` | 69 | 未被引用的响应工具 |
+| `api/_lib/password.ts` | 21 | api/index.ts 中有重复实现 |
+| `api/_lib/hono-helpers.ts` | 104 | Hono 框架未使用 |
+
+**删除迁移代码**:
+- `api/index.ts` 中的 `hasMigrated` 标记和 `migrateDatabase()` 函数
+- storyboard_pages.updated_at 字段已存在，不再需要迁移
+
+**相关 Commits**:
+- e17c845 清理：删除已完成的数据库迁移代码
+- e39c6ba 清理：删除未使用的 api/_lib/image.ts
+- 9c5fe9e 清理：删除未使用的 api/_lib/prompts.ts
+- 0e71b74 清理：删除 _lib 目录下未使用的工具文件
+
+#### 5. 代码统计
+
+| 指标 | 数量 |
+|------|------|
+| 新增代码 | ~30 行 |
+| 删除代码 | ~1,117 行 |
+| 净减少 | ~1,087 行 |
+
+---
+
 ## [2026-01-31] API 模块化重构与系统性 Bug 修复
 
 ### 本次更新摘要
