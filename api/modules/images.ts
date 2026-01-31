@@ -185,7 +185,7 @@ export function registerImageRoutes(
       }
 
       const enhancedPrompt = enhancePrompt(page.image_prompt, style);
-      console.log(`[单张图片生成] 第 ${pageNumber} 页 prompt:`, enhancedPrompt.substring(0, 200));
+      console.log(`[单张图片生成] 第 ${pageNumber} 页:`);
 
       // 调用智谱 GLM API（添加超时控制）
       const controller = new AbortController();
