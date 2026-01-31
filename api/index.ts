@@ -170,14 +170,14 @@ function getAIClient(): OpenAI {
 // 限流检查
 async function checkRateLimit(userId: string): Promise<{ allowed: boolean; retryAfter?: number }> {
   const limit = 10; // 每小时10次
-  const window = 60 * 60 * 1000; // 1小时
+  const windowMs = 60 * 60 * 1000; // 1小时
 
   const now = Date.now();
-  const cutoff = now - window;
+  const cutoffTime = new Date(now - windowMs);
 
-  // 清理过期记录
+  // 清理过期记录 - 直接使用 ISO 时间戳
   await sql`
-    DELETE FROM rate_limits WHERE created_at < TO_TIMESTAMP(${cutoff} / 1000)
+    DELETE FROM rate_limits WHERE created_at < ${cutoffTime.toISOString()}
   `;
 
   // 检查当前请求数
@@ -194,7 +194,7 @@ async function checkRateLimit(userId: string): Promise<{ allowed: boolean; retry
     `;
     if (oldestResult.rows.length > 0) {
       const oldestTime = new Date(oldestResult.rows[0].created_at).getTime();
-      const retryAfter = Math.ceil((oldestTime + window - now) / 1000);
+      const retryAfter = Math.ceil((oldestTime + windowMs - now) / 1000);
       return { allowed: false, retryAfter };
     }
   }
