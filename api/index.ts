@@ -231,7 +231,7 @@ async function recordRequest(userId: string): Promise<void> {
 interface RouteHandler {
   method: string;
   pattern: RegExp | string;
-  handler: (req: VercelRequest, res: VercelResponse, matches?: RegExpMatchArray) => void | Promise<void>;
+  handler: (req: VercelRequest, res: VercelResponse, matches?: RegExpMatchArray) => VercelResponse | Promise<VercelResponse> | void | Promise<void>;
 }
 
 class Router {
@@ -787,7 +787,10 @@ router.post('/api/db/init', async (_req: VercelRequest, res: VercelResponse) => 
 });
 
 router.get('/api/db/init', async (_req: VercelRequest, res: VercelResponse) => {
-  return router.post('/api/db/init', _req, res);
+  return res.status(200).json({
+    success: true,
+    message: '请使用 POST 请求初始化数据库',
+  });
 });
 
 // ==================== 导出主处理函数 ====================
