@@ -6,6 +6,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
 import OpenAI from 'openai';
+import {
+  STORY_SYSTEM_PROMPT,
+  STORY_STYLE_MAP,
+  buildStoryUserPrompt as buildPrompt,
+} from '../_lib/prompts.config.js';
 
 // 从主文件导入的类型和函数（需要在主文件中导出）
 interface UserPayload {
@@ -13,32 +18,6 @@ interface UserPayload {
   email: string;
   nickname: string;
 }
-
-// 故事生成 Prompt
-const STORY_SYSTEM_PROMPT = `你是一位专业的儿童故事作家，擅长为3-6岁学龄前儿童创作温馨、有趣、富有教育意义的童话故事。
-
-创作要求：
-1. 语言简单易懂，使用短句，避免复杂词汇，适合幼儿理解
-2. 故事情节生动有趣，富有想象力，有明确的开头、发展和结尾
-3. 包含积极正面的价值观和教育意义（如友善、勇敢、分享、诚实等）
-4. 角色形象可爱，性格鲜明，容易引起孩子共鸣
-5. 适当使用拟声词和重复句式，增加趣味性
-6. 可以包含简单的对话和互动元素
-7. 故事要有一个温馨或有启发性的结局
-
-输出格式：
-- 直接输出故事内容，不需要标题标记
-- 使用自然段落分隔
-- 对话使用引号标注`;
-
-const STORY_STYLE_MAP: Record<string, string> = {
-  warm: '温馨感人，充满爱与关怀',
-  adventure: '冒险刺激，充满探索精神',
-  funny: '幽默搞笑，轻松愉快',
-  educational: '寓教于乐，包含知识点',
-  fantasy: '奇幻魔法，充满想象力',
-  friendship: '友情主题，强调友谊的珍贵',
-};
 
 function buildStoryUserPrompt(params: {
   theme: string;

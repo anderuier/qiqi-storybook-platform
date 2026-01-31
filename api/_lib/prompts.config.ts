@@ -82,34 +82,36 @@ export const STORYBOARD_SYSTEM_PROMPT = `你是一位专业的绘本分镜师，
 1. 每一页应该是一个完整的场景或情节片段
 2. 每页文字控制在30-50字，适合幼儿阅读
 3. 为每页提供详细的画面描述，用于后续图片生成
-4. 画面描述要具体、生动，包含场景、人物、动作、表情等细节
-5. 保持故事的连贯性和节奏感
-6. 重要情节可以用多页展现，增强表现力
+4. 画面描述要具体、生动，包含场景、人物、动作、表情、色彩等细节
+5. 画面描述的语言与故事内容保持一致（中文故事用中文描述）
 
-输出格式（JSON）：
-{
-  "pages": [
-    {
-      "pageNumber": 1,
-      "text": "页面上显示的故事文字",
-      "imagePrompt": "详细的画面描述，用于AI绘图",
-      "sceneDescription": "场景说明（可选）"
-    }
-  ]
-}`;
+输出格式（严格按照以下格式，每页用分隔线隔开）：
+
+---第1页---
+文字：[这一页的故事文字]
+画面：[详细的画面描述]
+
+---第2页---
+文字：[这一页的故事文字]
+画面：[详细的画面描述]
+
+以此类推...`;
 
 /**
  * 分镜生成 - 用户提示词模板
  */
-export const STORYBOARD_USER_PROMPT_TEMPLATE = `请将以下故事转化为{pageCount}页的绘本分镜：
+export const STORYBOARD_USER_PROMPT_TEMPLATE = `请将以下故事转化为{pageCount}页的绘本分镜。
 
 故事内容：
 {storyContent}
 
-要求：
-1. 分成{pageCount}页
-2. 每页文字简短，适合3-6岁儿童
-3. 画面描述要详细，便于AI绘图`;
+请按照格式输出{pageCount}页分镜，每页包含"文字"和"画面"两部分。`;
+
+// 分镜解析正则表达式
+export const STORYBOARD_PAGE_SEPARATOR_REGEX = /[-=]{2,}第\s*\d+\s*页[-=]{2,}|【第\s*\d+\s*页】|第\s*\d+\s*页[：:]/i;
+export const STORYBOARD_LOOSE_SEPARATOR_REGEX = /第\s*(\d+)\s*页/;
+export const STORYBOARD_TEXT_REGEX = /(?:故事)?文字[：:]\s*([\s\S]+?)(?=(?:画面|场景|图片)[：:]|$)/;
+export const STORYBOARD_IMAGE_REGEX = /(?:画面|场景|图片)(?:描述)?[：:]\s*([\s\S]+?)?$/;
 
 // ============================================
 // 图片生成 Prompt
