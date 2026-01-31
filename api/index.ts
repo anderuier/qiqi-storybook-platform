@@ -750,6 +750,26 @@ router.delete(/^\/api\/drafts\/([^/]+)$/, async (req: VercelRequest, res: Vercel
     });
   }
 
+  // 先查询并删除关联的图片
+  const pagesResult = await sql`
+    SELECT sp.image_url
+    FROM storyboard_pages sp
+    INNER JOIN storyboards sb ON sp.storyboard_id = sb.id
+    WHERE sb.work_id = ${draftId} AND sp.image_url IS NOT NULL
+  `;
+
+  // 删除 Vercel Blob 中的图片
+  for (const page of pagesResult.rows) {
+    if (page.image_url && page.image_url.includes('vercel-storage.com')) {
+      try {
+        await del(page.image_url);
+      } catch (error) {
+        console.error('删除图片失败:', page.image_url, error);
+      }
+    }
+  }
+
+  // 删除草稿（级联删除关联的 stories, storyboards, storyboard_pages）
   await sql`DELETE FROM works WHERE id = ${draftId}`;
 
   return res.status(200).json({
@@ -892,6 +912,25 @@ router.delete(/^\/api\/works\/([^/]+)$/, async (req: VercelRequest, res: VercelR
         message: '无权删除此作品',
       },
     });
+  }
+
+  // 先查询并删除关联的图片
+  const pagesResult = await sql`
+    SELECT sp.image_url
+    FROM storyboard_pages sp
+    INNER JOIN storyboards sb ON sp.storyboard_id = sb.id
+    WHERE sb.work_id = ${workId} AND sp.image_url IS NOT NULL
+  `;
+
+  // 删除 Vercel Blob 中的图片
+  for (const page of pagesResult.rows) {
+    if (page.image_url && page.image_url.includes('vercel-storage.com')) {
+      try {
+        await del(page.image_url);
+      } catch (error) {
+        console.error('删除图片失败:', page.image_url, error);
+      }
+    }
   }
 
   await sql`DELETE FROM works WHERE id = ${workId}`;
