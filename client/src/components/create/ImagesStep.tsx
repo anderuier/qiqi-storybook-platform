@@ -117,7 +117,7 @@ export const ImagesStep = memo(function ImagesStep({
             </p>
             <Progress value={imageTask.progress} className="w-full max-w-md mx-auto mb-4" />
             <p className="text-sm text-muted-foreground">
-              AI 正在为每一页绘制精美插图，请耐心等待...
+              正在为每一页绘制精美插图，请耐心等待...
             </p>
           </>
         )}
