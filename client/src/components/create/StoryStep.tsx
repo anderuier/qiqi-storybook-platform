@@ -4,6 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+// 故事生成等待提示（随时间递进）
+const STORY_WAIT_HINTS = [
+  "正在构思故事情节...",
+  "正在编织奇妙的冒险...",
+  "灵感涌现中，请稍候...",
+  "故事的轮廓逐渐清晰...",
+  "精彩内容即将呈现...",
+  "正在打磨故事细节...",
+  "马上就好，请再等一下...",
+];
+
 /**
  * 步骤2：查看生成的故事
  */
@@ -31,6 +42,21 @@ export const StoryStep = memo(function StoryStep({
 }: StoryStepProps) {
   const [inputValue, setInputValue] = useState(desiredPageCount.toString());
   const [error, setError] = useState<string>("");
+  const [hintIndex, setHintIndex] = useState(0);
+
+  // 等待时定时切换提示文字
+  useEffect(() => {
+    if (!isLoading || streamingContent) {
+      setHintIndex(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setHintIndex(prev =>
+        prev < STORY_WAIT_HINTS.length - 1 ? prev + 1 : prev
+      );
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [isLoading, streamingContent]);
 
   // 同步外部 desiredPageCount 变化到本地状态
   useEffect(() => {
@@ -60,7 +86,7 @@ export const StoryStep = memo(function StoryStep({
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <FileText className="w-6 h-6 text-mint" />
-        AI 生成的故事
+        生成的故事
       </h2>
 
       {isLoading ? (
@@ -68,7 +94,7 @@ export const StoryStep = memo(function StoryStep({
           <div className="bg-cream/30 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <Loader2 className="w-4 h-4 animate-spin text-coral" />
-              <span className="text-sm text-muted-foreground">AI 正在创作故事...</span>
+              <span className="text-sm text-muted-foreground">正在创作故事...</span>
             </div>
             <div className="prose prose-sm max-w-none whitespace-pre-wrap">
               {streamingContent}
@@ -77,8 +103,7 @@ export const StoryStep = memo(function StoryStep({
         ) : (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="w-12 h-12 animate-spin text-coral mb-4" />
-            <p className="text-muted-foreground">AI 正在创作故事...</p>
-            <p className="text-sm text-muted-foreground mt-2">预计需要 10-20 秒</p>
+            <p className="text-muted-foreground">{STORY_WAIT_HINTS[hintIndex]}</p>
           </div>
         )
       ) : story ? (

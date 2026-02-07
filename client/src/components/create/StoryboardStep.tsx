@@ -1,6 +1,16 @@
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import { Palette, Loader2, Check } from "lucide-react";
 import { artStyles } from "./constants";
+
+// 分镜生成等待提示（随时间递进）
+const STORYBOARD_WAIT_HINTS = [
+  "正在分析故事结构...",
+  "正在规划每一页的画面...",
+  "正在为每页编写画面描述...",
+  "分镜内容逐渐成形...",
+  "精心安排画面构图中...",
+  "即将完成，请稍候...",
+];
 
 /**
  * 步骤3：分镜剧本 & 艺术风格
@@ -27,6 +37,22 @@ export const StoryboardStep = memo(function StoryboardStep({
   selectedArtStyle,
   setSelectedArtStyle,
 }: StoryboardStepProps) {
+  const [hintIndex, setHintIndex] = useState(0);
+
+  // 等待时定时切换提示文字
+  useEffect(() => {
+    if (!isLoading || streamingContent) {
+      setHintIndex(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setHintIndex(prev =>
+        prev < STORYBOARD_WAIT_HINTS.length - 1 ? prev + 1 : prev
+      );
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [isLoading, streamingContent]);
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
@@ -39,7 +65,7 @@ export const StoryboardStep = memo(function StoryboardStep({
           <div className="bg-cream/30 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <Loader2 className="w-4 h-4 animate-spin text-mint" />
-              <span className="text-sm text-muted-foreground">AI 正在生成分镜剧本...</span>
+              <span className="text-sm text-muted-foreground">正在生成分镜剧本...</span>
             </div>
             <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
               {streamingContent}
@@ -48,7 +74,7 @@ export const StoryboardStep = memo(function StoryboardStep({
         ) : (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="w-12 h-12 animate-spin text-mint mb-4" />
-            <p className="text-muted-foreground">AI 正在生成分镜剧本...</p>
+            <p className="text-muted-foreground">{STORYBOARD_WAIT_HINTS[hintIndex]}</p>
           </div>
         )
       ) : storyboard ? (
