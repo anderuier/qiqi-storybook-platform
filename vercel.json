@@ -8,12 +8,6 @@
     "api/index.ts": {
       "runtime": "@vercel/node@5.5.16",
       "maxDuration": 60
-    },
-    "api/create-story-stream.ts": {
-      "runtime": "edge"
-    },
-    "api/create-storyboard-stream.ts": {
-      "runtime": "edge"
     }
   },
   "rewrites": [
