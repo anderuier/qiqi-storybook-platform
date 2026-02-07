@@ -5,6 +5,33 @@
 
 ---
 
+## [2026-02-07] SSE 流式路由迁移到 Edge Runtime & 图片生成 SQL 修复
+
+### 本次更新摘要
+将故事和分镜的 SSE 流式路由从 Node.js Serverless Function 迁移到 Vercel Edge Function，从根本上解决 60 秒超时问题；修复图片生成模块中的 SQL bug。
+
+### 详细内容
+
+#### 1. Edge Runtime 迁移
+- 新增 `api/_edge/auth.ts`：Edge 兼容的 JWT 验证（Web Crypto API）
+- 新增 `api/_edge/sse.ts`：Edge 兼容的 SSE 工具（ReadableStream）
+- 新增 `api/create-story-stream.ts`：故事流式生成 Edge Function
+- 新增 `api/create-storyboard-stream.ts`：分镜流式生成 Edge Function
+- 修改 `vercel.json`：添加 SSE rewrite 规则
+- 清理 `story.ts`、`storyboard.ts` 中的旧 stream 路由注册
+
+#### 2. 前端流断开检测
+- `client/src/lib/sse-client.ts`：reader done 但未收到 done/error 事件时，主动触发 `STREAM_DISCONNECTED` 错误
+
+#### 3. 图片生成 SQL Bug 修复
+- `api/modules/images.ts:1011`：`totalItems` → `total_items`，修复 continue 端点失败回滚时的 SQL 错误
+
+#### 4. 经验记录
+- 尝试为图片生成添加超时控制，发现反而导致 GLM API 被提前中断，最终回滚
+- Edge Function 的 runtime 在文件内部声明即可，不需要在 vercel.json functions 中重复
+
+---
+
 ## [2026-02-07] SSE 流式响应架构重构
 
 ### 本次更新摘要
