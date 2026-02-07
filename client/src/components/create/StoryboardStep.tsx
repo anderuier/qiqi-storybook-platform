@@ -15,6 +15,7 @@ export interface StoryboardStepProps {
     }>;
   } | null;
   isLoading: boolean;
+  streamingContent?: string;
   selectedArtStyle: string | null;
   setSelectedArtStyle: (value: string) => void;
 }
@@ -22,6 +23,7 @@ export interface StoryboardStepProps {
 export const StoryboardStep = memo(function StoryboardStep({
   storyboard,
   isLoading,
+  streamingContent,
   selectedArtStyle,
   setSelectedArtStyle,
 }: StoryboardStepProps) {
@@ -33,10 +35,22 @@ export const StoryboardStep = memo(function StoryboardStep({
       </h2>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="w-12 h-12 animate-spin text-mint mb-4" />
-          <p className="text-muted-foreground">AI 正在生成分镜剧本...</p>
-        </div>
+        streamingContent ? (
+          <div className="bg-cream/30 rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Loader2 className="w-4 h-4 animate-spin text-mint" />
+              <span className="text-sm text-muted-foreground">AI 正在生成分镜剧本...</span>
+            </div>
+            <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
+              {streamingContent}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="w-12 h-12 animate-spin text-mint mb-4" />
+            <p className="text-muted-foreground">AI 正在生成分镜剧本...</p>
+          </div>
+        )
       ) : storyboard ? (
         <>
           {/* 分镜预览 */}

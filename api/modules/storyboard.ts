@@ -14,6 +14,7 @@ import {
   STORYBOARD_IMAGE_REGEX,
   buildStoryboardUserPrompt,
 } from '../_lib/prompts.config.js';
+import { handleStoryboardStream } from './_storyboard/stream-handler.js';
 
 // 类型定义
 interface UserPayload {
@@ -303,5 +304,10 @@ export function registerStoryboardRoutes(
         },
       });
     }
+  });
+
+  // 流式分镜生成路由
+  app.post('/api/create/storyboard/stream', async (req: VercelRequest, res: VercelResponse) => {
+    await handleStoryboardStream(req, res, dependencies);
   });
 }

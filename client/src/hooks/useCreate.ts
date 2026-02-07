@@ -3,7 +3,7 @@
  * 管理故事创作的完整流程状态
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   createApi,
   CreateStoryRequest,
@@ -15,6 +15,31 @@ import {
   DraftDetail,
   ImageProvider,
 } from '../lib/api';
+import { fetchSSE } from '../lib/sse-client';
+
+// SSE 完成事件数据类型（与后端 sse.types.ts 保持一致）
+interface StoryDoneData {
+  storyId: string;
+  workId: string;
+  title: string;
+  content: string;
+  wordCount: number;
+  estimatedPages: number;
+  aiProvider: string;
+  aiModel: string;
+}
+
+interface StoryboardDoneData {
+  storyboardId: string;
+  pageCount: number;
+  pages: Array<{
+    pageNumber: number;
+    text: string;
+    imagePrompt: string;
+  }>;
+  aiProvider: string;
+  aiModel: string;
+}
 
 // 创作步骤
 export type CreateStep = 'input' | 'story' | 'storyboard' | 'images' | 'preview';
@@ -50,6 +75,9 @@ export interface CreateState {
 
   // 页面图片
   pageImages: Record<number, string>;
+
+  // 流式生成中的文字内容
+  streamingContent: string;
 }
 
 // 初始状态
@@ -71,10 +99,16 @@ const initialState: CreateState = {
     totalPages: 0,
   },
   pageImages: {},
+  streamingContent: '',
 };
 
 export function useCreate() {
   const [state, setState] = useState<CreateState>(initialState);
+
+  // 用于取消流式请求的 ref
+  const streamControllerRef = useRef<AbortController | null>(null);
+  // 用于累积流式内容的 ref（避免闭包问题）
+  const streamContentRef = useRef('');
 
   // 更新状态
   const updateState = useCallback((updates: Partial<CreateState>) => {
@@ -176,78 +210,140 @@ export function useCreate() {
     }
   }, [updateState]);
 
-  // 步骤1：生成故事
+  // 步骤1：生成故事（流式）
   const generateStory = useCallback(
-    async (input: CreateStoryRequest['input']) => {
+    (input: CreateStoryRequest['input']): Promise<StoryResponse> => {
+      // 取消之前的流
+      if (streamControllerRef.current) {
+        streamControllerRef.current.abort();
+      }
+
       updateState({
         isLoading: true,
         error: null,
         input,
+        streamingContent: '',
       });
+      streamContentRef.current = '';
 
-      try {
-        const story = await createApi.generateStory({
-          mode: 'free',
-          input,
-        });
-
-        updateState({
-          isLoading: false,
-          story,
-          workId: story.workId,
-          step: 'story',
-        });
-
-        return story;
-      } catch (err: any) {
-        updateState({
-          isLoading: false,
-          error: err.message || '故事生成失败',
-        });
-        throw err;
-      }
+      return new Promise((resolve, reject) => {
+        const controller = fetchSSE<StoryDoneData>(
+          '/create/story/stream',
+          { mode: 'free', input },
+          {
+            onContent: (delta) => {
+              streamContentRef.current += delta;
+              updateState({ streamingContent: streamContentRef.current });
+            },
+            onDone: (data) => {
+              streamControllerRef.current = null;
+              const story: StoryResponse = {
+                storyId: data.storyId,
+                workId: data.workId,
+                title: data.title,
+                content: data.content,
+                wordCount: data.wordCount,
+                estimatedPages: data.estimatedPages,
+                aiProvider: data.aiProvider,
+                aiModel: data.aiModel,
+              };
+              updateState({
+                isLoading: false,
+                story,
+                workId: story.workId,
+                step: 'story',
+                streamingContent: '',
+              });
+              resolve(story);
+            },
+            onError: (err) => {
+              streamControllerRef.current = null;
+              updateState({
+                isLoading: false,
+                error: err.message || '故事生成失败',
+                streamingContent: '',
+              });
+              reject(err);
+            },
+          },
+        );
+        streamControllerRef.current = controller;
+      });
     },
     [updateState]
   );
 
-  // 步骤2：生成分镜剧本
+  // 步骤2：生成分镜剧本（流式）
   const generateStoryboard = useCallback(
-    async () => {
+    (): Promise<StoryboardResponse> => {
       if (!state.story || !state.workId) {
-        throw new Error('请先生成故事');
+        return Promise.reject(new Error('请先生成故事'));
       }
 
       // 验证页数范围
       if (state.desiredPageCount < 4 || state.desiredPageCount > 12) {
-        throw new Error('页数必须在 4-12 页之间');
+        return Promise.reject(new Error('页数必须在 4-12 页之间'));
+      }
+
+      // 取消之前的流
+      if (streamControllerRef.current) {
+        streamControllerRef.current.abort();
       }
 
       updateState({
         isLoading: true,
         error: null,
+        streamingContent: '',
       });
+      streamContentRef.current = '';
 
-      try {
-        const storyboard = await createApi.generateStoryboard({
-          storyContent: state.story.content,
-          pageCount: state.desiredPageCount,
-          workId: state.workId,
-        });
-
-        updateState({
-          isLoading: false,
-          storyboard,
-          step: 'storyboard',
-        });
-
-        return storyboard;
-      } catch (err: any) {
-        updateState({
-          isLoading: false,
-          error: err.message || '分镜剧本生成失败',
-        });
-        throw err;
-      }
+      return new Promise((resolve, reject) => {
+        const controller = fetchSSE<StoryboardDoneData>(
+          '/create/storyboard/stream',
+          {
+            storyContent: state.story!.content,
+            pageCount: state.desiredPageCount,
+            workId: state.workId,
+          },
+          {
+            onContent: (delta) => {
+              streamContentRef.current += delta;
+              updateState({ streamingContent: streamContentRef.current });
+            },
+            onDone: (data) => {
+              streamControllerRef.current = null;
+              const storyboard: StoryboardResponse = {
+                storyboardId: data.storyboardId,
+                workId: state.workId!,
+                pageCount: data.pageCount,
+                pages: data.pages.map(p => ({
+                  ...p,
+                  duration: 5000,
+                })),
+                aiProvider: data.aiProvider,
+                aiModel: data.aiModel,
+              };
+              updateState({
+                isLoading: false,
+                storyboard,
+                step: 'storyboard',
+                streamingContent: '',
+              });
+              resolve(storyboard);
+            },
+            onError: (err) => {
+              streamControllerRef.current = null;
+              updateState({
+                isLoading: false,
+                error: err.message || '分镜剧本生成失败',
+                streamingContent: '',
+              });
+              reject(err);
+            },
+          },
+        );
+        streamControllerRef.current = controller;
+      });
     },
     [state.story, state.workId, state.desiredPageCount, updateState]
   );

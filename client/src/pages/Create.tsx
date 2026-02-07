@@ -388,6 +388,7 @@ export default function Create() {
               <StoryStep
                 story={create.story}
                 isLoading={create.isLoading}
+                streamingContent={create.streamingContent}
                 onRegenerate={() => {
                   create.reset();
                   setCurrentStep(1);
@@ -402,6 +403,7 @@ export default function Create() {
               <StoryboardStep
                 storyboard={create.storyboard}
                 isLoading={create.isLoading}
+                streamingContent={create.streamingContent}
                 selectedArtStyle={selectedArtStyle}
                 setSelectedArtStyle={setSelectedArtStyle}
               />

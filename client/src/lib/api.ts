@@ -7,7 +7,7 @@ import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 
 // API 基础 URL
 // 开发环境直接请求 Vercel API，生产环境使用相对路径
-const API_BASE_URL = import.meta.env.DEV
+export const API_BASE_URL = import.meta.env.DEV
   ? 'https://storybook-gamma-ten.vercel.app/api'
   : '/api';
 

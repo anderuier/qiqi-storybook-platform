@@ -11,6 +11,7 @@ import {
   STORY_STYLE_MAP,
   buildStoryUserPrompt as buildPrompt,
 } from '../_lib/prompts.config.js';
+import { handleStoryStream } from './_story/stream-handler.js';
 
 // 从主文件导入的类型和函数（需要在主文件中导出）
 interface UserPayload {
@@ -236,5 +237,10 @@ export function registerStoryRoutes(
         },
       });
     }
+  });
+
+  // 流式故事生成路由
+  app.post('/api/create/story/stream', async (req: VercelRequest, res: VercelResponse) => {
+    await handleStoryStream(req, res, dependencies);
   });
 }

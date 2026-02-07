@@ -15,6 +15,7 @@ export interface StoryStepProps {
     estimatedPages: number;
   } | null;
   isLoading: boolean;
+  streamingContent?: string;
   onRegenerate: () => void;
   desiredPageCount: number;
   onDesiredPageCountChange: (count: number) => void;
@@ -23,6 +24,7 @@ export interface StoryStepProps {
 export const StoryStep = memo(function StoryStep({
   story,
   isLoading,
+  streamingContent,
   onRegenerate,
   desiredPageCount,
   onDesiredPageCountChange,
@@ -62,11 +64,23 @@ export const StoryStep = memo(function StoryStep({
       </h2>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="w-12 h-12 animate-spin text-coral mb-4" />
-          <p className="text-muted-foreground">AI 正在创作故事...</p>
-          <p className="text-sm text-muted-foreground mt-2">预计需要 10-20 秒</p>
-        </div>
+        streamingContent ? (
+          <div className="bg-cream/30 rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Loader2 className="w-4 h-4 animate-spin text-coral" />
+              <span className="text-sm text-muted-foreground">AI 正在创作故事...</span>
+            </div>
+            <div className="prose prose-sm max-w-none whitespace-pre-wrap">
+              {streamingContent}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="w-12 h-12 animate-spin text-coral mb-4" />
+            <p className="text-muted-foreground">AI 正在创作故事...</p>
+            <p className="text-sm text-muted-foreground mt-2">预计需要 10-20 秒</p>
+          </div>
+        )
       ) : story ? (
         <>
           <div className="bg-cream/30 rounded-2xl p-6">
