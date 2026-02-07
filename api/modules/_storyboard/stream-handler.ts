@@ -110,11 +110,13 @@ export async function handleStoryboardStream(
   `;
   const storyId = storyResult.rows[0]?.id || null;
 
-  // 记录请求
-  await recordRequest(userPayload.userId);
-
-  // 初始化 SSE 响应
+  // 先初始化 SSE 响应，让客户端尽快收到响应头
   initSSE(res);
+
+  // 记录请求（非阻塞关键路径，移到 SSE 初始化之后）
+  recordRequest(userPayload.userId).catch(err =>
+    console.error('[分镜流式生成] 记录请求失败:', err)
+  );
 
   const startTime = Date.now();
   console.log('[分镜流式生成] 开始 workId:', workId, '页数:', validPageCount);

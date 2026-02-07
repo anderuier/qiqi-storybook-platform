@@ -141,7 +141,7 @@ function getAIClient(): OpenAI {
   return aiClient;
 }
 
-// 限流检查
+// 限流检查（优化：合并查询，减少数据库往返）
 async function checkRateLimit(userId: string): Promise<{ allowed: boolean; retryAfter?: number }> {
   const limit = 10; // 每小时10次
   const windowMs = 60 * 60 * 1000; // 1小时
@@ -149,28 +149,24 @@ async function checkRateLimit(userId: string): Promise<{ allowed: boolean; retry
   const now = Date.now();
   const cutoffTime = new Date(now - windowMs);
 
-  // 清理过期记录 - 直接使用 ISO 时间戳
-  await sql`
-    DELETE FROM rate_limits WHERE created_at < ${cutoffTime.toISOString()}
-  `;
+  // 异步清理过期记录，不阻塞主流程
+  sql`DELETE FROM rate_limits WHERE created_at < ${cutoffTime.toISOString()}`.catch(err =>
+    console.error('[限流] 清理过期记录失败:', err)
+  );
 
-  // 检查当前请求数
+  // 单次查询：同时获取计数和最早记录时间
   const result = await sql`
-    SELECT COUNT(*) as count FROM rate_limits WHERE user_id = ${userId}
+    SELECT COUNT(*) as count, MIN(created_at) as oldest
+    FROM rate_limits
+    WHERE user_id = ${userId} AND created_at >= ${cutoffTime.toISOString()}
   `;
 
   const count = parseInt(result.rows[0].count);
 
   if (count >= limit) {
-    // 计算最早记录的剩余时间
-    const oldestResult = await sql`
-      SELECT created_at FROM rate_limits WHERE user_id = ${userId} ORDER BY created_at ASC LIMIT 1
-    `;
-    if (oldestResult.rows.length > 0) {
-      const oldestTime = new Date(oldestResult.rows[0].created_at).getTime();
-      const retryAfter = Math.ceil((oldestTime + windowMs - now) / 1000);
-      return { allowed: false, retryAfter };
-    }
+    const oldestTime = new Date(result.rows[0].oldest).getTime();
+    const retryAfter = Math.ceil((oldestTime + windowMs - now) / 1000);
+    return { allowed: false, retryAfter };
   }
 
   return { allowed: true };

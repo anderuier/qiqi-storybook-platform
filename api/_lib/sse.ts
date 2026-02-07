@@ -15,6 +15,9 @@ export function initSSE(res: VercelResponse): void {
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
   res.status(200);
+  // 立即发送响应头到客户端，让 fetch() Promise 尽快 resolve
+  // 避免客户端等到第一个 res.write() 才收到响应
+  res.flushHeaders();
 }
 
 /**

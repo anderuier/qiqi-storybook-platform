@@ -100,11 +100,13 @@ export async function handleStoryStream(
     return;
   }
 
-  // 记录请求
-  await recordRequest(userPayload.userId);
-
-  // 初始化 SSE 响应
+  // 先初始化 SSE 响应，让客户端尽快收到响应头
   initSSE(res);
+
+  // 记录请求（非阻塞关键路径，移到 SSE 初始化之后）
+  recordRequest(userPayload.userId).catch(err =>
+    console.error('[故事流式生成] 记录请求失败:', err)
+  );
 
   const startTime = Date.now();
   console.log('[故事流式生成] 开始, userId:', userPayload.userId, '主题:', theme);
