@@ -137,6 +137,7 @@ export default function Create() {
   const handleGenerateStory = async () => {
     if (isGenerating) return; // 防止重复点击
     setIsGenerating(true);
+    setCurrentStep(2); // 立即跳转，让用户看到流式文字
     try {
       await create.generateStory({
         childName,
@@ -144,7 +145,6 @@ export default function Create() {
         theme: storyInput,
         style: selectedStoryStyle as any,
       });
-      setCurrentStep(2);
     } catch (err) {
       // 错误已在 hook 中处理
     } finally {
@@ -156,9 +156,9 @@ export default function Create() {
   const handleGenerateStoryboard = async () => {
     if (isGenerating) return; // 防止重复点击
     setIsGenerating(true);
+    setCurrentStep(3); // 立即跳转，让用户看到流式文字
     try {
       await create.generateStoryboard();
-      setCurrentStep(3);
     } catch (err) {
       // 错误已在 hook 中处理
     } finally {
