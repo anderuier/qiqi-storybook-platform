@@ -75,6 +75,7 @@ export function fetchSSE<T = unknown>(
 
       const decoder = new TextDecoder();
       let buffer = '';
+      let receivedTerminalEvent = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -98,8 +99,10 @@ export function fetchSSE<T = unknown>(
             if (event.type === 'content') {
               callbacks.onContent(event.delta);
             } else if (event.type === 'done') {
+              receivedTerminalEvent = true;
               callbacks.onDone(event.data as T);
             } else if (event.type === 'error') {
+              receivedTerminalEvent = true;
               callbacks.onError(event.error);
             }
           } catch {
@@ -107,6 +110,14 @@ export function fetchSSE<T = unknown>(
             console.warn('[SSE] 无法解析事件:', jsonStr);
           }
         }
+      }
+
+      // 流断开检测：reader done 但未收到 done/error 事件，说明连接异常断开
+      if (!receivedTerminalEvent) {
+        callbacks.onError({
+          code: 'STREAM_DISCONNECTED',
+          message: '服务器连接异常断开，请重试',
+        });
       }
     })
     .catch((err) => {
