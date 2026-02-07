@@ -187,7 +187,7 @@ export function registerImageRoutes(
 
       // 调用智谱 GLM API（添加超时控制）
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 35000);
+      const timeout = setTimeout(() => controller.abort(), 45000);
 
       const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
       const requestBody = {
@@ -429,7 +429,7 @@ export function registerImageRoutes(
         const oldImageUrl = firstPage.image_url;
 
         const batchController = new AbortController();
-        const batchTimeout = setTimeout(() => batchController.abort(), 35000);
+        const batchTimeout = setTimeout(() => batchController.abort(), 45000);
 
         try {
           const glmApiKey = process.env.GLM_API_KEY;
@@ -894,7 +894,7 @@ export function registerImageRoutes(
       console.log(`[Continue 图片生成] 生成第 ${nextPageNumber} 页图片`);
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 35000);
+      const timeout = setTimeout(() => controller.abort(), 45000);
 
       try {
         const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
