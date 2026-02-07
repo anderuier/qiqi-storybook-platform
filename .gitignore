@@ -138,3 +138,4 @@ DOCS/web-development-best-practices.md
 # Backup files
 *.bak
 **/*.bak
+/docs/*.md
