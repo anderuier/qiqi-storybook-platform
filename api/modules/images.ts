@@ -428,6 +428,9 @@ export function registerImageRoutes(
       if (!firstPage.image_url || forceRegenerate) {
         const oldImageUrl = firstPage.image_url;
 
+        const batchController = new AbortController();
+        const batchTimeout = setTimeout(() => batchController.abort(), 35000);
+
         try {
           const glmApiKey = process.env.GLM_API_KEY;
           if (!glmApiKey) {
@@ -442,8 +445,6 @@ export function registerImageRoutes(
           console.log('生成图片 prompt:', enhancedPrompt);
 
           const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
-          const batchController = new AbortController();
-          const batchTimeout = setTimeout(() => batchController.abort(), 35000);
 
           const imgResponse = await fetch('https://open.bigmodel.cn/api/paas/v4/images/generations', {
             method: 'POST',
