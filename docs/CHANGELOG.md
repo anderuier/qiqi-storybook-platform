@@ -7,6 +7,160 @@
 
 ---
 
+## [2026-02-07] SSE 流式响应架构重构
+
+### 本次更新摘要
+完成故事生成和分镜生成的 SSE 流式响应架构重构，实现实时流式展示，显著提升用户体验。
+
+### 详细内容
+
+#### 1. SSE 流式响应架构
+
+**设计目标**：
+- 最大化用户交互流畅度与可感知反馈
+- 显著降低接口超时、失败率
+- 首字符快速可见（TTFC < 3s）
+
+**技术方案**：
+
+| 项目 | 实现方案 |
+|------|----------|
+| 传输协议 | Server-Sent Events (SSE) |
+| 前端实现 | fetch + ReadableStream（支持 POST 和 Auth） |
+| 后端实现 | Vercel Response + ReadableStream |
+| AI 调用 | `stream: true` 流式生成 |
+
+#### 2. 新增文件（8个）
+
+**后端 SSE 工具**：
+| 文件 | 职责 |
+|------|------|
+| `api/_lib/sse.ts` | SSE 工具函数（initSSE, sendContentDelta, sendDone, sendError） |
+| `api/_lib/sse.types.ts` | 前后端共享的 SSE 事件类型定义 |
+
+**故事模块拆分**：
+| 文件 | 职责 |
+|------|------|
+| `api/modules/_story/stream-handler.ts` | 故事流式生成处理器 |
+| `api/modules/_story/db-save.ts` | 故事数据库保存逻辑（提取） |
+
+**分镜模块拆分**：
+| 文件 | 职责 |
+|------|------|
+| `api/modules/_storyboard/stream-handler.ts` | 分镜流式生成处理器 |
+| `api/modules/_storyboard/parser.ts` | 分镜文本解析器（提取） |
+| `api/modules/_storyboard/db-save.ts` | 分镜数据库保存逻辑（提取） |
+
+**前端 SSE 客户端**：
+| 文件 | 职责 |
+|------|------|
+| `client/src/lib/sse-client.ts` | SSE 客户端（fetchSSE 函数） |
+
+#### 3. 修改文件（7个）
+
+| 文件 | 改动 |
+|------|------|
+| `api/modules/story.ts` | 新增 `/api/create/story/stream` 路由，委托给 stream-handler |
+| `api/modules/storyboard.ts` | 新增 `/api/create/storyboard/stream` 路由，委托给 stream-handler |
+| `client/src/components/create/StoryStep.tsx` | 新增 `streamingContent` prop，支持流式内容展示 |
+| `client/src/components/create/StoryboardStep.tsx` | 新增 `streamingContent` prop，支持流式内容展示 |
+| `client/src/hooks/useCreate.ts` | generateStory/generateStoryboard 改用 fetchSSE 流式调用 |
+| `client/src/lib/api.ts` | 导出 API_BASE_URL, getToken, clearToken 供 SSE 客户端使用 |
+| `client/src/pages/Create.tsx` | 传递 streamingContent 到子组件 |
+
+#### 4. 用户体验优化
+
+| 优化项 | 说明 | Commit |
+|--------|------|--------|
+| 实时流式展示 | 生成过程中逐字符显示内容 | f070521 |
+| 立即跳转页面 | 生成开始后立即跳转到结果页 | ec5e422 |
+| 降低首字延迟 | 优化 AI 调用参数减少首字等待时间 | b645bf1 |
+| 递进式提示 | "正在构思开头..." → "正在展开情节..." | 4f46097 |
+| 去除"AI"字样 | 界面文案更友好 | 4f46097 |
+
+#### 5. 技术亮点
+
+**后端流式转发**：
+```typescript
+for await (const chunk of stream) {
+  const delta = chunk.choices[0]?.delta?.content || '';
+  if (delta) {
+    sendContentDelta(res, delta);
+  }
+}
+sendDone(res, { storyId, finishReason: 'stop' });
+```
+
+**前端增量渲染**：
+```typescript
+const contentRef = useRef('');
+const onDelta = (delta: string) => {
+  contentRef.current += delta;
+  setContent(contentRef.current);
+};
+```
+
+**状态机设计**：
+```
+idle → generating → done/error
+```
+
+#### 6. 新增文档
+
+| 文件 | 说明 |
+|------|------|
+| `docs/ai_streaming_architecture_optimized.md` | AI 流式生成架构设计文档 v2.0（完整版） |
+| `docs/streaming_refactor_review_20260207.md` | SSE 流式架构重构代码审查报告 |
+
+#### 7. Git 提交记录
+
+| Commit | 说明 |
+|--------|------|
+| f070521 | 功能：故事生成和分镜生成改为 SSE 流式响应 |
+| ec5e422 | 修复：生成故事和分镜时立即跳转页面，显示流式文字 |
+| b645bf1 | 优化：降低流式响应首字延迟 |
+| 4f46097 | 优化：等待生成时显示递进式提示文字，去除"AI"字样 |
+
+#### 8. 待解决问题（代码审查发现）
+
+**高优先级**：
+- 客户端缺少超时控制机制
+- 流异常结束无回调检测
+- 未迁移 Edge Runtime（仍有 60s 超时限制）
+
+**中优先级**：
+- 分镜数据库保存缺少重试机制
+- `buildStoryUserPrompt` 重复定义
+- `useSSE` Hook 未被使用
+
+### 当前项目状态
+
+| 模块 | 状态 |
+|------|------|
+| 用户认证 | ✅ 完成 |
+| AI 故事生成 | ✅ 完成（SSE 流式） |
+| AI 分镜生成 | ✅ 完成（SSE 流式） |
+| AI 图片生成 | ✅ 完成 |
+| 图片永久存储 | ✅ 完成 |
+| 草稿保存/恢复 | ✅ 完成 |
+| 绘本预览/播放 | ✅ 完成 |
+| 语音生成 | ⏳ 待开发 |
+| 作品发布 | ⏳ 待开发 |
+
+### 下一步计划
+
+**高优先级**：
+- 添加客户端超时控制
+- 实现流异常结束检测
+- 评估 Edge Runtime 迁移
+
+**功能开发**：
+- 语音生成功能（TTS）
+- 作品发布功能
+- 作品下载功能（PDF/视频导出）
+
+---
+
 ## [2026-01-31] 代码清理与优化（二）
 
 ### 本次更新摘要
