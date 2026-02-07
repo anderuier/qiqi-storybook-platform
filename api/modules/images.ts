@@ -28,28 +28,16 @@ function generateId(prefix: string = ''): string {
 }
 
 async function uploadImageToBlob(imageUrl: string, filename: string): Promise<string> {
-  // 下载图片（15 秒超时）
-  const downloadController = new AbortController();
-  const downloadTimeout = setTimeout(() => downloadController.abort(), 15000);
-  try {
-    const response = await fetch(imageUrl, { signal: downloadController.signal });
-    clearTimeout(downloadTimeout);
-    if (!response.ok) {
-      throw new Error(`下载图片失败: ${response.statusText}`);
-    }
-    const blob = await response.blob();
-    const result = await put(filename, blob, {
-      access: 'public',
-      contentType: 'image/png',
-    });
-    return result.url;
-  } catch (err: any) {
-    clearTimeout(downloadTimeout);
-    if (err.name === 'AbortError') {
-      throw new Error('下载图片超时');
-    }
-    throw err;
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error(`下载图片失败: ${response.statusText}`);
   }
+  const blob = await response.blob();
+  const result = await put(filename, blob, {
+    access: 'public',
+    contentType: 'image/png',
+  });
+  return result.url;
 }
 
 /**
@@ -187,7 +175,7 @@ export function registerImageRoutes(
 
       // 调用智谱 GLM API（添加超时控制）
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
+      const timeout = setTimeout(() => controller.abort(), 50000);
 
       const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
       const requestBody = {
@@ -428,9 +416,6 @@ export function registerImageRoutes(
       if (!firstPage.image_url || forceRegenerate) {
         const oldImageUrl = firstPage.image_url;
 
-        const batchController = new AbortController();
-        const batchTimeout = setTimeout(() => batchController.abort(), 45000);
-
         try {
           const glmApiKey = process.env.GLM_API_KEY;
           if (!glmApiKey) {
@@ -445,7 +430,6 @@ export function registerImageRoutes(
           console.log('生成图片 prompt:', enhancedPrompt);
 
           const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
-
           const imgResponse = await fetch('https://open.bigmodel.cn/api/paas/v4/images/generations', {
             method: 'POST',
             headers: {
@@ -456,10 +440,7 @@ export function registerImageRoutes(
               model,
               prompt: enhancedPrompt,
             }),
-            signal: batchController.signal,
           });
-
-          clearTimeout(batchTimeout);
 
           if (!imgResponse.ok) {
             const errText = await imgResponse.text();
@@ -512,11 +493,8 @@ export function registerImageRoutes(
             }
           }
         } catch (imgErr: any) {
-          clearTimeout(batchTimeout);
           console.error('第一张图片生成失败:', imgErr);
-          const errorMessage = imgErr.name === 'AbortError'
-            ? '图片生成超时，请重试'
-            : (imgErr.message || '图片生成失败');
+          const errorMessage = imgErr.message || '图片生成失败';
           await sql`
             UPDATE tasks
             SET status = 'failed',
@@ -894,7 +872,7 @@ export function registerImageRoutes(
       console.log(`[Continue 图片生成] 生成第 ${nextPageNumber} 页图片`);
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
+      const timeout = setTimeout(() => controller.abort(), 50000);
 
       try {
         const model = process.env.GLM_IMAGE_MODEL || 'glm-image';
