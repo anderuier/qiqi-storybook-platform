@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
@@ -48,6 +48,31 @@ function Router() {
 // - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
 //   to keep consistent foreground/background color across components
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
+
+// 图片保护：禁用右键菜单和拖拽
+useEffect(() => {
+  const disableImageContextMenu = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'IMG' || target.closest('img')) {
+      e.preventDefault();
+    }
+  };
+
+  const disableImageDrag = (e: DragEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'IMG') {
+      e.preventDefault();
+    }
+  };
+
+  document.addEventListener('contextmenu', disableImageContextMenu);
+  document.addEventListener('dragstart', disableImageDrag);
+
+  return () => {
+    document.removeEventListener('contextmenu', disableImageContextMenu);
+    document.removeEventListener('dragstart', disableImageDrag);
+  };
+}, []);
 
 function App() {
   return (

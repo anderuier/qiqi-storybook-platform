@@ -301,3 +301,11 @@
 ::-webkit-scrollbar-thumb:hover {
   background: oklch(0.72 0.12 25);
 }
+
+/* 图片保护 - 禁止右键下载和长按保存 */
+img {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  pointer-events: auto;
+}
