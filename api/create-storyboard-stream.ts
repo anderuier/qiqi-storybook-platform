@@ -63,7 +63,7 @@ async function recordRequest(userId: string): Promise<void> {
 function jsonError(status: number, code: string, message: string, extra?: Record<string, unknown>): Response {
   return new Response(
     JSON.stringify({ success: false, error: { code, message, ...extra } }),
-    { status, headers: { 'Content-Type': 'application/json' } },
+    { status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } },
   );
 }
 
