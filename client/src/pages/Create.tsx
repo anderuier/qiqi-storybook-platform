@@ -453,7 +453,7 @@ export default function Create() {
             <Button
               variant="outline"
               onClick={handlePrev}
-              disabled={currentStep === 1 || create.isLoading}
+              disabled={currentStep === 1 || create.isLoading || create.imageTask.status === "processing"}
               className="rounded-full px-6"
             >
               <ChevronLeft className="w-5 h-5 mr-1" />

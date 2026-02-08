@@ -4,7 +4,7 @@
  */
 
 import { Button } from "@/components/ui/button";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
@@ -54,6 +54,7 @@ export const BookStep = memo(function BookStep({
   const [isLandscape, setIsLandscape] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
 
   // 检测屏幕方向和尺寸
   useEffect(() => {
@@ -186,6 +187,45 @@ export const BookStep = memo(function BookStep({
     };
   }, []);
 
+  // 手势滑动翻页 - 仅在全屏模式下生效
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!isFullscreen) return;
+    const touch = e.touches[0];
+    setDragStart({ x: touch.clientX, y: touch.clientY });
+  }, [isFullscreen]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!isFullscreen || !dragStart) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - dragStart.x;
+    const deltaY = touch.clientY - dragStart.y;
+    const minSwipeDistance = 50; // 最小滑动距离
+
+    // 横屏模式：左右滑动翻页
+    if (isLandscape) {
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+        if (deltaX > 0) {
+          handlePrev(); // 向右滑动 → 上一页
+        } else {
+          handleNext(); // 向左滑动 → 下一页
+        }
+      }
+    }
+    // 竖屏模式：上下滑动翻页
+    else {
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > minSwipeDistance) {
+        if (deltaY > 0) {
+          handlePrev(); // 向下滑动 → 上一页
+        } else {
+          handleNext(); // 向上滑动 → 下一页
+        }
+      }
+    }
+
+    setDragStart(null);
+  }, [isFullscreen, isLandscape, dragStart, handlePrev, handleNext]);
+
   // 可爱文字样式
   const cuteTextStyle =
     "text-base md:text-xl leading-relaxed text-center font-bold bg-gradient-to-br from-coral via-orange-400 to-amber-400 bg-clip-text text-transparent drop-shadow-sm tracking-wide";
@@ -205,7 +245,12 @@ export const BookStep = memo(function BookStep({
   }
 
   return (
-    <div className={`w-full ${isFullscreen ? 'bg-black p-4 md:p-8' : ''}`} ref={containerRef}>
+    <div
+      className={`w-full ${isFullscreen ? 'bg-black p-4 md:p-8' : ''}`}
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* 标题区域 - 全屏时隐藏 */}
       {!isFullscreen && (
         <div className="text-center mb-8">
