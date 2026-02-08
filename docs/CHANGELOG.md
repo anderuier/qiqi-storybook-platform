@@ -5,6 +5,128 @@
 
 ---
 
+## [2026-02-08] 代码清理、Bug修复与图片保护功能
+
+### 本次更新摘要
+完成大规模代码清理，删除 52 个未使用文件和 28 个依赖包，简化项目架构。修复图片生成时上一步按钮问题，添加全屏模式手势翻页和图片保护功能。
+
+### 详细内容
+
+#### 1. 代码清理（大规模重构）
+
+**删除未使用的组件和文件（52个）**：
+
+| 类型 | 数量 | 说明 |
+|------|------|------|
+| 自定义组件 | 7 | TechSection, RoadmapSection, ManusDialog, PricingSection, Map, useSSE, useMobile |
+| UI 组件 | 42 | shadcn/ui 组件（accordion, alert-dialog, calendar, carousel 等） |
+| 后端文件 | 2 | api/_lib/ai.ts, api/_lib/auth.ts |
+| 杂项文件 | 3 | init-db.ps1, test-api.ps1, test-server.ts |
+
+所有文件移至 `_recycle/` 目录本地保留，未纳入版本控制。
+
+**删除未使用的依赖包（28个）**：
+
+| 类别 | 包名 |
+|------|------|
+| Radix UI | accordion, alert-dialog, aspect-ratio, avatar, context-menu, dropdown-menu, hover-card, menubar, navigation-menu, popover, radio-group, scroll-area, select, tabs, toggle-group |
+| UI 相关 | cmdk, embla-carousel-react, recharts, react-day-picker, react-resizable-panels, input-otp |
+| 服务器 | express, @types/express, @hono/node-server, esbuild |
+| 其他 | agentation, @types/google.maps, vite-plugin-manus-runtime, tw-animate-css, add, @types/bcryptjs |
+
+**架构简化**：
+
+| 项目 | 之前 | 之后 |
+|------|------|------|
+| 构建脚本 | build + build:client | 只有 build |
+| 启动脚本 | 有 start (Express) | 移除 |
+| API 架构 | Express + Edge Functions | 纯 Edge Functions |
+| 代码行数 | - | 净减少 9,316 行 |
+
+#### 2. Bug 修复
+
+| 问题 | 修复方案 | Commit |
+|------|----------|--------|
+| 图片生成时上一步按钮可点击 | 添加 `create.imageTask.status === "processing"` 判断 | f27a027 |
+| App.tsx 语法错误导致页面空白 | 创建独立的 ImageProtection 组件 | 8dcc379 |
+| vercel.json build 命令错误 | build:client → build | 861d2de |
+| .gitignore 过度忽略 | 删除 `/docs/*.md` | 81e898f |
+
+#### 3. 新功能：全屏模式移动端手势翻页
+
+**功能描述**：
+- 竖屏模式：上下滑动翻页
+- 横屏模式：左右滑动翻页
+- 仅在全屏模式下生效
+- 最小滑动距离 50px
+
+**实现位置**：`client/src/components/create/BookStep.tsx`
+
+**Commit**: `f27a027`
+
+#### 4. 新功能：图片保护
+
+**功能描述**：
+- 桌面端：禁止右键菜单
+- 移动端：禁止长按保存
+- 禁止拖拽图片
+
+**实现方式**：
+
+1. **CSS 保护** (`client/src/index.css`)：
+```css
+img {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+```
+
+2. **JavaScript 保护** (`client/src/App.tsx`)：
+```typescript
+function ImageProtection() {
+  useEffect(() => {
+    const disableImageContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG' || target.closest('img')) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('contextmenu', disableImageContextMenu);
+    document.addEventListener('dragstart', disableImageDrag);
+    return () => {
+      document.removeEventListener('contextmenu', disableImageContextMenu);
+      document.removeEventListener('dragstart', disableImageDrag);
+    };
+  }, []);
+  return null;
+}
+```
+
+**Commit**: `52c1f4d`, `8dcc379`
+
+### 代码统计
+
+| 指标 | 数量 |
+|------|------|
+| 删除文件 | 52 个 |
+| 删除代码行 | 9,316 行 |
+| 删除依赖包 | 28 个 |
+| 新增功能 | 2 个 |
+| Bug 修复 | 4 个 |
+
+### Git 提交记录
+
+| Commit | 说明 |
+|--------|------|
+| 81e898f | 重构：清理未使用的代码和依赖 |
+| 861d2de | 修复：更新 vercel.json build 命令 |
+| f27a027 | 修复：图片生成时禁用上一步按钮 + 全屏模式添加手势翻页 |
+| 52c1f4d | 功能：添加图片保护，禁止下载 |
+| 8dcc379 | 修复：App.tsx 语法错误导致页面空白 |
+
+---
+
 ## [2026-02-07] SSE 流式路由迁移到 Edge Runtime & 图片生成 SQL 修复
 
 ### 本次更新摘要
