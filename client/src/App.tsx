@@ -7,6 +7,35 @@ import { RouteLoading } from "./components/RouteLoading";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
 
+// 图片保护组件
+function ImageProtection() {
+  useEffect(() => {
+    const disableImageContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG' || target.closest('img')) {
+        e.preventDefault();
+      }
+    };
+
+    const disableImageDrag = (e: DragEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('contextmenu', disableImageContextMenu);
+    document.addEventListener('dragstart', disableImageDrag);
+
+    return () => {
+      document.removeEventListener('contextmenu', disableImageContextMenu);
+      document.removeEventListener('dragstart', disableImageDrag);
+    };
+  }, []);
+
+  return null;
+}
+
 // 路由懒加载：将页面组件拆分为独立 chunk，按需加载
 // 这样可以减少首屏 JS 体积，提升首屏加载速度
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -49,31 +78,6 @@ function Router() {
 //   to keep consistent foreground/background color across components
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
-// 图片保护：禁用右键菜单和拖拽
-useEffect(() => {
-  const disableImageContextMenu = (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.tagName === 'IMG' || target.closest('img')) {
-      e.preventDefault();
-    }
-  };
-
-  const disableImageDrag = (e: DragEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.tagName === 'IMG') {
-      e.preventDefault();
-    }
-  };
-
-  document.addEventListener('contextmenu', disableImageContextMenu);
-  document.addEventListener('dragstart', disableImageDrag);
-
-  return () => {
-    document.removeEventListener('contextmenu', disableImageContextMenu);
-    document.removeEventListener('dragstart', disableImageDrag);
-  };
-}, []);
-
 function App() {
   return (
     <ErrorBoundary>
@@ -84,6 +88,7 @@ function App() {
         <AuthProvider>
           <TooltipProvider>
             <Toaster />
+            <ImageProtection />
             <Router />
           </TooltipProvider>
         </AuthProvider>
