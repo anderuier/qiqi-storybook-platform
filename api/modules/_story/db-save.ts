@@ -21,9 +21,11 @@ export function extractTitle(storyContent: string): string {
 
 /**
  * 保存故事到数据库（带 3 次重试）
+ * 支持：1. 创建新草稿 2. 更新已存在草稿（重新生成故事）
  */
 export async function saveStoryToDb(params: {
   userId: string;
+  workId?: string | null;  // 如果提供，则更新已存在的草稿
   storyContent: string;
   theme: string;
   childName?: string;
@@ -31,26 +33,62 @@ export async function saveStoryToDb(params: {
   childGender?: string;
   style?: string;
 }): Promise<{ storyId: string; workId: string; title: string }> {
-  const { userId, storyContent, theme, childName, childAge, childGender, style } = params;
+  const { userId, workId: existingWorkId, storyContent, theme, childName, childAge, childGender, style } = params;
 
   const storyId = generateId('story');
-  const workId = generateId('work');
   const title = extractTitle(storyContent);
 
   let dbSaveSuccess = false;
   let dbError: unknown = null;
+  let finalWorkId = existingWorkId || null;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      await sql`
-        INSERT INTO works (id, user_id, title, status, current_step, theme, child_name, child_age, child_gender, style)
-        VALUES (${workId}, ${userId}, ${title}, 'draft', 'story', ${theme}, ${childName || null}, ${childAge || null}, ${childGender || null}, ${style || null})
-      `;
+      if (existingWorkId) {
+        // 更新已存在的草稿
+        // 1. 更新 work 信息
+        await sql`
+          UPDATE works
+          SET title = ${title},
+              theme = ${theme},
+              child_name = ${childName || null},
+              child_age = ${childAge || null},
+              child_gender = ${childGender || null},
+              style = ${style || null},
+              current_step = 'story',
+              updated_at = NOW()
+          WHERE id = ${existingWorkId}
+        `;
 
-      await sql`
-        INSERT INTO stories (id, work_id, content, word_count)
-        VALUES (${storyId}, ${workId}, ${storyContent}, ${storyContent.length})
-      `;
+        // 2. 删除旧的 story 记录（重新生成）
+        await sql`
+          DELETE FROM stories WHERE work_id = ${existingWorkId}
+        `;
+
+        // 3. 插入新的 story 记录
+        await sql`
+          INSERT INTO stories (id, work_id, content, word_count)
+          VALUES (${storyId}, ${existingWorkId}, ${storyContent}, ${storyContent.length})
+        `;
+
+        finalWorkId = existingWorkId;
+        console.log('[故事保存] 更新已存在草稿 workId:', existingWorkId);
+      } else {
+        // 创建新草稿
+        const newWorkId = generateId('work');
+        await sql`
+          INSERT INTO works (id, user_id, title, status, current_step, theme, child_name, child_age, child_gender, style)
+          VALUES (${newWorkId}, ${userId}, ${title}, 'draft', 'story', ${theme}, ${childName || null}, ${childAge || null}, ${childGender || null}, ${style || null})
+        `;
+
+        await sql`
+          INSERT INTO stories (id, work_id, content, word_count)
+          VALUES (${storyId}, ${newWorkId}, ${storyContent}, ${storyContent.length})
+        `;
+
+        finalWorkId = newWorkId;
+        console.log('[故事保存] 创建新草稿 workId:', newWorkId);
+      }
 
       dbSaveSuccess = true;
       break;
@@ -67,5 +105,5 @@ export async function saveStoryToDb(params: {
     throw dbError;
   }
 
-  return { storyId, workId, title };
+  return { storyId, workId: finalWorkId!, title };
 }

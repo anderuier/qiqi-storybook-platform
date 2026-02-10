@@ -227,9 +227,18 @@ export function useCreate() {
       streamContentRef.current = '';
 
       return new Promise((resolve, reject) => {
+        // 如果有 workId，说明是在重新生成已有草稿的故事
+        const requestBody: Record<string, unknown> = {
+          mode: 'free',
+          input,
+        };
+        if (state.workId) {
+          requestBody.workId = state.workId;
+        }
+
         const controller = fetchSSE<StoryDoneData>(
           '/create/story/stream',
-          { mode: 'free', input },
+          requestBody,
           {
             onContent: (delta) => {
               streamContentRef.current += delta;
@@ -270,7 +279,7 @@ export function useCreate() {
         streamControllerRef.current = controller;
       });
     },
-    [updateState]
+    [updateState, state.workId]
   );
 
   // 步骤2：生成分镜剧本（流式）

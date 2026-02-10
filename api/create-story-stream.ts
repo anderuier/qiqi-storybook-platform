@@ -125,10 +125,24 @@ export default async function handler(req: Request): Promise<Response> {
   // 参数解析
   const body = await req.json().catch(() => ({}));
   const input = body.input || body;
-  const { theme, childName, childAge, childGender, style } = input;
+  const { workId, theme, childName, childAge, childGender, style } = input;
 
   if (!theme) {
     return jsonError(400, 'INVALID_PARAMS', '请提供故事主题');
+  }
+
+  // 如果提供了 workId，验证该 work 存在且属于当前用户
+  let existingWorkId: string | null = null;
+  if (workId) {
+    const workResult = await sql`
+      SELECT id, user_id FROM works WHERE id = ${workId} AND user_id = ${userPayload.userId}
+    `;
+    if (workResult.rows.length > 0) {
+      existingWorkId = workId;
+      console.log('[故事流式生成-Edge] 使用已存在的草稿 workId:', workId);
+    } else {
+      console.warn('[故事流式生成-Edge] workId 不存在或无权限，将创建新草稿');
+    }
   }
 
   // 初始化 SSE 流
@@ -223,8 +237,9 @@ export default async function handler(req: Request): Promise<Response> {
 
       // 保存到数据库
       try {
-        const { storyId, workId, title } = await saveStoryToDb({
+        const { storyId, workId: savedWorkId, title } = await saveStoryToDb({
           userId: userPayload.userId,
+          workId: existingWorkId,
           storyContent: fullContent,
           theme,
           childName,
@@ -235,7 +250,7 @@ export default async function handler(req: Request): Promise<Response> {
 
         const doneData: StoryDoneData = {
           storyId,
-          workId,
+          workId: savedWorkId,
           title,
           content: fullContent,
           wordCount: fullContent.length,
@@ -246,7 +261,7 @@ export default async function handler(req: Request): Promise<Response> {
 
         sse.sendDone(doneData);
 
-        console.log('[故事流式生成-Edge] 完成! storyId:', storyId, 'workId:', workId,
+        console.log('[故事流式生成-Edge] 完成! storyId:', storyId, 'workId:', savedWorkId,
           '总耗时:', (Date.now() - startTime) / 1000, '秒');
       } catch (dbErr) {
         console.error('[故事流式生成-Edge] 数据库保存失败:', dbErr);

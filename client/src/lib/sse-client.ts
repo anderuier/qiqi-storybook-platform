@@ -6,6 +6,9 @@
 
 import { API_BASE_URL, getToken, clearToken } from './api.js';
 
+// SSE 请求超时时间（毫秒）- 5 分钟
+const SSE_TIMEOUT = 5 * 60 * 1000;
+
 // SSE 事件回调
 export interface SSECallbacks<T = unknown> {
   onContent: (delta: string) => void;
@@ -23,6 +26,20 @@ export function fetchSSE<T = unknown>(
   callbacks: SSECallbacks<T>,
 ): AbortController {
   const controller = new AbortController();
+
+  // 设置超时取消
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+    callbacks.onError({
+      code: 'TIMEOUT',
+      message: '请求超时，请稍后重试',
+    });
+  }, SSE_TIMEOUT);
+
+  // 清除超时定时器的辅助函数
+  const clearTimeoutFn = () => {
+    clearTimeout(timeoutId);
+  };
 
   const url = `${API_BASE_URL}${path}`;
   const token = getToken();
@@ -43,6 +60,7 @@ export function fetchSSE<T = unknown>(
     .then(async (response) => {
       // 非 200 响应：尝试解析 JSON 错误
       if (!response.ok) {
+        clearTimeoutFn(); // 清除超时定时器
         // 401 未授权：清除 token 并跳转登录
         if (response.status === 401) {
           clearToken();
@@ -69,6 +87,7 @@ export function fetchSSE<T = unknown>(
       // 读取 SSE 流
       const reader = response.body?.getReader();
       if (!reader) {
+        clearTimeoutFn(); // 清除超时定时器
         callbacks.onError({ code: 'STREAM_ERROR', message: '无法读取响应流' });
         return;
       }
@@ -100,9 +119,11 @@ export function fetchSSE<T = unknown>(
               callbacks.onContent(event.delta);
             } else if (event.type === 'done') {
               receivedTerminalEvent = true;
+              clearTimeoutFn(); // 清除超时定时器
               callbacks.onDone(event.data as T);
             } else if (event.type === 'error') {
               receivedTerminalEvent = true;
+              clearTimeoutFn(); // 清除超时定时器
               callbacks.onError(event.error);
             }
           } catch {
@@ -114,6 +135,7 @@ export function fetchSSE<T = unknown>(
 
       // 流断开检测：reader done 但未收到 done/error 事件，说明连接异常断开
       if (!receivedTerminalEvent) {
+        clearTimeoutFn(); // 清除超时定时器
         callbacks.onError({
           code: 'STREAM_DISCONNECTED',
           message: '服务器连接异常断开，请重试',
@@ -121,6 +143,7 @@ export function fetchSSE<T = unknown>(
       }
     })
     .catch((err) => {
+      clearTimeoutFn(); // 清除超时定时器
       // 请求被取消时不触发错误回调
       if (err.name === 'AbortError') return;
 
