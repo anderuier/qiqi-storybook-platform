@@ -5,6 +5,107 @@
 
 ---
 
+## [2026-02-10] 修复：超时后重新生成创建新草稿
+
+### 本次更新摘要
+修复故事生成超时后重新生成会创建新草稿的 Bug，实现草稿继续生成功能。添加 SSE 请求超时控制，避免无限等待。
+
+### 详细内容
+
+#### 1. Bug 修复
+
+**问题描述**：
+- 故事/分镜生成超时后，界面一直转圈
+- 退出后重新进入草稿，再次点击生成会创建新草稿，而不是在原草稿上继续
+
+**根本原因**：
+- 前端 `generateStory` 没有传递 `workId` 参数
+- 后端 `create-story-stream.ts` 没有接收 `workId` 参数
+- 后端 `db-save.ts` 每次都创建新的 work 记录
+
+**修复方案**：
+
+| 文件 | 修改内容 |
+|------|----------|
+| `client/src/hooks/useCreate.ts` | `generateStory` 有 `workId` 时传递给后端 |
+| `api/create-story-stream.ts` | 接收 `workId` 参数并验证存在性 |
+| `api/modules/_story/db-save.ts` | 有 `workId` 时更新草稿，否则创建新的 |
+| `client/src/lib/sse-client.ts` | 添加 5 分钟超时控制 |
+
+#### 2. 代码修改
+
+**前端传递 workId**：
+```typescript
+// useCreate.ts
+const requestBody: Record<string, unknown> = {
+  mode: 'free',
+  input,
+};
+if (state.workId) {
+  requestBody.workId = state.workId;  // 传递 workId
+}
+```
+
+**后端验证 workId**：
+```typescript
+// create-story-stream.ts
+let existingWorkId: string | null = null;
+if (workId) {
+  const workResult = await sql`
+    SELECT id, user_id FROM works WHERE id = ${workId} AND user_id = ${userPayload.userId}
+  `;
+  if (workResult.rows.length > 0) {
+    existingWorkId = workId;
+  }
+}
+```
+
+**数据库支持更新**：
+```typescript
+// db-save.ts
+if (existingWorkId) {
+  // 更新已存在的草稿
+  await sql`UPDATE works SET ... WHERE id = ${existingWorkId}`;
+  await sql`DELETE FROM stories WHERE work_id = ${existingWorkId}`;
+  await sql`INSERT INTO stories (...) VALUES (...)`;
+} else {
+  // 创建新草稿
+  const newWorkId = generateId('work');
+  await sql`INSERT INTO works (...) VALUES (...)`;
+}
+```
+
+#### 3. SSE 超时控制
+
+```typescript
+// sse-client.ts
+const SSE_TIMEOUT = 5 * 60 * 1000;  // 5 分钟
+
+const timeoutId = setTimeout(() => {
+  controller.abort();
+  callbacks.onError({
+    code: 'TIMEOUT',
+    message: '请求超时，请稍后重试',
+  });
+}, SSE_TIMEOUT);
+```
+
+### 代码统计
+
+| 指标 | 数量 |
+|------|------|
+| 修改文件 | 4 个 |
+| 新增代码 | 85 行 |
+| 修改代码 | 17 行 |
+
+### Git 提交记录
+
+| Commit | 说明 |
+|--------|------|
+| 58063fe | 修复：超时后重新生成创建新草稿的问题 |
+
+---
+
 ## [2026-02-08] 代码清理、Bug修复与图片保护功能
 
 ### 本次更新摘要
